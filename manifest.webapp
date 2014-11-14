@@ -1,7 +1,7 @@
 {
   "name": "Ubike Info",
   "type": "privileged",
-  "launch_path": "/index.html",
+  "launch_path": "/taipei.html",
   "developer": {
     "name": "owen",
     "url": "https://github.com/oouyang/ubike"
