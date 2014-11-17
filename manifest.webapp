@@ -1,5 +1,7 @@
 {
   "name": "Ubike Info",
+  "version": "1.0",
+  "description": "ubike demo",
   "type": "privileged",
   "launch_path": "/taipei.html",
   "developer": {
