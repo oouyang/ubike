@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "type": "web",
-  "name": "TPE Ubike Sites List",
-  "description": "List all Taipei UBike sites list",
+  "name": "TPE Ubike Sites map",
+  "description": "List all Taipei UBike sites in google map",
   "icons":{
     "128": "http://oouyang.github.io/ubike/img/icon.png"
   },
