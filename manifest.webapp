@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "type": "web",
+  "name": "TPE Ubike Sites List",
+  "description": "List all Taipei UBike sites list",
+  "icons":{
+    "128": "http://oouyang.github.io/ubike/img/icon.png"
+  },
+  "launch_path": "/map.html",
+  "developer": {
+    "name": "Owen Ouyang",
+      "url": "https://github.com/oouyang"
+  },
+  "default_locale": "en"
+}
