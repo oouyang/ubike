@@ -6,7 +6,7 @@
   "icons":{
     "128": "http://oouyang.github.io/ubike/img/icon.png"
   },
-  "launch_path": "/map.html",
+  "launch_path": "/ubike/map.html",
   "developer": {
     "name": "Owen Ouyang",
       "url": "https://github.com/oouyang"
