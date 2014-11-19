@@ -50,16 +50,35 @@ function initialize() {
     center: myLatlng
   }
   map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+  var iconBase = 'http://oouyang.github.io/ubike/img/';
+  var icons = {
+    ok: {
+      icon: iconBase + 'ok.png'
+    },
+    empty: {
+      icon: iconBase + 'empty.png'
+    },
+    full: {
+      icon: iconBase + 'full.png'
+    }
+  };
 
   jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
   var retVal = JSON.parse(jsonstr).retVal;
   for (i in retVal) {
     latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
+    var type = 'ok';
+    if ( retVal[i].sbi == 0 ) {
+      type = 'empty';
+    } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
+      type = 'full';
+    }
     var marker = new google.maps.Marker({
          position: latlng,
          map: map,
+         icon: icons[type].icon,
          //animation: google.maps.Animation.DROP,
-         title: retVal[i].ar + "\n(" + retVal[i].sbi + "/" + retVal[i].tot + ")"
+         title: retVal[i].ar + "\n(" + retVal[i].sbi + "/" + (retVal[i].tot-retVal[i].sbi) + ")"
     });
     markers.push(marker);
     (function(marker, i) {
