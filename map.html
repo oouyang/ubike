@@ -184,6 +184,9 @@ function initialize() {
      })(marker, i);
 */
   updateMarkers(map);
+  setTimeout(function() {
+    updateMarkers(map);
+  }, 5 * 60 * 1000); // update the ubike information every 5 minutes.
 
       var routeCoords = [];
       var routePath ;
