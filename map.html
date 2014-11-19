@@ -24,7 +24,32 @@ function httpGet(url) {
   xmlHttp.send( null );
   return xmlHttp.responseText;
 }
-
+function getInfoTitle(site) {
+  var userLang = navigator.language || navigator.userLanguage;
+  if (userLang == 'zh-TW' || userLang == 'zh-CN') {
+    return site.ar + "\n(" + site.sbi + "/" + (site.tot-site.sbi) + ")";
+  } 
+  // use en-US as default
+  return site.aren + "\n( bikes: " + site.sbi + "/ slots: " + (site.tot-site.sbi) + ")";
+}
+function getInfoContent(site) {
+ var userLang = navigator.language || navigator.userLanguage;
+  if (userLang == 'zh-TW' || userLang == 'zh-CN') {
+     return '<div id="content">'+
+          '<h4 id="firstHeading" class="firstHeading">'+site.sna+'</h3>'+
+          '&#31449;&#40670;&#20301;&#32622; : ' +site.ar+
+          '<br>&#21487;&#20511;&#36554;&#36635; : ' +site.sbi+ ' &#36635; ' +
+          '<br>&#21487;&#20572;&#31354;&#20301; : ' +(site.tot-site.sbi)+ ' &#36635; '+
+          '</div>';
+  } 
+  // use en-US as default
+  return '<div id="content">'+
+          '<h4 id="firstHeading" class="firstHeading">'+site.snaen+'</h3>'+
+          'location: ' +site.aren+
+          '<br>bikes: ' +site.sbi+
+          '<br>slots: ' +(site.tot-site.sbi)+
+          '</div>';
+}
 function initialize() {
   var myLatlng = new google.maps.LatLng(25.03304,121.5656);
   var maxLat = 26;
@@ -80,26 +105,21 @@ function initialize() {
     } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
       image = fullImage;
     }
+    
+    var infoTitle = getInfoTitle(retVal[i]);
     var marker = new google.maps.Marker({
          position: latlng,
          map: map,
          icon: image,
          shadow: pinShadow,
          //animation: google.maps.Animation.DROP,
-         title: retVal[i].ar + "\n(" + retVal[i].sbi + "/" + (retVal[i].tot-retVal[i].sbi) + ")"
+         title: infoTitle
     });
     markers.push(marker);
     (function(marker, i) {
+        var infoContent = getInfoContent(retVal[i]);
         var infowindow = new google.maps.InfoWindow({
-            content: '<div id="content">'+
-          '<div id="siteNotice">'+
-          '</div>'+
-          '<h3 id="firstHeading" class="firstHeading">'+retVal[i].sna+'</h3>'+
-          '<div id="bodyContent">'+
-          '&#31449;&#40670;&#20301;&#32622; : ' +retVal[i].ar+
-          '<br>&#21487;&#20511;&#36554;&#36635; : ' +retVal[i].sbi+ ' &#36635; ' +
-          '<br>&#21487;&#20572;&#31354;&#20301; : ' +(retVal[i].tot-retVal[i].sbi)+ ' &#36635; ' + '</div>'+
-          '</div>'
+            content: infoContent
           });
         google.maps.event.addListener(marker, 'mouseover', function() {
             infowindow.open(map, marker)
