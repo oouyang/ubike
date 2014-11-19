@@ -4,8 +4,8 @@
   "name": "TPE Ubike Sites map",
   "description": "List all Taipei UBike sites in google map",
   "icons":{
-    "32": "http://oouyang.github.io/ubike/img/ubike32.png"
-    "64": "http://oouyang.github.io/ubike/img/ubike64.png"
+    "32": "http://oouyang.github.io/ubike/img/ubike32.png",
+    "64": "http://oouyang.github.io/ubike/img/ubike64.png",
     "128": "http://oouyang.github.io/ubike/img/ubike128.png"
   },
   "launch_path": "/ubike/map.html",
