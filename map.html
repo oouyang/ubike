@@ -17,6 +17,25 @@ var map;
 var manifest_url = location.href + 'manifest.webapp';
 var jsonstr = '';
 var markers = [];
+var okColor = "80FF00";
+var emptyColor = "FF9E21";
+var fullColor = "FF4D00";
+var okImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + okColor,
+    new google.maps.Size(21, 34),
+    new google.maps.Point(0,0),
+    new google.maps.Point(10, 34));
+var emptyImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + emptyColor,
+    new google.maps.Size(21, 34),
+    new google.maps.Point(0,0),
+    new google.maps.Point(10, 34));
+var fullImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + fullColor,
+    new google.maps.Size(21, 34),
+    new google.maps.Point(0,0),
+    new google.maps.Point(10, 34));
+var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
+    new google.maps.Size(40, 37),
+    new google.maps.Point(0, 0),
+    new google.maps.Point(12, 35));
 
 function httpGet(url) {
   xmlHttp = new XMLHttpRequest();
@@ -50,6 +69,54 @@ function getInfoContent(site) {
           '<br>slots: ' +(site.tot-site.sbi)+
           '</div>';
 }
+
+function updateMarkers(map) {
+  // clear
+  for (var i =0 i  markers.length; i++) {
+    markers[i].setMap(null);
+  }
+  markers = [];
+  // refresh
+  jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
+  var retVal = JSON.parse(jsonstr).retVal;
+  for (i in retVal) {
+    latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
+    var image = okImage;
+    if ( retVal[i].sbi == 0 ) {
+      image = emptyImage;
+    } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
+      image = fullImage;
+    }
+    
+    var infoTitle = getInfoTitle(retVal[i]);
+    var marker = new google.maps.Marker({
+         position: latlng,
+         map: map,
+         icon: image,
+         shadow: pinShadow,
+         //animation: google.maps.Animation.DROP,
+         title: infoTitle
+    });
+    markers.push(marker);
+    (function(marker, i) {
+        var infoContent = getInfoContent(retVal[i]);
+        var infowindow = new google.maps.InfoWindow({
+            content: infoContent
+          });
+        google.maps.event.addListener(marker, 'mouseover', function() {
+            infowindow.open(map, marker)
+        });
+
+        google.maps.event.addListener(marker, 'mouseout', function() {
+            t = setTimeout(function() {
+                infowindow.close()
+            }, 3000);
+        });
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.open(map, marker);
+        });
+     })(marker, i);  
+}
 function initialize() {
   var myLatlng = new google.maps.LatLng(25.03304,121.5656);
   var maxLat = 26;
@@ -75,26 +142,7 @@ function initialize() {
     center: myLatlng
   }
   map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-  var okColor = "80FF00";
-  var emptyColor = "FF9E21";
-  var fullColor = "FF4D00";
-  var okImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + okColor,
-      new google.maps.Size(21, 34),
-      new google.maps.Point(0,0),
-      new google.maps.Point(10, 34));
-  var emptyImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + emptyColor,
-      new google.maps.Size(21, 34),
-      new google.maps.Point(0,0),
-      new google.maps.Point(10, 34));
-  var fullImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + fullColor,
-      new google.maps.Size(21, 34),
-      new google.maps.Point(0,0),
-      new google.maps.Point(10, 34));
-  var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
-      new google.maps.Size(40, 37),
-      new google.maps.Point(0, 0),
-      new google.maps.Point(12, 35));
-
+/*
   jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
   var retVal = JSON.parse(jsonstr).retVal;
   for (i in retVal) {
@@ -134,6 +182,8 @@ function initialize() {
           infowindow.open(map, marker);
         });
      })(marker, i);
+*/
+  updateMarkers(map);
 
       var routeCoords = [];
       var routePath ;
