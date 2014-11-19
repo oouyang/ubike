@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "type": "web",
-  "name": "TPE Ubike Sites map",
+  "name": "Ubike",
   "description": "List all Taipei UBike sites in google map",
   "icons":{
     "32": "http://oouyang.github.io/ubike/img/ubike32.png",
@@ -14,4 +14,18 @@
       "url": "https://github.com/oouyang"
   },
   "default_locale": "en"
+  "locales": {
+    "zh-TW": {
+      "name": "微笑單車",
+      "description": "台北微笑單車地圖"
+    }
+    "zh-CN": {
+      "name": "微笑單車",
+      "description": "台北微笑單車地圖"
+    }
+    "en-US": {
+      "name": "Ubike",
+      "description": "List all Taipei UBike sites in google map"
+    }
+  }
 }
