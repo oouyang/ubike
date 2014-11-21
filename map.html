@@ -71,15 +71,13 @@ function httpGet(url) {
 }
 
 function updateMarkers(map) {
-  xmlHttp = new XMLHttpRequest();
-  xmlHttp.onload = function() {
   // clear
   for (var i =0; i < markers.length; i++) {
     markers[i].setMap(null);
   }
   markers = [];
   // refresh
-  // jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
+  jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
   jsonstr = this.responseText
   var retVal = JSON.parse(jsonstr).retVal;
   for (i in retVal) {
@@ -120,11 +118,7 @@ function updateMarkers(map) {
         });
      })(marker, i);  
   }
-  }
-  xmlHttp.addEventListener("error", function() { console.log("Network failed!!"); }, false);
-  xmlHttp.open( "GET", url, false );
-  xmlHttp.send( null );
-  
+
   setTimeout(function() {
     updateMarkers(map);
   }, 5 * 60 * 1000); // update the ubike information every 5 minutes.
