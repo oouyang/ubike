@@ -78,7 +78,6 @@ function updateMarkers(map) {
   markers = [];
   // refresh
   jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
-  jsonstr = this.responseText
   var retVal = JSON.parse(jsonstr).retVal;
   for (i in retVal) {
     latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
@@ -175,52 +174,9 @@ function initialize() {
       };
 
       var wpid = navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
-     // get a reference to the button and call install() on click if the app isn't already installed. If it is, hide the button.
-     /*
-     var button = document.getElementById('install-btn');
-
-     var installCheck = navigator.mozApps.checkInstalled(manifest_url);
-
-     installCheck.onsuccess = function() {
-       if(installCheck.result) {
-         button.style.display = "none";
-       } else {
-         button.addEventListener('click', install, false);
-       };
-     };
-     */
 }
 
-/*
-function install(ev) {
-  ev.preventDefault();
-  // define the manifest URL
-  // install the app
-  var installLocFind = navigator.mozApps.install(manifest_url);
-  installLocFind.onsuccess = function(data) {
-    // App is installed, do something
-  };
-  installLocFind.onerror = function() {
-    // App wasn't installed, info is in
-    // installapp.error.name
-    alert(installLocFind.error.name);
-  };
-};
-
-function toggleBounce() {
-
-  if (marker.getAnimation() != null) {
-    marker.setAnimation(null);
-  } else {
-    marker.setAnimation(google.maps.Animation.BOUNCE);
-  }
-}
-function onBoundsChanged() {
-bounds = map.getBound();
-console.log(bounds);
-}*/
 google.maps.event.addDomListener(window, 'load', initialize);
-//google.maps.event.addDomListener(window, 'bounds_changed', onBoundsChanged);
     </script>
   </head>
   <body>
