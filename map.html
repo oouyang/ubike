@@ -64,7 +64,7 @@ function getInfoContent(site) {
 }
 
 function httpGet(url) {
-  xmlHttp = new XMLHttpRequest();
+  xmlHttp = new XMLHttpRequest({mozSystem:true});
   xmlHttp.open( "GET", url, false );
   xmlHttp.send( null );
   return xmlHttp.responseText;
