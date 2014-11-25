@@ -69,57 +69,61 @@ function httpGet(url) {
   xmlHttp.send( null );
   return xmlHttp.responseText;
 }
-
-function updateMarkers(map) {
+function updateMarkers(map, retVal)
+{
   // clear
   for (var i =0; i < markers.length; i++) {
     markers[i].setMap(null);
   }
   markers = [];
+  for (i in retVal) {
+      latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
+      var image = okImage;
+      if ( retVal[i].sbi == 0 ) {
+        image = emptyImage;
+      } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
+        image = fullImage;
+      }
+      
+      var infoTitle = getInfoTitle(retVal[i]);
+      var marker = new google.maps.Marker({
+           position: latlng,
+           map: map,
+           icon: image,
+           shadow: pinShadow,
+           //animation: google.maps.Animation.DROP,
+           title: infoTitle
+      });
+      markers.push(marker);
+      (function(marker, i) {
+          var infoContent = getInfoContent(retVal[i]);
+          var infowindow = new google.maps.InfoWindow({
+              content: infoContent
+            });
+          google.maps.event.addListener(marker, 'mouseover', function() {
+              infowindow.open(map, marker)
+          });
+
+          google.maps.event.addListener(marker, 'mouseout', function() {
+              t = setTimeout(function() {
+                  infowindow.close()
+              }, 3000);
+          });
+          google.maps.event.addListener(marker, 'click', function() {
+            infowindow.open(map, marker);
+          });
+       })(marker, i);  
+  }
+}
+
+function updateMap(map) {
   // refresh
   jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
   var retVal = JSON.parse(jsonstr).retVal;
-  for (i in retVal) {
-    latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
-    var image = okImage;
-    if ( retVal[i].sbi == 0 ) {
-      image = emptyImage;
-    } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
-      image = fullImage;
-    }
-    
-    var infoTitle = getInfoTitle(retVal[i]);
-    var marker = new google.maps.Marker({
-         position: latlng,
-         map: map,
-         icon: image,
-         shadow: pinShadow,
-         //animation: google.maps.Animation.DROP,
-         title: infoTitle
-    });
-    markers.push(marker);
-    (function(marker, i) {
-        var infoContent = getInfoContent(retVal[i]);
-        var infowindow = new google.maps.InfoWindow({
-            content: infoContent
-          });
-        google.maps.event.addListener(marker, 'mouseover', function() {
-            infowindow.open(map, marker)
-        });
-
-        google.maps.event.addListener(marker, 'mouseout', function() {
-            t = setTimeout(function() {
-                infowindow.close()
-            }, 3000);
-        });
-        google.maps.event.addListener(marker, 'click', function() {
-          infowindow.open(map, marker);
-        });
-     })(marker, i);  
-  }
-
+  updateMarkers(map, retVal);
+  
   setTimeout(function() {
-    updateMarkers(map);
+    updateMap(map);
   }, 5 * 60 * 1000); // update the ubike information every 5 minutes.
 }
 function initialize() {
@@ -148,7 +152,7 @@ function initialize() {
   }
   map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
 
-  updateMarkers(map);
+  updateMap(map);
 
       var routeCoords = [];
       var routePath ;
