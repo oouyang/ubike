@@ -2,7 +2,7 @@
   "version": "1.0",
   "type": "web",
   "name": "Ubike",
-  "description": "List all Taipei UBike sites in google map",
+  "description": "Marker all Taipei UBike sites in google map",
   "icons":{
     "32": "http://oouyang.github.io/ubike/img/ubike32.png",
     "64": "http://oouyang.github.io/ubike/img/ubike64.png",
@@ -25,7 +25,7 @@
     },
     "en-US": {
       "name": "Ubike",
-      "description": "List all Taipei UBike sites in google map"
+      "description": "Marker all Taipei UBike sites in google map"
     }
   }
 }
