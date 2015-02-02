@@ -29,98 +29,103 @@ var okColor = "80FF00";
 var emptyColor = "FF9E21";
 var fullColor = "FF4D00";
 var okImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + okColor,
-    new google.maps.Size(21, 34),
-    new google.maps.Point(0,0),
-    new google.maps.Point(10, 34));
+  new google.maps.Size(21, 34),
+  new google.maps.Point(0, 0),
+  new google.maps.Point(10, 34));
 var emptyImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + emptyColor,
-    new google.maps.Size(21, 34),
-    new google.maps.Point(0,0),
-    new google.maps.Point(10, 34));
+  new google.maps.Size(21, 34),
+  new google.maps.Point(0, 0),
+  new google.maps.Point(10, 34));
 var fullImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + fullColor,
-    new google.maps.Size(21, 34),
-    new google.maps.Point(0,0),
-    new google.maps.Point(10, 34));
+  new google.maps.Size(21, 34),
+  new google.maps.Point(0, 0),
+  new google.maps.Point(10, 34));
 var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
-    new google.maps.Size(40, 37),
-    new google.maps.Point(0, 0),
-    new google.maps.Point(12, 35));
+  new google.maps.Size(40, 37),
+  new google.maps.Point(0, 0),
+  new google.maps.Point(12, 35));
+
 function getInfoTitle(site) {
   var userLang = navigator.language || navigator.userLanguage;
   if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-    return site.ar + "\n(" + site.sbi + "/" + (site.tot-site.sbi) + ")";
-  } 
+    return site.ar + "\n(" + site.sbi + "/" + (site.tot - site.sbi) + ")";
+  }
   // use en-US as default
-  return site.aren + "\n( bikes: " + site.sbi + "/ slots: " + (site.tot-site.sbi) + ")";
+  return site.aren + "\n( bikes: " + site.sbi + "/ slots: " + (site.tot - site.sbi) + ")";
 }
+
 function getInfoContent(site) {
- var userLang = navigator.language || navigator.userLanguage;
+  var userLang = navigator.language || navigator.userLanguage;
   if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-     return '<div id="content">'+
-          '<h4 id="firstHeading" class="firstHeading">'+site.sna+'</h3>'+
-          '&#31449;&#40670;&#20301;&#32622; : ' +site.ar+
-          '<br>&#21487;&#20511;&#36554;&#36635; : ' +site.sbi+ ' &#36635; ' +
-          '<br>&#21487;&#20572;&#31354;&#20301; : ' +(site.tot-site.sbi)+ ' &#36635; '+
-          '</div>';
-  } 
+    return '<div id="content">' +
+      '<h4 id="firstHeading" class="firstHeading">' + site.sna + '</h3>' +
+      '&#31449;&#40670;&#20301;&#32622; : ' + site.ar +
+      '<br>&#21487;&#20511;&#36554;&#36635; : ' + site.sbi + ' &#36635; ' +
+      '<br>&#21487;&#20572;&#31354;&#20301; : ' + (site.tot - site.sbi) + ' &#36635; ' +
+      '</div>';
+  }
   // use en-US as default
-  return '<div id="content">'+
-          '<h4 id="firstHeading" class="firstHeading">'+site.snaen+'</h3>'+
-          'location: ' +site.aren+
-          '<br>bikes: ' +site.sbi+
-          '<br>slots: ' +(site.tot-site.sbi)+
-          '</div>';
+  return '<div id="content">' +
+    '<h4 id="firstHeading" class="firstHeading">' + site.snaen + '</h3>' +
+    'location: ' + site.aren +
+    '<br>bikes: ' + site.sbi +
+    '<br>slots: ' + (site.tot - site.sbi) +
+    '</div>';
 }
 
 function httpGet(url) {
-  xmlHttp = new XMLHttpRequest({mozSystem:true});
-  xmlHttp.open( "GET", url, false );
-  xmlHttp.send( null );
+  xmlHttp = new XMLHttpRequest({
+    mozSystem: true
+  });
+  xmlHttp.open("GET", url, false);
+  xmlHttp.send(null);
   return xmlHttp.responseText;
 }
-function updateMarkers(map, retVal)
-{
+
+function updateMarkers(map, retVal) {
   // clear
-  for (var i =0; i < markers.length; i++) {
+  for (var i = 0; i < markers.length; i++) {
     markers[i].setMap(null);
   }
   markers = [];
   for (i in retVal) {
-      latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
-      var image = okImage;
-      if ( retVal[i].sbi == 0 ) {
-        image = emptyImage;
-      } else if ( (retVal[i].tot-retVal[i].sbi) == 0 ) {
-        image = fullImage;
-      }
-      
-      var infoTitle = getInfoTitle(retVal[i]);
-      var marker = new google.maps.Marker({
-           position: latlng,
-           map: map,
-           icon: image,
-           shadow: pinShadow,
-           //animation: google.maps.Animation.DROP,
-           title: infoTitle
-      });
-      markers.push(marker);
-      (function(marker, i) {
-          var infoContent = getInfoContent(retVal[i]);
-          var infowindow = new google.maps.InfoWindow({
-              content: infoContent
-            });
-          google.maps.event.addListener(marker, 'mouseover', function() {
-              infowindow.open(map, marker)
-          });
+    latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
+    var image = okImage;
+    if (retVal[i].sbi == 0) {
+      image = emptyImage;
+    }
+    else if ((retVal[i].tot - retVal[i].sbi) == 0) {
+      image = fullImage;
+    }
 
-          google.maps.event.addListener(marker, 'mouseout', function() {
-              t = setTimeout(function() {
-                  infowindow.close()
-              }, 3000);
-          });
-          google.maps.event.addListener(marker, 'click', function() {
-            infowindow.open(map, marker);
-          });
-       })(marker, i);  
+    var infoTitle = getInfoTitle(retVal[i]);
+    var marker = new google.maps.Marker({
+      position: latlng,
+      map: map,
+      icon: image,
+      shadow: pinShadow,
+      //animation: google.maps.Animation.DROP,
+      title: infoTitle
+    });
+    markers.push(marker);
+    (function(marker, i) {
+      var infoContent = getInfoContent(retVal[i]);
+      var infowindow = new google.maps.InfoWindow({
+        content: infoContent
+      });
+      google.maps.event.addListener(marker, 'mouseover', function() {
+        infowindow.open(map, marker)
+      });
+
+      google.maps.event.addListener(marker, 'mouseout', function() {
+        t = setTimeout(function() {
+          infowindow.close()
+        }, 3000);
+      });
+      google.maps.event.addListener(marker, 'click', function() {
+        infowindow.open(map, marker);
+      });
+    })(marker, i);
   }
 }
 
@@ -129,13 +134,14 @@ function updateMap(map) {
   jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
   var retVal = JSON.parse(jsonstr).retVal;
   updateMarkers(map, retVal);
-  
+
   setTimeout(function() {
     updateMap(map);
   }, 5 * 60 * 1000); // update the ubike information every 5 minutes.
 }
+
 function initialize() {
-  var myLatlng = new google.maps.LatLng(25.03304,121.5656);
+  var myLatlng = new google.maps.LatLng(25.03304, 121.5656);
   var maxLat = 26;
   var maxLng = 121.7;
   var minLat = 23;
@@ -144,12 +150,12 @@ function initialize() {
     navigator.geolocation.getCurrentPosition(function(pos) {
       lat = pos.coords.latitude;
       lng = pos.coords.longitude;
-      console.log("Your position: (Latitude: " + lat +", Longitue: " + lng + ")");
+      console.log("Your position: (Latitude: " + lat + ", Longitue: " + lng + ")");
       if (lat < maxLat &&
-          lat > minLat &&
-          lng < maxLng &&
-          lng > minLng) {
-        myLatlng = new google.maps.LatLng( lat, lng );
+        lat > minLat &&
+        lng < maxLng &&
+        lng > minLng) {
+        myLatlng = new google.maps.LatLng(lat, lng);
       }
     });
   }
@@ -162,31 +168,33 @@ function initialize() {
 
   updateMap(map);
 
-      var routeCoords = [];
-      var routePath ;
-      function geo_success(position) {
-        routeCoords.push(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
-        routePath = new google.maps.Polyline({
-          path: routeCoords,
-          strokeColor: "#0000FF",
-          strokeOpacity: 1.0,
-          strokeWeight: 2
-        });
-        routePath.setMap(map);
-      }
+  var routeCoords = [];
+  var routePath;
 
-      function geo_error() {
-        console.log("Sorry, no position available.");
-      }
+  function geo_success(position) {
+    routeCoords.push(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
+    routePath = new google.maps.Polyline({
+      path: routeCoords,
+      strokeColor: "#0000FF",
+      strokeOpacity: 1.0,
+      strokeWeight: 2
+    });
+    routePath.setMap(map);
+  }
 
-      var geo_options = {
-        enableHighAccuracy: true, 
-        maximumAge        : 0, 
-        timeout           : 2000
-      };
+  function geo_error() {
+    console.log("Sorry, no position available.");
+  }
 
-      var wpid = navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
+  var geo_options = {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 2000
+  };
+
+  var wpid = navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
 }
+
 function refreshubike() {
   updateMap(map);
 }
