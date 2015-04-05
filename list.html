@@ -27,8 +27,18 @@
 			var obj = JSON.parse(response).retVal;
 			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
-
-				content = content + "<tr><td>" + i + "</td><td>" + obj[i].sna + "</td><td>" + obj[i].ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+				var sna, ar;
+				if (isZh) {
+					sna = obj[i].sna;
+					ar = obj[i].sarea + obj[i].ar;
+				} else {
+					sna = obj[i].snaen;
+					ar = obj[i].sareaen + obj[i].aren;
+				}
+				content = content + "<tr><td>" + i + "</td><td>"
+					+ sna + "</td><td>" + obj[i].ar + "</td><td>"
+					+ obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>"
+					+ obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
 			}
 			content = content + "</table>";
 			document.getElementById("ubike").innerHTML = content;
