@@ -1,41 +1,57 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
 	<script>
-	function httpGet(url) {
-	  xmlHttp = new XMLHttpRequest({mozSystem:true});
-	  xmlHttp.open( "GET", url, false );
-	  xmlHttp.send( null );
-	  return xmlHttp.responseText;
-	}
-	function init() {
-	url = "http://opendata.dot.taipei.gov.twopendata/gwjs_cityhall.json";
-	url = 'http://ubike.net46.net/ubikejson.php';
-	response = httpGet(url);
-	//document.getElementById("ubike").innerHTML = response;
-	obj = JSON.parse(response).retVal;
-	content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th><th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
-	for (i in obj ) {
-	  content = content + "<tr><td>" + i + "</td><td>" + obj[i].sna + "</td><td>" + obj[i].ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot-obj[i].sbi) + "</td></tr>\n";
-	}
-	content = content + "</table>";
-	document.getElementById("ubike").innerHTML = content;
-	}
+		function httpGet(url) {
+			var xmlHttp = new XMLHttpRequest({
+				mozSystem: true
+			});
+			xmlHttp.open("GET", url, false);
+			xmlHttp.send(null);
+			return xmlHttp.responseText;
+		}
+
+		function init() {
+			var url = "http://opendata.dot.taipei.gov.twopendata/gwjs_cityhall.json";
+			url = 'http://ubike.net46.net/ubikejson.php';
+			var userLang = navigator.language || navigator.userLanguage;
+			var isZh = false;
+			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
+				isZh = true;
+			}
+			var response = httpGet(url);
+			//document.getElementById("ubike").innerHTML = response;
+			var obj = JSON.parse(response).retVal;
+			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+			for (var i in obj) {
+
+				content = content + "<tr><td>" + i + "</td><td>" + obj[i].sna + "</td><td>" + obj[i].ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+			}
+			content = content + "</table>";
+			document.getElementById("ubike").innerHTML = content;
+		}
 	</script>
-    <style>
-		tr:nth-child(even) {background: #CCC}
-		tr:nth-child(odd) {background: #FFF}
-    </style>
+	<style>
+		tr:nth-child(even) {
+			background: #CCC
+		}
+		tr:nth-child(odd) {
+			background: #FFF
+		}
+	</style>
 </head>
+
 <body onload=init()>
 	<p id='ubike'></p>
+</body>
+
+</html>
 <!-- START OF HIT COUNTER CODE -->
 <!--br><script language="JavaScript" src="http://www.counter160.com/js.js?img=9"></script><br><a href="http://www.000webhost.com"><img src="http://www.counter160.com/images/9/left.png" alt="Free web hosting" border="0" align="texttop"></a><a href="http://www.hosting24.com"><img alt="Web hosting" src="http://www.counter160.com/images/9/right.png" border="0" align="texttop"></a-->
 <!-- END OF HIT COUNTER CODE -->
-</body>
-</html>
 <!-- Hosting24 Analytics Code -->
-<script type="text/javascript" src="http://stats.hosting24.com/count.php"></script>
+<!--script type="text/javascript" src="http://stats.hosting24.com/count.php"></script-->
 <!-- End Of Analytics Code -->
