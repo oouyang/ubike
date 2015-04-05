@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='UTF-8'>
+	<title>ubike site list</title>
+	<script>
+		function httpGet(url) {
+			var xmlHttp = new XMLHttpRequest({
+				mozSystem: true
+			});
+			xmlHttp.open("GET", url, false);
+			xmlHttp.send(null);
+			return xmlHttp.responseText;
+		}
+
+		function init() {
+			var url = 'http://ubike.net46.net/ubikecht.php';
+			var response = httpGet(url);
+			var obj = JSON.parse(response);
+			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+			for (var i in obj) {
+				var sna, ar;
+				sna = obj[i].sna;
+				ar = obj[i].sarea + ' ' + obj[i].ar;
+				content = content + "<tr><td>" + i + "</td><td>"
+					+ sna + "</td><td>" + ar + "</td><td>"
+					+ obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>"
+					+ obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+			}
+			content = content + "</table>";
+			document.getElementById("ubike").innerHTML = content;
+		}
+	</script>
+	<style>
+		tr:nth-child(even) {
+			background: #CCC
+		}
+		tr:nth-child(odd) {
+			background: #FFF
+		}
+	</style>
+</head>
+
+<body onload=init()>
+	<p id='ubike'></p>
+</body>
+
+</html>
