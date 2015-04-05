@@ -58,12 +58,12 @@
 					 var trow = tbl.getElementsByTagName('tr')[i];
 					 var td = document.createElement('td');
 					 if ( trow.rowIndex === 0) {
-					   var txt = document.createTextNode('dist');
+					   var txt = document.createTextNode('距離');
 					 } else {
 					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
 					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
 					 	var dist = getDistanceFromLatLonInM(lat, lng,
-					 		lat1, lng1);
+					 		lat1, lng1).toFixed(2);
 					   var txt = document.createTextNode(dist);
 					 }
 					 td.appendChild(txt);
