@@ -38,12 +38,12 @@
 			response = response.substring(0, response.indexOf('<') - 1);
 			var obj = JSON.parse(response);
 			ubikeObj = obj;
-			var content = '<table id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th> (經度, 緯度) </th><th>可借數</th><th>可停數</th></tr>';
+			var content = '<table id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
 				ar = obj[i].sarea + ' ' + obj[i].ar;
-				content = content + "<tr><td>" + i + "</td><td>" + sna + "</td><td>" + ar + "</td><td> (" + obj[i].lat + ", " + obj[i].lng + ") </td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+				content = content + "<tr><td>" + i + "</td><td>" + sna + "</td><td>" + ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
 			}
 			content = content + "</table>";
 			document.getElementById("ubike").innerHTML = content;
@@ -60,8 +60,10 @@
 					 if ( trow.rowIndex === 0) {
 					   var txt = document.createTextNode('dist');
 					 } else {
+					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
+					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
 					 	var dist = getDistanceFromLatLonInM(lat, lng,
-					 		ubikeObj[i].lat, ubikeObj[i].lng);
+					 		lat1, lng1);
 					   var txt = document.createTextNode(dist);
 					 }
 					 td.appendChild(txt);
