@@ -17,6 +17,7 @@
 		function init() {
 			var url = 'http://ubike.net46.net/ubikecht.php';
 			var response = httpGet(url);
+			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
 			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
