@@ -19,7 +19,7 @@
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
-			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th> (經度, 緯度) </th><th>可借數</th><th>可停數</th></tr>';
+			var content = '<table id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th> (經度, 緯度) </th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
@@ -31,6 +31,19 @@
 			}
 			content = content + "</table>";
 			document.getElementById("ubike").innerHTML = content;
+			if ("geolocation" in navigator) {
+			    navigator.geolocation.getCurrentPosition(function(pos) {
+			      var lat = pos.coords.latitude;
+			      var lng = pos.coords.longitude;
+			      console.log("Your position: (Latitude: " + lat + ", Longitue: " + lng + ")");
+			      if (lat < maxLat &&
+			        lat > minLat &&
+			        lng < maxLng &&
+			        lng > minLng) {
+			        var myLatlng = new google.maps.LatLng(lat, lng);
+			      }
+			    });
+			}
 		}
 	</script>
 	<style>
