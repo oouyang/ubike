@@ -19,13 +19,16 @@
 			url = 'http://ubike.net46.net/ubikejson.php';
 			var userLang = navigator.language || navigator.userLanguage;
 			var isZh = false;
-			// if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-			// 	isZh = true;
-			// }
+			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
+				isZh = false;
+			}
 			var response = httpGet(url);
 			//document.getElementById("ubike").innerHTML = response;
 			var obj = JSON.parse(response).retVal;
-			var content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+			var content = '<table border=1><tr><th>#</th><th>Station</th><th>Location</th>' + '<th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
+			if (isZh) {
+				content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+			}
 			for (var i in obj) {
 				var sna, ar;
 				if (isZh) {
