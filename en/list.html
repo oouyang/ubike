@@ -17,6 +17,7 @@
 		function init() {
 			var url = 'http://ubike.net46.net/ubikeen.php';
 			var response = httpGet(url);
+			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
 			var content = '<table border=1><tr><th>#</th><th>Station</th><th>Location</th>' + '<th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 			for (var i in obj) {
