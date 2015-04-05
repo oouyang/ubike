@@ -20,7 +20,7 @@
 			var userLang = navigator.language || navigator.userLanguage;
 			var isZh = false;
 			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-				isZh = false;
+				isZh = true;
 			}
 			var response = httpGet(url);
 			//document.getElementById("ubike").innerHTML = response;
@@ -33,10 +33,10 @@
 				var sna, ar;
 				if (isZh) {
 					sna = obj[i].sna;
-					ar = obj[i].sarea + obj[i].ar;
+					ar = obj[i].sarea + ' ' + obj[i].ar;
 				} else {
 					sna = obj[i].snaen;
-					ar = obj[i].sareaen + obj[i].aren;
+					ar = obj[i].sareaen + ' ' + obj[i].aren;
 				}
 				content = content + "<tr><td>" + i + "</td><td>"
 					+ sna + "</td><td>" + ar + "</td><td>"
