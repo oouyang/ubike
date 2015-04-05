@@ -19,9 +19,9 @@
 			url = 'http://ubike.net46.net/ubikejson.php';
 			var userLang = navigator.language || navigator.userLanguage;
 			var isZh = false;
-			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-				isZh = true;
-			}
+			// if (userLang == 'zh-TW' || userLang == 'zh-CN') {
+			// 	isZh = true;
+			// }
 			var response = httpGet(url);
 			//document.getElementById("ubike").innerHTML = response;
 			var obj = JSON.parse(response).retVal;
