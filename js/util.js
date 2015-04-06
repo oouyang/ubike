@@ -16,8 +16,9 @@ function net46JSONFile(path, callback) {
     httpRequest.onreadystatechange = function() {
         if (httpRequest.readyState === 4) {
             if (httpRequest.status === 200) {
-                var data = JSON.parse(httpRequest.responseText);
-                data = data.substring(0, data.indexOf('<')-1);
+                var str = httpRequest.responseText;
+                str = str.substring(0, str.indexOf('<')-1);
+                var data = JSON.parse(str);
                 if (callback) callback(data);
             }
         }
