@@ -4,7 +4,8 @@
 <head>
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
-	<script type="text/javascript" src="../sorttable.js"></script>
+	<script type="text/javascript" src="../js/sortable.min.js"></script>
+	<link rel="stylesheet" href="../css/sortable-theme-bootstrap.css" type="text/css" />
 	<script>
 		function httpGet(url) {
 			var xmlHttp = new XMLHttpRequest({
@@ -36,7 +37,7 @@
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
-			var content = '<table id=tbl class=sortable border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
+			var content = '<table id=tbl data-sortable class=sortable-theme-bootstrap border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
@@ -77,8 +78,8 @@
 					 td.appendChild(txt);
 					 trow.appendChild(td);
 					}
-					sorttable.makeSortable(tbl);
-					sorttable.innerSortFunction.apply(myth, []);
+					// sorttable.makeSortable(tbl);
+					// sorttable.innerSortFunction.apply(myth, []);
 				});
 			}
 		}
