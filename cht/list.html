@@ -57,7 +57,7 @@
 					var rows = tbl.getElementsByTagName('tr');
 					for (var i = 0; i < rows.length; i++ ) {
 					 var trow = tbl.getElementsByTagName('tr')[i];
-					 var td = document.createElement('td');
+					 var td = document.createElement((i==0)?'th':'td');
 					 if ( trow.rowIndex === 0) {
 					   var txt = document.createTextNode('距離(m)');
 					   myth = td;
