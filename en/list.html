@@ -49,7 +49,6 @@
 			content = content + "</table>";
 			document.getElementById("ubike").innerHTML = content;
 			var tbl = document.getElementById('tbl');
-			sorttable.makeSortable(tbl);
 			if ("geolocation" in navigator) {
 				navigator.geolocation.getCurrentPosition(function(pos) {
 					var lat = pos.coords.latitude;
@@ -78,6 +77,7 @@
 					 td.appendChild(txt);
 					 trow.appendChild(td);
 					}
+					sorttable.makeSortable(tbl);
 					sorttable.innerSortFunction.apply(myth, []);
 				});
 			}
