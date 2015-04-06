@@ -68,7 +68,12 @@
 					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
 					 	var dist = getDistanceFromLatLonInM(lat, lng,
 					 		lat1, lng1).toFixed(2);
-					   var txt = document.createTextNode(dist);
+					    var txt = document.createTextNode(dist);
+					    trow.onclick = function(){
+                          var cell = this.getElementsByTagName("td")[2];
+                          var id = cell.innerHTML;
+                          window.open('https://www.google.com/maps/place/' + id,'_self');
+                        };
 					 }
 					 td.appendChild(txt);
 					 trow.appendChild(td);
