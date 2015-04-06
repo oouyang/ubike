@@ -30,14 +30,12 @@
 		function deg2rad(deg) {
 			return deg * (Math.PI / 180)
 		}
-		var ubikeObj;
 
 		function init() {
 			var url = 'http://ubike.net46.net/ubikecht.php';
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<') - 1);
 			var obj = JSON.parse(response);
-			ubikeObj = obj;
 			var content = '<table id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
@@ -58,7 +56,7 @@
 					 var trow = tbl.getElementsByTagName('tr')[i];
 					 var td = document.createElement('td');
 					 if ( trow.rowIndex === 0) {
-					   var txt = document.createTextNode('距離');
+					   var txt = document.createTextNode('距離(m)');
 					 } else {
 					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
 					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);

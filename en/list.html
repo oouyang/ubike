@@ -35,7 +35,7 @@
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
-			var content = '<table id=tbl border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th></th>Lng) </th><th>Bike #</th><th>Park #</th></tr>';
+			var content = '<table id=tbl border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
