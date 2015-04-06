@@ -11,6 +11,20 @@ function fetchJSONFile(path, callback) {
     httpRequest.open('GET', path);
     httpRequest.send();
 }
+function net46JSONFile(path, callback) {
+    var httpRequest = new XMLHttpRequest();
+    httpRequest.onreadystatechange = function() {
+        if (httpRequest.readyState === 4) {
+            if (httpRequest.status === 200) {
+                var data = JSON.parse(httpRequest.responseText);
+                data = data.substring(0, data.indexOf('<')-1);
+                if (callback) callback(data);
+            }
+        }
+    };
+    httpRequest.open('GET', path);
+    httpRequest.send();
+}
 function httpGet(url) {
 	var xmlHttp = new XMLHttpRequest({
 		mozSystem: true
