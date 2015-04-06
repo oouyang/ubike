@@ -5,32 +5,9 @@
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
 	<script type="text/javascript" src="../sorttable.js"></script>
+	<script type="text/javascript" src="../js/util.js"></script>
 	<link rel="stylesheet" href="../css/sortable-theme-dark.css" type="text/css" />
 	<script>
-		function httpGet(url) {
-			var xmlHttp = new XMLHttpRequest({
-				mozSystem: true
-			});
-			xmlHttp.open("GET", url, false);
-			xmlHttp.send(null);
-			return xmlHttp.responseText;
-		}
-		function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-			var R = 6371000; // Radius of the earth in km
-			var dLat = deg2rad(lat2 - lat1); // deg2rad below
-			var dLon = deg2rad(lon2 - lon1);
-			var a =
-				Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-				Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-				Math.sin(dLon / 2) * Math.sin(dLon / 2);
-			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-			var d = R * c; // Distance in km
-			return d;
-		}
-
-		function deg2rad(deg) {
-			return deg * (Math.PI / 180)
-		}
 
 		function init() {
 			var url = 'http://ubike.net46.net/ubikeen.php';
