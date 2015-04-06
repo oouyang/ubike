@@ -5,6 +5,7 @@
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
 	<script type="text/javascript" src="../sorttable.js"></script>
+	<link rel="stylesheet" href="../css/sortable-theme-finder.css" type="text/css" />
 	<script>
 		function httpGet(url) {
 			var xmlHttp = new XMLHttpRequest({
@@ -37,7 +38,7 @@
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<') - 1);
 			var obj = JSON.parse(response);
-			var content = '<table class=sortalbe id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+			var content = '<table class="sorttable sortable-theme-finder"  id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
@@ -81,14 +82,14 @@
 			}
 		}
 	</script>
-	<style>
-		tr:nth-child(even) {
-			background: #CCC
-		}
-		tr:nth-child(odd) {
-			background: #FFF
-		}
-	</style>
+	<!--<style>-->
+	<!--	tr:nth-child(even) {-->
+	<!--		background: #CCC-->
+	<!--	}-->
+	<!--	tr:nth-child(odd) {-->
+	<!--		background: #FFF-->
+	<!--	}-->
+	<!--</style>-->
 </head>
 
 <body onload=init()>
