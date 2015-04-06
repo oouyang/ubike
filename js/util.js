@@ -19,6 +19,7 @@ function net46JSONFile(path, callback) {
                 var str = httpRequest.responseText;
                 str = str.substring(0, str.indexOf('<')-1);
                 var data = JSON.parse(str);
+
                 if (callback) callback(data);
             }
         }
@@ -26,6 +27,7 @@ function net46JSONFile(path, callback) {
     httpRequest.open('GET', path);
     httpRequest.send();
 }
+
 function httpGet(url) {
 	var xmlHttp = new XMLHttpRequest({
 		mozSystem: true
@@ -34,8 +36,9 @@ function httpGet(url) {
 	xmlHttp.send(null);
 	return xmlHttp.responseText;
 }
+
 function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-	var R = 6371000; // Radius of the earth in km
+	var R = 6371007; // Radius of the earth in km
 	var dLat = deg2rad(lat2 - lat1); // deg2rad below
 	var dLon = deg2rad(lon2 - lon1);
 	var a =

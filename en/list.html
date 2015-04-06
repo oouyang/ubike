@@ -1,79 +1,64 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-	<meta charset='UTF-8'>
-	<title>ubike site list</title>
-	<script type="text/javascript" src="../sorttable.js"></script>
-	<script type="text/javascript" src="../js/util.js"></script>
-	<link rel="stylesheet" href="../css/sortable-theme-dark.css" type="text/css" />
-	<script>
+<meta charset='UTF-8'>
+<title>ubike site list</title>
+<script type="text/javascript" src="../sorttable.js"></script>
+<script type="text/javascript" src="../js/util.js"></script>
+<link rel="stylesheet" href="../css/sortable-theme-dark.css" type="text/css" />
+<script>
+function init() {
+	var url = 'http://ubike.net46.net/ubikeen.php';
+	var response = httpGet(url);
+	response = response.substring(0, response.indexOf('<') - 1);
+	var obj = JSON.parse(response);
+	var content = '<table id=tbl data-sortable class="sorttable sortable-theme-finder" border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
+	for (var i in obj) {
+		var sna, ar;
+		sna = obj[i].sna;
+		ar = obj[i].sarea + ' ' + obj[i].ar;
+		content = content + "<tr><td>" + i + "</td><td>" + sna + "</td><td>" + ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+	}
+	content = content + "</table>";
+	document.getElementById("ubike").innerHTML = content;
+	var tbl = document.getElementById('tbl');
+	if ("geolocation" in navigator) {
+		navigator.geolocation.getCurrentPosition(function(pos) {
+			var lat = pos.coords.latitude;
+			var lng = pos.coords.longitude;
+			var myth;
 
-		function init() {
-			var url = 'http://ubike.net46.net/ubikeen.php';
-			var response = httpGet(url);
-			response = response.substring(0, response.indexOf('<')-1);
-			var obj = JSON.parse(response);
-			var content = '<table id=tbl data-sortable class="sorttable sortable-theme-finder" border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
-			for (var i in obj) {
-				var sna, ar;
-				sna = obj[i].sna;
-				ar = obj[i].sarea + ' ' + obj[i].ar;
-				content = content + "<tr><td>" + i + "</td><td>"
-					+ sna + "</td><td>" + ar + "</td><td>"
-					+ obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>"
-					+ obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+			var rows = tbl.getElementsByTagName('tr');
+			for (var i = 0; i < rows.length; i++) {
+				var trow = tbl.getElementsByTagName('tr')[i];
+				var td = document.createElement((i == 0) ? 'th' : 'td');
+				if (trow.rowIndex === 0) {
+					var txt = document.createTextNode('Distance(m)');
+					myth = td;
+				}
+				else {
+					var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
+					var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
+					var dist = getDistanceFromLatLonInM(lat, lng,
+						lat1, lng1).toFixed(0);
+					var txt = document.createTextNode(dist);
+					// trow.onclick = function(){
+					//                 var cell = this.getElementsByTagName("td")[2];
+					//                 var id = cell.innerHTML;
+					//                 window.open('https://www.google.com/maps/place/' + id,'_self');
+					//               };
+				}
+				td.appendChild(txt);
+				trow.appendChild(td);
 			}
-			content = content + "</table>";
-			document.getElementById("ubike").innerHTML = content;
-			var tbl = document.getElementById('tbl');
-			if ("geolocation" in navigator) {
-				navigator.geolocation.getCurrentPosition(function(pos) {
-					var lat = pos.coords.latitude;
-					var lng = pos.coords.longitude;
-					var myth;
-
-					var rows = tbl.getElementsByTagName('tr');
-					for (var i = 0; i < rows.length; i++ ) {
-					 var trow = tbl.getElementsByTagName('tr')[i];
-					 var td = document.createElement((i==0)?'th':'td');
-					 if ( trow.rowIndex === 0) {
-					   var txt = document.createTextNode('Distance(m)');
-					   myth = td;
-					 } else {
-					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
-					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
-					 	var dist = getDistanceFromLatLonInM(lat, lng,
-					 		lat1, lng1).toFixed(2);
-					    var txt = document.createTextNode(dist);
-					    // trow.onclick = function(){
-         //                 var cell = this.getElementsByTagName("td")[2];
-         //                 var id = cell.innerHTML;
-         //                 window.open('https://www.google.com/maps/place/' + id,'_self');
-         //               };
-					 }
-					 td.appendChild(txt);
-					 trow.appendChild(td);
-					}
-					// Sortable.init();
-					sorttable.makeSortable(tbl);
-					sorttable.innerSortFunction.apply(myth, []);
-				});
-			}
-		}
-	</script>
-	<!--<style>-->
-	<!--	tr:nth-child(even) {-->
-	<!--		background: #CCC-->
-	<!--	}-->
-	<!--	tr:nth-child(odd) {-->
-	<!--		background: #FFF-->
-	<!--	}-->
-	<!--</style>-->
+			sorttable.makeSortable(tbl);
+			sorttable.innerSortFunction.apply(myth, []);
+		});
+	}
+}
+</script>
 </head>
-
 <body onload=init()>
 	<p id='ubike'></p>
 </body>
-
 </html>
