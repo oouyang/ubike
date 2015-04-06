@@ -50,6 +50,7 @@
 				navigator.geolocation.getCurrentPosition(function(pos) {
 					var lat = pos.coords.latitude;
 					var lng = pos.coords.longitude;
+					var myth;
 
 					var tbl = document.getElementById('tbl');
 					var rows = tbl.getElementsByTagName('tr');
@@ -58,6 +59,7 @@
 					 var td = document.createElement('td');
 					 if ( trow.rowIndex === 0) {
 					   var txt = document.createTextNode('<b>距離(m)</b>');
+					   myth = td;
 					 } else {
 					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
 					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
@@ -69,6 +71,7 @@
 					 trow.appendChild(td);
 					}
 					sorttable.makeSortable(tbl);
+					sorttable.innerSortFunction.apply(myth, []);
 				});
 			}
 		}
