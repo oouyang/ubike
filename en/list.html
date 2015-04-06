@@ -59,7 +59,7 @@
 					 var trow = tbl.getElementsByTagName('tr')[i];
 					 var td = document.createElement('td');
 					 if ( trow.rowIndex === 0) {
-					   var txt = document.createTextNode('Distance(m)');
+					   var txt = document.createTextNode('<b>Distance(m)</b>');
 					 } else {
 					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
 					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
