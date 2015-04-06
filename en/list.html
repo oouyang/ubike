@@ -5,7 +5,7 @@
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
 	<script type="text/javascript" src="../js/sortable.min.js"></script>
-	<link rel="stylesheet" href="../css/sortable-theme-bootstrap.css" type="text/css" />
+	<link rel="stylesheet" href="../css/sortable-theme-finder.css" type="text/css" />
 	<script>
 		function httpGet(url) {
 			var xmlHttp = new XMLHttpRequest({
@@ -37,7 +37,7 @@
 			var response = httpGet(url);
 			response = response.substring(0, response.indexOf('<')-1);
 			var obj = JSON.parse(response);
-			var content = '<table id=tbl data-sortable class=sortable-theme-bootstrap border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
+			var content = '<table id=tbl data-sortable class=sortable-theme-finder border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 			for (var i in obj) {
 				var sna, ar;
 				sna = obj[i].sna;
@@ -84,14 +84,14 @@
 			}
 		}
 	</script>
-	<style>
-		tr:nth-child(even) {
-			background: #CCC
-		}
-		tr:nth-child(odd) {
-			background: #FFF
-		}
-	</style>
+	<!--<style>-->
+	<!--	tr:nth-child(even) {-->
+	<!--		background: #CCC-->
+	<!--	}-->
+	<!--	tr:nth-child(odd) {-->
+	<!--		background: #FFF-->
+	<!--	}-->
+	<!--</style>-->
 </head>
 
 <body onload=init()>
