@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Store locator with Panel</title>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?libraries=places"></script>
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js">
+    </script>
+    <script src="js/store-locator.min.js"></script>
+    <script src="ubike.js"></script>
+    <link rel="stylesheet" href="css/storelocator.css">
+    <style >
+      body { font-family: sans-serif; }
+      #map-canvas, #panel { height: 500px; }
+      #panel { width: 300px; float: left; margin-right: 10px; }
+      #panel .feature-filter label { width: 130px; }
+      p.attribution, p.attribution a { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>YouBike</h1>
+    <div id="panel"></div>
+    <div id="map-canvas"></div>
+  </body>
+</html>
