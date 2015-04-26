@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <!-- Read this before publishing packages to chocolatey.org: https://github.com/chocolatey/chocolatey/wiki/CreatePackages -->
+    <id>android-tools-adb</id>
+    <title>choco android tools adb</title>
+    <version>1.2</version>
+    <authors>http://sourceforge.net/users/cbabb</authors>
+    <owners>oouyang</owners>
+    <summary>install adb and fastboot</summary>
+    <description>If you need pure adb instead install Android SDK</description>
+    <projectUrl>http://sourceforge.net/projects/adbstandalone/</projectUrl>
+    <tags>android-tools-adb admin</tags>
+    <copyright>http://sourceforge.net/users/cbabb</copyright>
+    <!--licenseUrl>http://mozilla.org</licenseUrl-->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <!-- Important note about https://cdn.rawgit.com: Files are cached permanently after the first request. Use commit URLs when updating the icon. -->
+    <iconUrl>http://oouyang.github.io/ubike/img/adb.png</iconUrl>
+    <!--<dependencies>
+      <dependency id="" version="" />
+    </dependencies>-->
+    <releaseNotes></releaseNotes>
+  </metadata>
+  <!--files>
+    <file src="tools\**" target="tools" />
+  </files-->
+</package>
