@@ -6,7 +6,7 @@
   "icons":{
     "512": "http://oouyang.github.io/ubike/img/QQ1.png"
   },
-  "launch_path": "/qq/index.html",
+  "launch_path": "/ubike/qq/index.html",
   "developer": {
     "name": "Owen Ouyang",
       "url": "https://github.com/oouyang"
