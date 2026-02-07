@@ -23,189 +23,290 @@
     <script>FlurryAgent.startSession('PC3GQQ4V4RFBV7CSG4FJ');</script>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
     <script>
-var map;
-var manifest_url = location.href + 'manifest.webapp';
-var jsonstr = '';
-var markers = [];
-var okColor = "80FF00";
-var emptyColor = "FF9E21";
-var fullColor = "FF4D00";
-var okImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + okColor,
-  new google.maps.Size(21, 34),
-  new google.maps.Point(0, 0),
-  new google.maps.Point(10, 34));
-var emptyImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + emptyColor,
-  new google.maps.Size(21, 34),
-  new google.maps.Point(0, 0),
-  new google.maps.Point(10, 34));
-var fullImage = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|" + fullColor,
-  new google.maps.Size(21, 34),
-  new google.maps.Point(0, 0),
-  new google.maps.Point(10, 34));
-var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?chst=d_map_pin_shadow",
-  new google.maps.Size(40, 37),
-  new google.maps.Point(0, 0),
-  new google.maps.Point(12, 35));
+'use strict';
 
-function getInfoTitle(site) {
-  var userLang = navigator.language || navigator.userLanguage;
-  if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-    return site.ar + "\n(" + site.available_rent_bikes + "/" + site.available_return_bikes + ")";
+// Configuration
+const CONFIG = {
+  API_URL: 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json',
+  REFRESH_INTERVAL: 5 * 60 * 1000, // 5 minutes
+  DEFAULT_CENTER: { lat: 25.03304, lng: 121.5656 },
+  DEFAULT_ZOOM: 16,
+  BOUNDS: {
+    maxLat: 26,
+    minLat: 23,
+    maxLng: 121.7,
+    minLng: 121.4
   }
-  // use en-US as default
-  return site.aren + "\n( bikes: " + site.available_rent_bikes + "/ slots: " + site.available_return_bikes + ")";
+};
+
+// Marker colors
+const COLORS = {
+  OK: '80FF00',      // Green - bikes & slots available
+  EMPTY: 'FF9E21',   // Orange - no bikes
+  FULL: 'FF4D00'     // Red - no parking slots
+};
+
+// Create marker images
+function createMarkerImage(color) {
+  return new google.maps.MarkerImage(
+    `http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${color}`,
+    new google.maps.Size(21, 34),
+    new google.maps.Point(0, 0),
+    new google.maps.Point(10, 34)
+  );
+}
+
+const MARKER_IMAGES = {
+  ok: createMarkerImage(COLORS.OK),
+  empty: createMarkerImage(COLORS.EMPTY),
+  full: createMarkerImage(COLORS.FULL),
+  shadow: new google.maps.MarkerImage(
+    'http://chart.apis.google.com/chart?chst=d_map_pin_shadow',
+    new google.maps.Size(40, 37),
+    new google.maps.Point(0, 0),
+    new google.maps.Point(12, 35)
+  )
+};
+
+// State
+let map = null;
+let markers = [];
+let refreshTimer = null;
+
+// Locale detection
+function isChineseLocale() {
+  const userLang = navigator.language || navigator.userLanguage;
+  return userLang === 'zh-TW' || userLang === 'zh-CN';
+}
+
+// Info window content generators
+function getInfoTitle(site) {
+  const bikes = site.available_rent_bikes;
+  const slots = site.available_return_bikes;
+
+  if (isChineseLocale()) {
+    return `${site.ar}\n(${bikes}/${slots})`;
+  }
+  return `${site.aren}\n(bikes: ${bikes} / slots: ${slots})`;
 }
 
 function getInfoContent(site) {
-  var userLang = navigator.language || navigator.userLanguage;
-  if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-    return '<div id="content">' +
-      '<h4 id="firstHeading" class="firstHeading">' + site.sna + '</h3>' +
-      '&#31449;&#40670;&#20301;&#32622; : ' + site.ar +
-      '<br>&#21487;&#20511;&#36554;&#36635; : ' + site.available_rent_bikes + ' &#36635; ' +
-      '<br>&#21487;&#20572;&#31354;&#20301; : ' + site.available_return_bikes + ' &#36635; ' +
-      '</div>';
+  const bikes = site.available_rent_bikes;
+  const slots = site.available_return_bikes;
+
+  if (isChineseLocale()) {
+    return `<div id="content">
+      <h4 class="firstHeading">${site.sna}</h4>
+      站點位置: ${site.ar}<br>
+      可借車輛: ${bikes} 輛<br>
+      可停空位: ${slots} 輛
+    </div>`;
   }
-  // use en-US as default
-  return '<div id="content">' +
-    '<h4 id="firstHeading" class="firstHeading">' + site.snaen + '</h3>' +
-    'location: ' + site.aren +
-    '<br>bikes: ' + site.available_rent_bikes +
-    '<br>slots: ' + site.available_return_bikes +
-    '</div>';
+  return `<div id="content">
+    <h4 class="firstHeading">${site.snaen}</h4>
+    Location: ${site.aren}<br>
+    Bikes: ${bikes}<br>
+    Slots: ${slots}
+  </div>`;
 }
 
-function httpGet(url) {
-  xmlHttp = new XMLHttpRequest({
-    mozSystem: true
-  });
-  xmlHttp.open("GET", url, false);
-  xmlHttp.send(null);
-  return xmlHttp.responseText;
+// Determine marker image based on availability
+function getMarkerImage(station) {
+  if (station.available_rent_bikes === 0) {
+    return MARKER_IMAGES.empty;
+  }
+  if (station.available_return_bikes === 0) {
+    return MARKER_IMAGES.full;
+  }
+  return MARKER_IMAGES.ok;
 }
 
-function updateMarkers(map, stations) {
-  // clear
-  for (var i = 0; i < markers.length; i++) {
-    markers[i].setMap(null);
-  }
+// Clear all markers from map
+function clearMarkers() {
+  markers.forEach(marker => marker.setMap(null));
   markers = [];
-  for (i in stations) {
-    latlng = new google.maps.LatLng(stations[i].latitude, stations[i].longitude);
-    var image = okImage;
-    if (stations[i].available_rent_bikes == 0) {
-      image = emptyImage;
-    }
-    else if (stations[i].available_return_bikes == 0) {
-      image = fullImage;
-    }
+}
 
-    var infoTitle = getInfoTitle(stations[i]);
-    var marker = new google.maps.Marker({
-      position: latlng,
-      map: map,
-      icon: image,
-      shadow: pinShadow,
-      //animation: google.maps.Animation.DROP,
-      title: infoTitle
+// Create markers for all stations
+function updateMarkers(stations) {
+  console.log(`[UBike] Updating ${stations.length} markers`);
+  clearMarkers();
+
+  stations.forEach((station, index) => {
+    const position = new google.maps.LatLng(station.latitude, station.longitude);
+    const marker = new google.maps.Marker({
+      position,
+      map,
+      icon: getMarkerImage(station),
+      shadow: MARKER_IMAGES.shadow,
+      title: getInfoTitle(station)
     });
-    markers.push(marker);
-    (function(marker, i) {
-      var infoContent = getInfoContent(stations[i]);
-      var infowindow = new google.maps.InfoWindow({
-        content: infoContent
-      });
-      google.maps.event.addListener(marker, 'mouseover', function() {
-        infowindow.open(map, marker)
-      });
 
-      google.maps.event.addListener(marker, 'mouseout', function() {
-        t = setTimeout(function() {
-          infowindow.close()
-        }, 3000);
-      });
-      google.maps.event.addListener(marker, 'click', function() {
-        infowindow.open(map, marker);
-      });
-    })(marker, i);
-  }
-}
+    // Info window setup
+    const infoWindow = new google.maps.InfoWindow({
+      content: getInfoContent(station)
+    });
 
-function updateMap(map) {
-  // refresh
-  jsonstr = httpGet('https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json');
-  var stations = JSON.parse(jsonstr);
-  updateMarkers(map, stations);
+    let closeTimeout = null;
 
-  setTimeout(function() {
-    updateMap(map);
-  }, 5 * 60 * 1000); // update the ubike information every 5 minutes.
-}
-
-function initialize() {
-  var myLatlng = new google.maps.LatLng(25.03304, 121.5656);
-  var maxLat = 26;
-  var maxLng = 121.7;
-  var minLat = 23;
-  var minLng = 121.4;
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      lat = pos.coords.latitude;
-      lng = pos.coords.longitude;
-      console.log("Your position: (Latitude: " + lat + ", Longitue: " + lng + ")");
-      if (lat < maxLat &&
-        lat > minLat &&
-        lng < maxLng &&
-        lng > minLng) {
-        myLatlng = new google.maps.LatLng(lat, lng);
+    marker.addListener('mouseover', () => {
+      if (closeTimeout) {
+        clearTimeout(closeTimeout);
+        closeTimeout = null;
       }
+      infoWindow.open(map, marker);
     });
-  }
 
-  var mapOptions = {
-    zoom: 16,
-    center: myLatlng
-  }
-  map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
-  updateMap(map);
-
-  var routeCoords = [];
-  var routePath;
-
-  function geo_success(position) {
-    routeCoords.push(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
-    routePath = new google.maps.Polyline({
-      path: routeCoords,
-      strokeColor: "#0000FF",
-      strokeOpacity: 1.0,
-      strokeWeight: 2
+    marker.addListener('mouseout', () => {
+      closeTimeout = setTimeout(() => infoWindow.close(), 3000);
     });
-    routePath.setMap(map);
+
+    marker.addListener('click', () => {
+      if (closeTimeout) {
+        clearTimeout(closeTimeout);
+        closeTimeout = null;
+      }
+      infoWindow.open(map, marker);
+    });
+
+    markers.push(marker);
+  });
+
+  console.log('[UBike] Markers updated successfully');
+}
+
+// Fetch station data from API
+async function fetchStations() {
+  console.log('[UBike] Fetching station data...');
+  const response = await fetch(CONFIG.API_URL);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  const data = await response.json();
+  console.log(`[UBike] Loaded ${data.length} stations`);
+  return data;
+}
+
+// Update map with fresh data
+async function updateMap() {
+  try {
+    const stations = await fetchStations();
+    updateMarkers(stations);
+  } catch (error) {
+    console.error('[UBike] Failed to update map:', error.message);
   }
 
-  function geo_error() {
-    console.log("Sorry, no position available.");
+  // Schedule next refresh
+  refreshTimer = setTimeout(updateMap, CONFIG.REFRESH_INTERVAL);
+  console.log(`[UBike] Next refresh in ${CONFIG.REFRESH_INTERVAL / 1000}s`);
+}
+
+// Manual refresh handler
+function refreshUbike() {
+  console.log('[UBike] Manual refresh triggered');
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+  }
+  updateMap();
+}
+
+// Check if coordinates are within bounds
+function isWithinBounds(lat, lng) {
+  const { maxLat, minLat, maxLng, minLng } = CONFIG.BOUNDS;
+  return lat < maxLat && lat > minLat && lng < maxLng && lng > minLng;
+}
+
+// Initialize geolocation tracking
+function initGeolocationTracking() {
+  if (!('geolocation' in navigator)) {
+    console.warn('[UBike] Geolocation not supported');
+    return;
   }
 
-  var geo_options = {
+  const routeCoords = [];
+  let routePath = null;
+
+  const options = {
     enableHighAccuracy: true,
     maximumAge: 0,
     timeout: 2000
   };
 
-  var wpid = navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
+  navigator.geolocation.watchPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+      console.log(`[UBike] Position update: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
+
+      routeCoords.push(new google.maps.LatLng(latitude, longitude));
+
+      if (routePath) {
+        routePath.setMap(null);
+      }
+
+      routePath = new google.maps.Polyline({
+        path: routeCoords,
+        strokeColor: '#0000FF',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+      });
+      routePath.setMap(map);
+    },
+    (error) => {
+      console.warn('[UBike] Geolocation error:', error.message);
+    },
+    options
+  );
 }
 
-function refreshubike() {
-  updateMap(map);
+// Initialize the map
+async function initialize() {
+  console.log('[UBike] Initializing map...');
+
+  let center = new google.maps.LatLng(CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng);
+
+  // Try to get user's location for initial center
+  if ('geolocation' in navigator) {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+      });
+      const { latitude, longitude } = position.coords;
+      console.log(`[UBike] User location: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
+
+      if (isWithinBounds(latitude, longitude)) {
+        center = new google.maps.LatLng(latitude, longitude);
+        console.log('[UBike] Centering map on user location');
+      } else {
+        console.log('[UBike] User location outside service area, using default center');
+      }
+    } catch (error) {
+      console.warn('[UBike] Could not get user location:', error.message);
+    }
+  }
+
+  // Create map
+  map = new google.maps.Map(document.getElementById('map-canvas'), {
+    zoom: CONFIG.DEFAULT_ZOOM,
+    center
+  });
+  console.log('[UBike] Map created');
+
+  // Load initial data
+  await updateMap();
+
+  // Start tracking user location
+  initGeolocationTracking();
+
+  console.log('[UBike] Initialization complete');
 }
+
+// Start app when Google Maps is ready
 google.maps.event.addDomListener(window, 'load', initialize);
     </script>
   </head>
   <body>
     <div id="panel">
-      <input onclick="refreshubike();" type=button value="refresh">
+      <input onclick="refreshUbike();" type="button" value="refresh">
     </div>
     <div id="map-canvas"></div>
     <script>
@@ -219,14 +320,14 @@ google.maps.event.addDomListener(window, 'load', initialize);
       ga('send', 'pageview');
 
     </script>
- <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-<!-- FxOS Ubike -->
-<ins class="adsbygoogle"
-     style="display:inline-block;width:320px;height:100px"
-     data-ad-client="ca-pub-0983430695379728"
-     data-ad-slot="6114326151"></ins>
-<script>
-(adsbygoogle = window.adsbygoogle || []).push({});
-</script>
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- FxOS Ubike -->
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:320px;height:100px"
+         data-ad-client="ca-pub-0983430695379728"
+         data-ad-slot="6114326151"></ins>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
   </body>
 </html>

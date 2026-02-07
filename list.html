@@ -5,45 +5,78 @@
 	<meta charset='UTF-8'>
 	<title>ubike site list</title>
 	<script>
-		function httpGet(url) {
-			var xmlHttp = new XMLHttpRequest({
-				mozSystem: true
-			});
-			xmlHttp.open("GET", url, false);
-			xmlHttp.send(null);
-			return xmlHttp.responseText;
+		'use strict';
+
+		const API_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
+
+		function isChineseLocale() {
+			const userLang = navigator.language || navigator.userLanguage;
+			return userLang === 'zh-TW' || userLang === 'zh-CN';
 		}
 
-		function init() {
-			var url = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
-			var userLang = navigator.language || navigator.userLanguage;
-			var isZh = false;
-			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-				isZh = true;
-			}
-			var response = httpGet(url);
-			var obj = JSON.parse(response);
-			var content = '<table border=1><tr><th>#</th><th>Station</th><th>Location</th>' + '<th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
+		function buildTableHeader(isZh) {
 			if (isZh) {
-				content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
+				return '<table border=1><tr><th>#</th><th>站名</th><th>位置</th><th>緯度</th><th>經度</th><th>可借數</th><th>可停數</th></tr>';
 			}
-			for (var i in obj) {
-				var sna, ar;
-				if (isZh) {
-					sna = obj[i].sna;
-					ar = obj[i].sarea + ' ' + obj[i].ar;
-				} else {
-					sna = obj[i].snaen;
-					ar = obj[i].sareaen + ' ' + obj[i].aren;
-				}
-				content = content + "<tr><td>" + (parseInt(i) + 1) + "</td><td>"
-					+ sna + "</td><td>" + ar + "</td><td>"
-					+ obj[i].latitude + "</td><td>" + obj[i].longitude + "</td><td>"
-					+ obj[i].available_rent_bikes + "</td><td>" + obj[i].available_return_bikes + "</td></tr>\n";
-			}
-			content = content + "</table>";
-			document.getElementById("ubike").innerHTML = content;
+			return '<table border=1><tr><th>#</th><th>Station</th><th>Location</th><th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 		}
+
+		function buildTableRow(station, index, isZh) {
+			const name = isZh ? station.sna : station.snaen;
+			const location = isZh
+				? `${station.sarea} ${station.ar}`
+				: `${station.sareaen} ${station.aren}`;
+
+			return `<tr>
+				<td>${index + 1}</td>
+				<td>${name}</td>
+				<td>${location}</td>
+				<td>${station.latitude}</td>
+				<td>${station.longitude}</td>
+				<td>${station.available_rent_bikes}</td>
+				<td>${station.available_return_bikes}</td>
+			</tr>`;
+		}
+
+		async function fetchStations() {
+			console.log('[UBike] Fetching station data...');
+			const response = await fetch(API_URL);
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			}
+			const data = await response.json();
+			console.log(`[UBike] Loaded ${data.length} stations`);
+			return data;
+		}
+
+		function renderTable(stations) {
+			const isZh = isChineseLocale();
+			console.log(`[UBike] Rendering table (locale: ${isZh ? 'zh' : 'en'})`);
+
+			let html = buildTableHeader(isZh);
+			for (let i = 0; i < stations.length; i++) {
+				html += buildTableRow(stations[i], i, isZh);
+			}
+			html += '</table>';
+
+			return html;
+		}
+
+		async function init() {
+			const container = document.getElementById('ubike');
+
+			try {
+				container.innerHTML = '<p>Loading stations...</p>';
+				const stations = await fetchStations();
+				container.innerHTML = renderTable(stations);
+				console.log('[UBike] Table rendered successfully');
+			} catch (error) {
+				console.error('[UBike] Failed to load stations:', error.message);
+				container.innerHTML = `<p style="color: red;">Error loading stations: ${error.message}</p>`;
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded', init);
 	</script>
 	<style>
 		tr:nth-child(even) {
@@ -55,14 +88,8 @@
 	</style>
 </head>
 
-<body onload=init()>
-	<p id='ubike'></p>
+<body>
+	<div id='ubike'></div>
 </body>
 
 </html>
-<!-- START OF HIT COUNTER CODE -->
-<!--br><script language="JavaScript" src="http://www.counter160.com/js.js?img=9"></script><br><a href="http://www.000webhost.com"><img src="http://www.counter160.com/images/9/left.png" alt="Free web hosting" border="0" align="texttop"></a><a href="http://www.hosting24.com"><img alt="Web hosting" src="http://www.counter160.com/images/9/right.png" border="0" align="texttop"></a-->
-<!-- END OF HIT COUNTER CODE -->
-<!-- Hosting24 Analytics Code -->
-<!--script type="text/javascript" src="http://stats.hosting24.com/count.php"></script-->
-<!-- End Of Analytics Code -->
