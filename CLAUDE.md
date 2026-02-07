@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-UBike is a Progressive Web App (PWA) that displays YouBike bike-sharing stations on an interactive map using Leaflet/OpenStreetMap. It supports all Taiwan cities with YouBike (13 cities/counties) and shows real-time availability of bikes and parking slots at each station with color-coded markers.
+Taiwan Transport PWA that displays YouBike bike-sharing stations and MRT metro stations on interactive maps using Leaflet/OpenStreetMap. It supports all Taiwan cities with YouBike (13 cities/counties) and all MRT systems (Taipei, Kaohsiung, Taoyuan, Taichung).
 
 **Hosted on:** GitHub Pages (gh-pages branch)
 **Live URL:** https://oouyang.github.io/ubike/
@@ -21,9 +21,10 @@ There are no npm dependencies, build commands, or test frameworks.
 ## Architecture
 
 ### Entry Points
-- **map.html** - Main map view with real-time station markers and auto-refresh (primary)
-- **list.html** - Sortable table view with distance column and language toggle (EN/中文)
-- **ubike.html** - Map with search panel, station list, and city selector
+- **map.html** - YouBike map view with real-time station markers and auto-refresh (primary)
+- **list.html** - YouBike sortable table view with distance column and language toggle (EN/中文)
+- **ubike.html** - YouBike map with search panel, station list, and city selector
+- **mrt.html** - MRT metro stations map with system/line filters and search
 
 ### Multi-City Support
 City selector dropdown allows switching between all Taiwan cities with YouBike:
@@ -45,6 +46,18 @@ City selector dropdown allows switching between all Taiwan cities with YouBike:
 | taitung | 15 | 台東縣 | Taitung |
 
 City preference is saved in localStorage (`ubike-city`).
+
+### MRT Systems Support
+MRT page (`mrt.html`) displays metro stations for all Taiwan MRT systems:
+
+| System Code | Chinese | English | Lines |
+|-------------|---------|---------|-------|
+| TRTC | 台北捷運 | Taipei Metro | BR (文湖), R (淡水信義), G (松山新店), O (中和新蘆), BL (板南), Y (環狀), LG (安坑輕軌) |
+| KRTC | 高雄捷運 | Kaohsiung Metro | KR (紅線), KO (橘線), KC (環狀輕軌) |
+| TYMC | 桃園捷運 | Taoyuan Metro | A (機場線) |
+| TMRT | 台中捷運 | Taichung Metro | TG (綠線) |
+
+Station data is embedded as static JSON (MRT stations rarely change). System preference is saved in localStorage (`mrt-system`).
 
 ### Data Flow
 Station data fetched from official YouBike API:
