@@ -26,14 +26,12 @@
       background: linear-gradient(135deg, #f57c00, #e65100);
       color: white;
     }
-    h1 {
-      margin: 0;
-      font-size: 1.5em;
-    }
+    h1 { margin: 0; font-size: 1.5em; }
     .header-controls {
       display: flex;
       gap: 8px;
       align-items: center;
+      flex-wrap: wrap;
     }
     .nav-btn {
       padding: 6px 10px;
@@ -58,15 +56,12 @@
       cursor: pointer;
       font-weight: 500;
     }
-    #lang-btn:hover {
-      background: rgba(255,255,255,0.3);
-    }
     .container {
       display: flex;
       height: calc(100vh - 52px);
     }
     #panel {
-      width: 380px;
+      width: 420px;
       height: 100%;
       overflow-y: auto;
       border-right: 1px solid #ccc;
@@ -84,12 +79,36 @@
       top: 0;
       z-index: 100;
     }
-    .search-box input[type="text"] {
+    .search-box input, .search-box select {
       width: 100%;
       padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .search-box select:last-child { margin-bottom: 0; }
+    .direction-tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .direction-tab {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .direction-tab:hover { background: #fff3e0; }
+    .direction-tab.active {
+      background: #f57c00;
+      color: white;
+      border-color: #f57c00;
     }
     .info-box {
       padding: 10px 15px;
@@ -97,6 +116,78 @@
       border-bottom: 1px solid #ffcc80;
       font-size: 0.85em;
       color: #e65100;
+    }
+    .schedule-header {
+      padding: 12px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .current-time {
+      font-size: 0.9em;
+      color: #f57c00;
+    }
+    .train-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .train-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      transition: background 0.2s;
+    }
+    .train-item:hover { background: #fff3e0; }
+    .train-item.departed {
+      opacity: 0.5;
+      background: #f5f5f5;
+    }
+    .train-time {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #333;
+      min-width: 60px;
+    }
+    .train-info { flex: 1; }
+    .train-number {
+      font-weight: bold;
+      color: #f57c00;
+      margin-bottom: 2px;
+    }
+    .train-dest {
+      font-size: 0.85em;
+      color: #666;
+    }
+    .train-status {
+      font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .train-status.arriving {
+      background: #ffeb3b;
+      color: #f57c00;
+    }
+    .train-status.ontime {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .train-status.delayed {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .train-countdown {
+      font-size: 0.85em;
+      color: #999;
+      min-width: 70px;
+      text-align: right;
     }
     .station-list {
       padding: 0;
@@ -109,12 +200,8 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    .station-item:hover {
-      background: #fff3e0;
-    }
-    .station-item.selected {
-      background: #ffe0b2;
-    }
+    .station-item:hover { background: #fff3e0; }
+    .station-item.selected { background: #ffe0b2; }
     .station-name {
       font-weight: bold;
       margin-bottom: 4px;
@@ -134,7 +221,6 @@
     .station-info {
       font-size: 0.85em;
       color: #666;
-      margin-bottom: 4px;
     }
     .station-distance {
       font-size: 0.75em;
@@ -143,18 +229,6 @@
       padding: 2px 8px;
       border-radius: 10px;
       margin-left: auto;
-    }
-    .station-km {
-      font-size: 0.8em;
-      color: #f57c00;
-      font-weight: 500;
-    }
-    .result-count {
-      padding: 8px 15px;
-      background: #fff;
-      border-bottom: 1px solid #ddd;
-      font-size: 0.85em;
-      color: #666;
     }
     .marker-icon {
       background: #f57c00;
@@ -168,10 +242,39 @@
       font-weight: bold;
       font-size: 11px;
     }
+    .tab-buttons {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: #fff3e0; }
+    .tab-btn.active {
+      color: #f57c00;
+      border-bottom-color: #f57c00;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .no-trains {
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
+    }
     @media (max-width: 768px) {
       .container { flex-direction: column; }
-      #panel { width: 100%; height: 40%; }
-      #map-canvas { height: 60%; }
+      #panel { width: 100%; height: 50%; }
+      #map-canvas { height: 50%; }
       .header-controls { flex-wrap: wrap; }
     }
   </style>
@@ -191,21 +294,50 @@
   </header>
   <div class="container">
     <div id="panel">
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="Search stations...">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="schedule" data-en="Train Schedule" data-zh="列車時刻">Train Schedule</button>
+        <button class="tab-btn" data-tab="stations" data-en="Stations" data-zh="車站列表">Stations</button>
       </div>
-      <div class="info-box" id="info-box">
-        12 stations • Nangang to Zuoying • 350 km in ~90 min
+
+      <div id="tab-schedule" class="tab-content active">
+        <div class="search-box">
+          <select id="station-select" onchange="onStationChange()">
+            <option value="">-- Select Station --</option>
+          </select>
+          <div class="direction-tabs">
+            <div class="direction-tab active" data-dir="south" onclick="setDirection('south')">
+              <span data-en="↓ Southbound" data-zh="↓ 南下">↓ Southbound</span>
+            </div>
+            <div class="direction-tab" data-dir="north" onclick="setDirection('north')">
+              <span data-en="↑ Northbound" data-zh="↑ 北上">↑ Northbound</span>
+            </div>
+          </div>
+        </div>
+        <div class="schedule-header">
+          <span id="schedule-title" data-en="Upcoming Trains" data-zh="即將發車">Upcoming Trains</span>
+          <span class="current-time" id="current-time"></span>
+        </div>
+        <ul id="train-list" class="train-list">
+          <li class="no-trains" id="no-station-msg" data-en="Select a station to view schedule" data-zh="請選擇車站查看時刻表">Select a station to view schedule</li>
+        </ul>
       </div>
-      <div id="result-count" class="result-count"></div>
-      <ul id="station-list" class="station-list"></ul>
+
+      <div id="tab-stations" class="tab-content">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search stations...">
+        </div>
+        <div class="info-box" id="info-box">
+          12 stations • Nangang to Zuoying • 350 km in ~90 min
+        </div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
     </div>
     <div id="map-canvas"></div>
   </div>
   <script>
 'use strict';
 
-// Taiwan High Speed Rail Stations (Static Data)
+// Taiwan High Speed Rail Stations
 const STATIONS = [
   { id: 'THSR-01', code: '0990', name: { en: 'Nangang', zh: '南港' }, lat: 25.0530, lng: 121.6070, km: 0, address: { en: 'Nangang District, Taipei', zh: '台北市南港區' } },
   { id: 'THSR-02', code: '1000', name: { en: 'Taipei', zh: '台北' }, lat: 25.0478, lng: 121.5170, km: 6.4, address: { en: 'Zhongzheng District, Taipei', zh: '台北市中正區' } },
@@ -221,6 +353,53 @@ const STATIONS = [
   { id: 'THSR-12', code: '1070', name: { en: 'Zuoying', zh: '左營' }, lat: 22.6875, lng: 120.3080, km: 345.2, address: { en: 'Zuoying District, Kaohsiung', zh: '高雄市左營區' } }
 ];
 
+// Demo train schedule times (minutes from midnight)
+// In production, this would come from TDX API
+const TRAIN_SCHEDULE_BASE = {
+  southbound: [
+    { trainNo: '0103', times: [366, 396, 423, 454, 488, 510, 552, 566, 592, 624, 662, 687] }, // 6:06 from Nangang
+    { trainNo: '0203', times: [396, 426, 453, 484, 518, 540, 582, 596, 622, 654, 692, 717] }, // 6:36
+    { trainNo: '0605', times: [426, 456, 483, 514, 548, 570, 612, 626, 652, 684, 722, 747] }, // 7:06
+    { trainNo: '0109', times: [456, 486, 513, 544, 578, 600, 642, 656, 682, 714, 752, 777] }, // 7:36
+    { trainNo: '0111', times: [486, 516, 543, 574, 608, 630, 672, 686, 712, 744, 782, 807] }, // 8:06
+    { trainNo: '0809', times: [516, 546, 573, 604, 638, 660, 702, 716, 742, 774, 812, 837] }, // 8:36
+    { trainNo: '0117', times: [546, 576, 603, 634, 668, 690, 732, 746, 772, 804, 842, 867] }, // 9:06
+    { trainNo: '0295', times: [606, 636, 663, 694, 728, 750, 792, 806, 832, 864, 902, 927] }, // 10:06
+    { trainNo: '0123', times: [666, 696, 723, 754, 788, 810, 852, 866, 892, 924, 962, 987] }, // 11:06
+    { trainNo: '0129', times: [726, 756, 783, 814, 848, 870, 912, 926, 952, 984, 1022, 1047] }, // 12:06
+    { trainNo: '0135', times: [786, 816, 843, 874, 908, 930, 972, 986, 1012, 1044, 1082, 1107] }, // 13:06
+    { trainNo: '0141', times: [846, 876, 903, 934, 968, 990, 1032, 1046, 1072, 1104, 1142, 1167] }, // 14:06
+    { trainNo: '0147', times: [906, 936, 963, 994, 1028, 1050, 1092, 1106, 1132, 1164, 1202, 1227] }, // 15:06
+    { trainNo: '0153', times: [966, 996, 1023, 1054, 1088, 1110, 1152, 1166, 1192, 1224, 1262, 1287] }, // 16:06
+    { trainNo: '0159', times: [1026, 1056, 1083, 1114, 1148, 1170, 1212, 1226, 1252, 1284, 1322, 1347] }, // 17:06
+    { trainNo: '0165', times: [1086, 1116, 1143, 1174, 1208, 1230, 1272, 1286, 1312, 1344, 1382, 1407] }, // 18:06
+    { trainNo: '0171', times: [1146, 1176, 1203, 1234, 1268, 1290, 1332, 1346, 1372, 1404, 1442, 1467] }, // 19:06
+    { trainNo: '0177', times: [1206, 1236, 1263, 1294, 1328, 1350, 1392, 1406, 1432, 1464, 1502, 1527] }, // 20:06
+    { trainNo: '0183', times: [1266, 1296, 1323, 1354, 1388, 1410, 1452, 1466, 1492, 1524, 1562, 1587] }, // 21:06
+  ],
+  northbound: [
+    { trainNo: '0102', times: [1587, 1552, 1522, 1492, 1466, 1452, 1410, 1388, 1354, 1323, 1296, 1266] }, // reverse
+    { trainNo: '0202', times: [360, 325, 295, 265, 239, 225, 183, 161, 127, 96, 69, 39] },
+    { trainNo: '0604', times: [420, 385, 355, 325, 299, 285, 243, 221, 187, 156, 129, 99] },
+    { trainNo: '0108', times: [480, 445, 415, 385, 359, 345, 303, 281, 247, 216, 189, 159] },
+    { trainNo: '0110', times: [540, 505, 475, 445, 419, 405, 363, 341, 307, 276, 249, 219] },
+    { trainNo: '0806', times: [600, 565, 535, 505, 479, 465, 423, 401, 367, 336, 309, 279] },
+    { trainNo: '0116', times: [660, 625, 595, 565, 539, 525, 483, 461, 427, 396, 369, 339] },
+    { trainNo: '0294', times: [720, 685, 655, 625, 599, 585, 543, 521, 487, 456, 429, 399] },
+    { trainNo: '0122', times: [780, 745, 715, 685, 659, 645, 603, 581, 547, 516, 489, 459] },
+    { trainNo: '0128', times: [840, 805, 775, 745, 719, 705, 663, 641, 607, 576, 549, 519] },
+    { trainNo: '0134', times: [900, 865, 835, 805, 779, 765, 723, 701, 667, 636, 609, 579] },
+    { trainNo: '0140', times: [960, 925, 895, 865, 839, 825, 783, 761, 727, 696, 669, 639] },
+    { trainNo: '0146', times: [1020, 985, 955, 925, 899, 885, 843, 821, 787, 756, 729, 699] },
+    { trainNo: '0152', times: [1080, 1045, 1015, 985, 959, 945, 903, 881, 847, 816, 789, 759] },
+    { trainNo: '0158', times: [1140, 1105, 1075, 1045, 1019, 1005, 963, 941, 907, 876, 849, 819] },
+    { trainNo: '0164', times: [1200, 1165, 1135, 1105, 1079, 1065, 1023, 1001, 967, 936, 909, 879] },
+    { trainNo: '0170', times: [1260, 1225, 1195, 1165, 1139, 1125, 1083, 1061, 1027, 996, 969, 939] },
+    { trainNo: '0176', times: [1320, 1285, 1255, 1225, 1199, 1185, 1143, 1121, 1087, 1056, 1029, 999] },
+    { trainNo: '0682', times: [1380, 1345, 1315, 1285, 1259, 1245, 1203, 1181, 1147, 1116, 1089, 1059] },
+  ]
+};
+
 const CONFIG = {
   DEFAULT_CENTER: [24.0, 120.8],
   DEFAULT_ZOOM: 8
@@ -230,12 +409,13 @@ const CONFIG = {
 let map = null;
 let markers = {};
 let routeLine = null;
-let filteredStations = [...STATIONS];
 let selectedStation = null;
+let currentDirection = 'south';
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 let userLocation = null;
+let timeUpdateInterval = null;
 
-// Distance calculation utilities
+// Utilities
 const deg2rad = (deg) => deg * (Math.PI / 180);
 
 function getDistanceInMeters(lat1, lon1, lat2, lon2) {
@@ -254,9 +434,29 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-function isChineseLocale() {
-  return isZh;
+function formatTime(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
+
+function getCurrentMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function getCountdown(departureMinutes) {
+  const now = getCurrentMinutes();
+  let diff = departureMinutes - now;
+  if (diff < 0) diff += 24 * 60; // next day
+  if (diff < 1) return isZh ? '即將發車' : 'Departing';
+  if (diff < 60) return `${diff} ${isZh ? '分鐘' : 'min'}`;
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+  return `${h}${isZh ? '時' : 'h'} ${m}${isZh ? '分' : 'm'}`;
+}
+
+function isChineseLocale() { return isZh; }
 
 function toggleLang() {
   isZh = !isZh;
@@ -265,50 +465,230 @@ function toggleLang() {
 }
 
 function updateUI() {
-  // Update page title
   document.getElementById('page-title').textContent = isZh ? '台灣高鐵' : 'Taiwan High Speed Rail';
-
-  // Update search placeholder
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
-  }
-
-  // Update info box
   document.getElementById('info-box').textContent = isZh
     ? '12站 • 南港至左營 • 350公里約90分鐘'
     : '12 stations • Nangang to Zuoying • 350 km in ~90 min';
+  document.getElementById('search-input').placeholder = isZh ? '搜尋車站...' : 'Search stations...';
 
-  // Update navigation buttons
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    const text = isZh ? btn.dataset.zh : btn.dataset.en;
-    if (text) btn.textContent = text;
+  // Update all data-en/data-zh elements
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isZh ? el.dataset.zh : el.dataset.en;
   });
 
-  // Re-render station list and update popups
-  updateDisplay();
+  // Update station selector
+  updateStationSelector();
+  renderStationList();
+  renderTrainSchedule();
+  updatePopups();
+}
 
-  // Update all marker popups
-  Object.keys(markers).forEach(id => {
-    const station = STATIONS.find(s => s.id === id);
-    if (station && markers[id]) {
-      markers[id].setPopupContent(getPopupContent(station));
-    }
+function updateStationSelector() {
+  const select = document.getElementById('station-select');
+  const currentValue = select.value;
+  select.innerHTML = `<option value="">${isZh ? '-- 選擇車站 --' : '-- Select Station --'}</option>`;
+  STATIONS.forEach(s => {
+    const name = isZh ? s.name.zh : s.name.en;
+    select.innerHTML += `<option value="${s.id}">${name}</option>`;
   });
+  select.value = currentValue;
 }
 
 function getStationName(station) {
-  return isChineseLocale() ? station.name.zh : station.name.en;
+  return isZh ? station.name.zh : station.name.en;
 }
 
 function getAddress(station) {
-  return isChineseLocale() ? station.address.zh : station.address.en;
+  return isZh ? station.address.zh : station.address.en;
 }
 
 function getStationIndex(station) {
   return STATIONS.findIndex(s => s.id === station.id) + 1;
 }
 
+// Train Schedule Functions
+function setDirection(dir) {
+  currentDirection = dir;
+  document.querySelectorAll('.direction-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.dir === dir);
+  });
+  renderTrainSchedule();
+}
+
+function onStationChange() {
+  const stationId = document.getElementById('station-select').value;
+  if (stationId) {
+    const station = STATIONS.find(s => s.id === stationId);
+    if (station) {
+      selectStation(stationId);
+    }
+  }
+  renderTrainSchedule();
+}
+
+function getTrainsForStation(stationId, direction) {
+  const stationIndex = STATIONS.findIndex(s => s.id === stationId);
+  if (stationIndex === -1) return [];
+
+  const schedule = direction === 'south' ? TRAIN_SCHEDULE_BASE.southbound : TRAIN_SCHEDULE_BASE.northbound;
+  const now = getCurrentMinutes();
+
+  const trains = schedule.map(train => {
+    const depTime = train.times[stationIndex];
+    if (depTime === undefined) return null;
+
+    // Determine destination
+    let destStation;
+    if (direction === 'south') {
+      destStation = STATIONS[STATIONS.length - 1]; // Zuoying
+    } else {
+      destStation = STATIONS[0]; // Nangang
+    }
+
+    const isDeparted = depTime < now && (now - depTime) < 120; // within 2 hours ago
+    const diff = depTime - now;
+    const isArriving = diff >= 0 && diff <= 5;
+
+    return {
+      trainNo: train.trainNo,
+      depTime: depTime,
+      depTimeStr: formatTime(depTime),
+      destination: destStation,
+      isDeparted: depTime < now && diff < -5,
+      isArriving: isArriving,
+      countdown: getCountdown(depTime)
+    };
+  }).filter(t => t !== null);
+
+  // Sort by departure time, show next 10 trains
+  return trains
+    .filter(t => !t.isDeparted || (getCurrentMinutes() - t.depTime) < 5)
+    .sort((a, b) => {
+      // Handle day wraparound
+      const aNorm = a.depTime < now - 120 ? a.depTime + 1440 : a.depTime;
+      const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
+      return aNorm - bNorm;
+    })
+    .slice(0, 10);
+}
+
+function renderTrainSchedule() {
+  const listEl = document.getElementById('train-list');
+  const stationId = document.getElementById('station-select').value;
+
+  // Update current time
+  const now = new Date();
+  document.getElementById('current-time').textContent = now.toLocaleTimeString(isZh ? 'zh-TW' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+
+  if (!stationId) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '請選擇車站查看時刻表' : 'Select a station to view schedule'}</li>`;
+    return;
+  }
+
+  const station = STATIONS.find(s => s.id === stationId);
+
+  // Check if this is terminal station
+  const stationIndex = STATIONS.findIndex(s => s.id === stationId);
+  if ((currentDirection === 'south' && stationIndex === STATIONS.length - 1) ||
+      (currentDirection === 'north' && stationIndex === 0)) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '此為終點站，無此方向列車' : 'Terminal station - no trains in this direction'}</li>`;
+    return;
+  }
+
+  const trains = getTrainsForStation(stationId, currentDirection);
+
+  if (trains.length === 0) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '目前無列車資訊' : 'No train information available'}</li>`;
+    return;
+  }
+
+  listEl.innerHTML = trains.map(train => {
+    const destName = isZh ? train.destination.name.zh : train.destination.name.en;
+    let statusClass = 'ontime';
+    let statusText = isZh ? '準點' : 'On time';
+
+    if (train.isArriving) {
+      statusClass = 'arriving';
+      statusText = isZh ? '即將到站' : 'Arriving';
+    }
+
+    return `
+      <li class="train-item${train.isDeparted ? ' departed' : ''}">
+        <div class="train-time">${train.depTimeStr}</div>
+        <div class="train-info">
+          <div class="train-number">${train.trainNo}</div>
+          <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+        </div>
+        <div class="train-status ${statusClass}">${statusText}</div>
+        <div class="train-countdown">${train.countdown}</div>
+      </li>
+    `;
+  }).join('');
+}
+
+// Station List Functions
+function renderStationList() {
+  const listEl = document.getElementById('station-list');
+  const query = document.getElementById('search-input').value.toLowerCase().trim();
+
+  let filtered = STATIONS;
+  if (query) {
+    filtered = STATIONS.filter(s =>
+      s.name.en.toLowerCase().includes(query) ||
+      s.name.zh.includes(query) ||
+      s.address.en.toLowerCase().includes(query) ||
+      s.address.zh.includes(query)
+    );
+  }
+
+  listEl.innerHTML = filtered.map(station => {
+    const index = getStationIndex(station);
+    let distanceHtml = '';
+    if (userLocation) {
+      const dist = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+      distanceHtml = `<span class="station-distance">${formatDistance(dist)}</span>`;
+    }
+
+    return `
+      <li class="station-item${selectedStation === station.id ? ' selected' : ''}" data-id="${station.id}">
+        <div class="station-name">
+          <span class="station-number">${index}</span>
+          ${getStationName(station)}
+          ${distanceHtml}
+        </div>
+        <div class="station-info">
+          ${getAddress(station)} • ${station.km} km
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.station-item').forEach(item => {
+    item.addEventListener('click', () => {
+      selectStation(item.dataset.id);
+      document.getElementById('station-select').value = item.dataset.id;
+      document.querySelector('[data-tab="schedule"]').click();
+      renderTrainSchedule();
+    });
+  });
+}
+
+function selectStation(id) {
+  selectedStation = id;
+  document.querySelectorAll('.station-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.id === id);
+  });
+
+  const marker = markers[id];
+  if (marker) {
+    map.setView(marker.getLatLng(), 12);
+    marker.openPopup();
+  }
+
+  renderStationList();
+}
+
+// Map Functions
 function createMarkerIcon(index) {
   return L.divIcon({
     className: '',
@@ -320,13 +700,11 @@ function createMarkerIcon(index) {
 }
 
 function getPopupContent(station) {
-  const isZh = isChineseLocale();
   const index = getStationIndex(station);
-
   let distanceHtml = '';
-  if (userLocation && station.lat && station.lng) {
-    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
-    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(distance)}`;
+  if (userLocation) {
+    const dist = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(dist)}`;
   }
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
@@ -344,166 +722,89 @@ function getPopupContent(station) {
   </div>`;
 }
 
-function createStationListItem(station) {
-  const index = getStationIndex(station);
-  let distanceHtml = '';
-  if (userLocation && station.lat && station.lng) {
-    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
-    distanceHtml = `<span class="station-distance">${formatDistance(distance)}</span>`;
-  }
-
-  return `
-    <li class="station-item" data-id="${station.id}">
-      <div class="station-name">
-        <span class="station-number">${index}</span>
-        ${getStationName(station)}
-        ${distanceHtml}
-      </div>
-      <div class="station-info">
-        ${getAddress(station)}
-        <span class="station-km" style="margin-left:8px;">${station.km} km</span>
-      </div>
-    </li>
-  `;
-}
-
-function addMarkers(stationList) {
-  Object.values(markers).forEach(marker => map.removeLayer(marker));
-  markers = {};
-
-  stationList.forEach(station => {
-    if (!station.lat || !station.lng) return;
-    const index = getStationIndex(station);
-    const marker = L.marker([station.lat, station.lng], {
-      icon: createMarkerIcon(index)
-    });
-
-    marker.bindPopup(getPopupContent(station));
-    marker.on('click', () => selectStation(station.id));
-    marker.addTo(map);
-    markers[station.id] = marker;
-  });
-
-  // Draw route line
-  if (routeLine) {
-    map.removeLayer(routeLine);
-  }
-  const lineCoords = STATIONS.map(s => [s.lat, s.lng]);
-  routeLine = L.polyline(lineCoords, { color: '#f57c00', weight: 4, opacity: 0.7 }).addTo(map);
-
-  console.log(`[THSR] Added ${Object.keys(markers).length} markers`);
-}
-
-function renderStationList(stationList) {
-  const listEl = document.getElementById('station-list');
-  const countEl = document.getElementById('result-count');
-  const isZh = isChineseLocale();
-
-  listEl.innerHTML = stationList.map(createStationListItem).join('');
-  countEl.textContent = isZh
-    ? `顯示 ${stationList.length} 個車站`
-    : `Showing ${stationList.length} stations`;
-
-  listEl.querySelectorAll('.station-item').forEach(item => {
-    item.addEventListener('click', () => {
-      selectStation(item.dataset.id);
-    });
-  });
-}
-
-function selectStation(id) {
-  document.querySelectorAll('.station-item.selected').forEach(el => {
-    el.classList.remove('selected');
-  });
-
-  const listItem = document.querySelector(`.station-item[data-id="${id}"]`);
-  if (listItem) {
-    listItem.classList.add('selected');
-    listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  const marker = markers[id];
-  if (marker) {
-    map.setView(marker.getLatLng(), 14);
-    marker.openPopup();
-  }
-
-  selectedStation = id;
-  console.log(`[THSR] Selected station: ${id}`);
-}
-
-function filterStations() {
-  let filtered = [...STATIONS];
-
-  // Filter by search query
-  const query = document.getElementById('search-input').value.toLowerCase().trim();
-  if (query) {
-    filtered = filtered.filter(station => {
-      const nameZh = station.name.zh.toLowerCase();
-      const nameEn = station.name.en.toLowerCase();
-      const addressZh = station.address.zh.toLowerCase();
-      const addressEn = station.address.en.toLowerCase();
-      return nameZh.includes(query) || nameEn.includes(query) ||
-             addressZh.includes(query) || addressEn.includes(query);
-    });
-  }
-
-  return filtered;
-}
-
-function updateDisplay() {
-  const filtered = filterStations();
-  filteredStations = filtered;
-  renderStationList(filtered);
-  addMarkers(filtered);
-}
-
-function handleSearch(e) {
-  updateDisplay();
-  console.log(`[THSR] Search: "${e.target.value}" - ${filteredStations.length} results`);
-}
-
-async function initialize() {
-  console.log('[THSR] Initializing Taiwan High Speed Rail map...');
-
-  // Restore language preference
-  const savedLang = localStorage.getItem('ubike-lang');
-  if (savedLang) {
-    isZh = savedLang === 'zh';
-  }
-
-  // Get user location
-  if ('geolocation' in navigator) {
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-      });
-      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-      console.log('[THSR] User location:', userLocation);
-    } catch (error) {
-      console.warn('[THSR] Could not get location:', error.message);
+function updatePopups() {
+  STATIONS.forEach(station => {
+    if (markers[station.id]) {
+      markers[station.id].setPopupContent(getPopupContent(station));
     }
-  }
+  });
+}
 
-  // Create map
+function initMap() {
   map = L.map('map-canvas').setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
 
-  // Update UI with language
+  // Add markers
+  STATIONS.forEach((station, index) => {
+    const marker = L.marker([station.lat, station.lng], {
+      icon: createMarkerIcon(index + 1)
+    });
+    marker.bindPopup(getPopupContent(station));
+    marker.on('click', () => {
+      selectedStation = station.id;
+      document.getElementById('station-select').value = station.id;
+      renderStationList();
+      renderTrainSchedule();
+    });
+    marker.addTo(map);
+    markers[station.id] = marker;
+  });
+
+  // Draw route line
+  const lineCoords = STATIONS.map(s => [s.lat, s.lng]);
+  routeLine = L.polyline(lineCoords, { color: '#f57c00', weight: 4, opacity: 0.7 }).addTo(map);
+}
+
+// Tab handling
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+}
+
+// Initialize
+async function initialize() {
+  console.log('[THSR] Initializing...');
+
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) isZh = savedLang === 'zh';
+
+  // Get user location
+  if ('geolocation' in navigator) {
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      console.log('[THSR] User location:', userLocation);
+    } catch (e) {
+      console.warn('[THSR] Could not get location');
+    }
+  }
+
+  setupTabs();
+  initMap();
   updateUI();
 
-  // Setup search
-  const searchInput = document.getElementById('search-input');
-  searchInput.addEventListener('input', handleSearch);
+  // Search handler
+  document.getElementById('search-input').addEventListener('input', renderStationList);
 
-  // Initial load
-  updateDisplay();
+  // Update time every minute
+  timeUpdateInterval = setInterval(() => {
+    if (document.getElementById('station-select').value) {
+      renderTrainSchedule();
+    }
+  }, 60000);
 
-  console.log('[THSR] Taiwan High Speed Rail map initialized successfully');
+  console.log('[THSR] Initialized');
 }
 
 document.addEventListener('DOMContentLoaded', initialize);

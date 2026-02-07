@@ -187,6 +187,139 @@
     .class-2 { background-color: #1565c0; }
     .class-3 { background-color: #2e7d32; }
     .class-S { background-color: #6a1b9a; }
+    /* Tab buttons */
+    .tab-buttons {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: #e3f2fd; }
+    .tab-btn.active {
+      color: #0d47a1;
+      border-bottom-color: #0d47a1;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    /* Direction tabs */
+    .direction-tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .direction-tab {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .direction-tab:hover { background: #e3f2fd; }
+    .direction-tab.active {
+      background: #0d47a1;
+      color: white;
+      border-color: #0d47a1;
+    }
+    /* Schedule styles */
+    .schedule-header {
+      padding: 12px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .current-time {
+      font-size: 0.9em;
+      color: #0d47a1;
+    }
+    .train-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .train-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      transition: background 0.2s;
+    }
+    .train-item:hover { background: #e3f2fd; }
+    .train-item.departed {
+      opacity: 0.5;
+      background: #f5f5f5;
+    }
+    .train-time {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #333;
+      min-width: 60px;
+    }
+    .train-info { flex: 1; }
+    .train-number {
+      font-weight: bold;
+      color: #0d47a1;
+      margin-bottom: 2px;
+    }
+    .train-type {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75em;
+      margin-left: 6px;
+    }
+    .train-type.express { background: #c62828; color: white; }
+    .train-type.limited { background: #f57c00; color: white; }
+    .train-type.local { background: #2e7d32; color: white; }
+    .train-type.fast-local { background: #1565c0; color: white; }
+    .train-dest {
+      font-size: 0.85em;
+      color: #666;
+    }
+    .train-status {
+      font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .train-status.arriving {
+      background: #ffeb3b;
+      color: #e65100;
+    }
+    .train-status.ontime {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .train-countdown {
+      font-size: 0.85em;
+      color: #999;
+      min-width: 70px;
+      text-align: right;
+    }
+    .no-trains {
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
+    }
     /* Markers */
     .marker-icon {
       border-radius: 50%;
@@ -222,17 +355,54 @@
   </header>
   <div class="container">
     <div id="panel">
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="Search stations...">
-        <select id="line-select" onchange="changeLine()">
-          <option value="all">All Lines</option>
-        </select>
-        <select id="class-select" onchange="changeClass()">
-          <option value="all">All Classes</option>
-        </select>
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="schedule" data-en="Train Schedule" data-zh="列車時刻">Train Schedule</button>
+        <button class="tab-btn" data-tab="stations" data-en="Stations" data-zh="車站列表">Stations</button>
       </div>
-      <div id="result-count" class="result-count"></div>
-      <ul id="station-list" class="station-list"></ul>
+
+      <div id="tab-schedule" class="tab-content active">
+        <div class="search-box">
+          <select id="schedule-line-select" onchange="onScheduleLineChange()">
+            <option value="WL" data-en="Western Line (North)" data-zh="西部幹線(北段)">Western Line (North)</option>
+            <option value="ML" data-en="Mountain Line" data-zh="山線">Mountain Line</option>
+            <option value="CL" data-en="Coast Line" data-zh="海線">Coast Line</option>
+            <option value="SL" data-en="Western Line (South)" data-zh="西部幹線(南段)">Western Line (South)</option>
+            <option value="YL" data-en="Yilan Line" data-zh="宜蘭線">Yilan Line</option>
+          </select>
+          <select id="schedule-station-select" onchange="onScheduleStationChange()">
+            <option value="">-- Select Station --</option>
+          </select>
+          <div class="direction-tabs">
+            <div class="direction-tab active" data-dir="south" onclick="setDirection('south')">
+              <span data-en="↓ Southbound" data-zh="↓ 南下">↓ Southbound</span>
+            </div>
+            <div class="direction-tab" data-dir="north" onclick="setDirection('north')">
+              <span data-en="↑ Northbound" data-zh="↑ 北上">↑ Northbound</span>
+            </div>
+          </div>
+        </div>
+        <div class="schedule-header">
+          <span id="schedule-title" data-en="Upcoming Trains" data-zh="即將發車">Upcoming Trains</span>
+          <span class="current-time" id="current-time"></span>
+        </div>
+        <ul id="train-list" class="train-list">
+          <li class="no-trains" data-en="Select a station to view schedule" data-zh="請選擇車站查看時刻表">Select a station to view schedule</li>
+        </ul>
+      </div>
+
+      <div id="tab-stations" class="tab-content">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search stations...">
+          <select id="line-select" onchange="changeLine()">
+            <option value="all">All Lines</option>
+          </select>
+          <select id="class-select" onchange="changeClass()">
+            <option value="all">All Classes</option>
+          </select>
+        </div>
+        <div id="result-count" class="result-count"></div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
     </div>
     <div id="map-canvas"></div>
   </div>
@@ -512,6 +682,161 @@ const CONFIG = {
   DEFAULT_ZOOM: 8
 };
 
+// Train types configuration
+const TRAIN_TYPES = {
+  express: { name: { en: 'Tze-Chiang', zh: '自強' }, class: 'express' },
+  limited: { name: { en: 'Chu-Kuang', zh: '莒光' }, class: 'limited' },
+  local: { name: { en: 'Local', zh: '區間車' }, class: 'local' },
+  fastLocal: { name: { en: 'Fast Local', zh: '區間快' }, class: 'fast-local' }
+};
+
+// Major stations for schedule (Western Line North as primary demo)
+const SCHEDULE_STATIONS = {
+  WL: ['0900', '0920', '0930', '0980', '0990', '1000', '1020', '1080', '1100', '1200', '1240'],
+  ML: ['1240', '2120', '2170', '2180', '2190', '2240', '2270', '2280'],
+  CL: ['1240', '2020', '2090', '2300', '2310', '2340'],
+  SL: ['3300', '3330', '3360', '3400', '3460', '3500', '3550', '3600', '3670', '3700', '3760'],
+  YL: ['0920', '7020', '7140', '7180', '7210', '7240']
+};
+
+// Demo train schedule data (minutes from midnight)
+// Format: { trainNo, type, times: [time at each SCHEDULE_STATION] }
+const TRAIN_SCHEDULE = {
+  WL: {
+    southbound: [
+      { trainNo: '110', type: 'express', times: [360, 365, 368, 385, 390, 395, 408, 425, 432, 465, 480] },
+      { trainNo: '2102', type: 'local', times: [372, 380, 385, 405, 412, 420, 438, 460, 470, 510, 528] },
+      { trainNo: '112', type: 'express', times: [420, 425, 428, 445, 450, 455, 468, 485, 492, 525, 540] },
+      { trainNo: '2106', type: 'local', times: [432, 440, 445, 465, 472, 480, 498, 520, 530, 570, 588] },
+      { trainNo: '114', type: 'express', times: [480, 485, 488, 505, 510, 515, 528, 545, 552, 585, 600] },
+      { trainNo: '272', type: 'limited', times: [510, 518, 522, 545, 552, 560, 580, 605, 615, 660, 680] },
+      { trainNo: '2110', type: 'local', times: [540, 548, 553, 573, 580, 588, 606, 628, 638, 678, 696] },
+      { trainNo: '116', type: 'express', times: [540, 545, 548, 565, 570, 575, 588, 605, 612, 645, 660] },
+      { trainNo: '118', type: 'express', times: [600, 605, 608, 625, 630, 635, 648, 665, 672, 705, 720] },
+      { trainNo: '2114', type: 'fastLocal', times: [612, 618, 622, 638, 644, 650, 665, 685, 693, 728, 745] },
+      { trainNo: '120', type: 'express', times: [660, 665, 668, 685, 690, 695, 708, 725, 732, 765, 780] },
+      { trainNo: '2118', type: 'local', times: [720, 728, 733, 753, 760, 768, 786, 808, 818, 858, 876] },
+      { trainNo: '122', type: 'express', times: [720, 725, 728, 745, 750, 755, 768, 785, 792, 825, 840] },
+      { trainNo: '124', type: 'express', times: [780, 785, 788, 805, 810, 815, 828, 845, 852, 885, 900] },
+      { trainNo: '126', type: 'express', times: [840, 845, 848, 865, 870, 875, 888, 905, 912, 945, 960] },
+      { trainNo: '128', type: 'express', times: [900, 905, 908, 925, 930, 935, 948, 965, 972, 1005, 1020] },
+      { trainNo: '130', type: 'express', times: [960, 965, 968, 985, 990, 995, 1008, 1025, 1032, 1065, 1080] },
+      { trainNo: '132', type: 'express', times: [1020, 1025, 1028, 1045, 1050, 1055, 1068, 1085, 1092, 1125, 1140] },
+      { trainNo: '134', type: 'express', times: [1080, 1085, 1088, 1105, 1110, 1115, 1128, 1145, 1152, 1185, 1200] },
+      { trainNo: '136', type: 'express', times: [1140, 1145, 1148, 1165, 1170, 1175, 1188, 1205, 1212, 1245, 1260] },
+      { trainNo: '138', type: 'express', times: [1200, 1205, 1208, 1225, 1230, 1235, 1248, 1265, 1272, 1305, 1320] },
+    ],
+    northbound: [
+      { trainNo: '111', type: 'express', times: [1320, 1305, 1302, 1285, 1280, 1275, 1262, 1245, 1238, 1205, 1190] },
+      { trainNo: '2101', type: 'local', times: [360, 342, 337, 312, 305, 295, 272, 245, 232, 185, 165] },
+      { trainNo: '113', type: 'express', times: [420, 405, 402, 385, 380, 375, 362, 345, 338, 305, 290] },
+      { trainNo: '2105', type: 'local', times: [480, 462, 457, 432, 425, 415, 392, 365, 352, 305, 285] },
+      { trainNo: '115', type: 'express', times: [540, 525, 522, 505, 500, 495, 482, 465, 458, 425, 410] },
+      { trainNo: '273', type: 'limited', times: [600, 582, 577, 550, 542, 532, 508, 478, 465, 415, 392] },
+      { trainNo: '117', type: 'express', times: [660, 645, 642, 625, 620, 615, 602, 585, 578, 545, 530] },
+      { trainNo: '2109', type: 'local', times: [660, 642, 637, 612, 605, 595, 572, 545, 532, 485, 465] },
+      { trainNo: '119', type: 'express', times: [720, 705, 702, 685, 680, 675, 662, 645, 638, 605, 590] },
+      { trainNo: '121', type: 'express', times: [780, 765, 762, 745, 740, 735, 722, 705, 698, 665, 650] },
+      { trainNo: '2113', type: 'fastLocal', times: [780, 765, 760, 740, 734, 726, 708, 685, 675, 635, 615] },
+      { trainNo: '123', type: 'express', times: [840, 825, 822, 805, 800, 795, 782, 765, 758, 725, 710] },
+      { trainNo: '125', type: 'express', times: [900, 885, 882, 865, 860, 855, 842, 825, 818, 785, 770] },
+      { trainNo: '2117', type: 'local', times: [900, 882, 877, 852, 845, 835, 812, 785, 772, 725, 705] },
+      { trainNo: '127', type: 'express', times: [960, 945, 942, 925, 920, 915, 902, 885, 878, 845, 830] },
+      { trainNo: '129', type: 'express', times: [1020, 1005, 1002, 985, 980, 975, 962, 945, 938, 905, 890] },
+      { trainNo: '131', type: 'express', times: [1080, 1065, 1062, 1045, 1040, 1035, 1022, 1005, 998, 965, 950] },
+      { trainNo: '133', type: 'express', times: [1140, 1125, 1122, 1105, 1100, 1095, 1082, 1065, 1058, 1025, 1010] },
+      { trainNo: '135', type: 'express', times: [1200, 1185, 1182, 1165, 1160, 1155, 1142, 1125, 1118, 1085, 1070] },
+      { trainNo: '137', type: 'express', times: [1260, 1245, 1242, 1225, 1220, 1215, 1202, 1185, 1178, 1145, 1130] },
+    ]
+  },
+  ML: {
+    southbound: [
+      { trainNo: '110', type: 'express', times: [480, 505, 525, 535, 542, 555, 575, 580] },
+      { trainNo: '2502', type: 'local', times: [528, 565, 590, 602, 612, 635, 665, 672] },
+      { trainNo: '112', type: 'express', times: [540, 565, 585, 595, 602, 615, 635, 640] },
+      { trainNo: '114', type: 'express', times: [600, 625, 645, 655, 662, 675, 695, 700] },
+      { trainNo: '116', type: 'express', times: [660, 685, 705, 715, 722, 735, 755, 760] },
+      { trainNo: '118', type: 'express', times: [720, 745, 765, 775, 782, 795, 815, 820] },
+      { trainNo: '2506', type: 'local', times: [780, 817, 842, 854, 864, 887, 917, 924] },
+      { trainNo: '120', type: 'express', times: [840, 865, 885, 895, 902, 915, 935, 940] },
+      { trainNo: '122', type: 'express', times: [900, 925, 945, 955, 962, 975, 995, 1000] },
+    ],
+    northbound: [
+      { trainNo: '111', type: 'express', times: [1000, 995, 975, 965, 958, 945, 925, 920] },
+      { trainNo: '2501', type: 'local', times: [360, 333, 303, 288, 275, 245, 205, 195] },
+      { trainNo: '113', type: 'express', times: [450, 445, 425, 415, 408, 395, 375, 370] },
+      { trainNo: '115', type: 'express', times: [540, 535, 515, 505, 498, 485, 465, 460] },
+      { trainNo: '117', type: 'express', times: [660, 655, 635, 625, 618, 605, 585, 580] },
+      { trainNo: '2505', type: 'local', times: [720, 693, 663, 648, 635, 605, 565, 555] },
+      { trainNo: '119', type: 'express', times: [780, 775, 755, 745, 738, 725, 705, 700] },
+      { trainNo: '121', type: 'express', times: [900, 895, 875, 865, 858, 845, 825, 820] },
+      { trainNo: '123', type: 'express', times: [1020, 1015, 995, 985, 978, 965, 945, 940] },
+    ]
+  },
+  CL: {
+    southbound: [
+      { trainNo: '2302', type: 'local', times: [400, 430, 465, 505, 520, 545] },
+      { trainNo: '2304', type: 'local', times: [520, 550, 585, 625, 640, 665] },
+      { trainNo: '2306', type: 'local', times: [640, 670, 705, 745, 760, 785] },
+      { trainNo: '2308', type: 'local', times: [760, 790, 825, 865, 880, 905] },
+      { trainNo: '2310', type: 'local', times: [880, 910, 945, 985, 1000, 1025] },
+      { trainNo: '2312', type: 'local', times: [1000, 1030, 1065, 1105, 1120, 1145] },
+    ],
+    northbound: [
+      { trainNo: '2301', type: 'local', times: [1145, 1120, 1085, 1045, 1030, 1005] },
+      { trainNo: '2303', type: 'local', times: [360, 335, 300, 260, 245, 220] },
+      { trainNo: '2305', type: 'local', times: [480, 455, 420, 380, 365, 340] },
+      { trainNo: '2307', type: 'local', times: [600, 575, 540, 500, 485, 460] },
+      { trainNo: '2309', type: 'local', times: [720, 695, 660, 620, 605, 580] },
+      { trainNo: '2311', type: 'local', times: [840, 815, 780, 740, 725, 700] },
+    ]
+  },
+  SL: {
+    southbound: [
+      { trainNo: '110', type: 'express', times: [580, 600, 618, 650, 690, 720, 750, 785, 820, 850, 880] },
+      { trainNo: '2702', type: 'local', times: [600, 630, 655, 705, 768, 815, 865, 920, 975, 1020, 1068] },
+      { trainNo: '112', type: 'express', times: [640, 660, 678, 710, 750, 780, 810, 845, 880, 910, 940] },
+      { trainNo: '114', type: 'express', times: [700, 720, 738, 770, 810, 840, 870, 905, 940, 970, 1000] },
+      { trainNo: '116', type: 'express', times: [760, 780, 798, 830, 870, 900, 930, 965, 1000, 1030, 1060] },
+      { trainNo: '118', type: 'express', times: [820, 840, 858, 890, 930, 960, 990, 1025, 1060, 1090, 1120] },
+      { trainNo: '120', type: 'express', times: [940, 960, 978, 1010, 1050, 1080, 1110, 1145, 1180, 1210, 1240] },
+      { trainNo: '122', type: 'express', times: [1000, 1020, 1038, 1070, 1110, 1140, 1170, 1205, 1240, 1270, 1300] },
+    ],
+    northbound: [
+      { trainNo: '111', type: 'express', times: [1300, 1270, 1252, 1220, 1180, 1150, 1120, 1085, 1050, 1020, 990] },
+      { trainNo: '2701', type: 'local', times: [360, 318, 288, 228, 150, 90, 25, 1405, 1335, 1278, 1218] },
+      { trainNo: '113', type: 'express', times: [450, 420, 402, 370, 330, 300, 270, 235, 200, 170, 140] },
+      { trainNo: '115', type: 'express', times: [540, 510, 492, 460, 420, 390, 360, 325, 290, 260, 230] },
+      { trainNo: '117', type: 'express', times: [660, 630, 612, 580, 540, 510, 480, 445, 410, 380, 350] },
+      { trainNo: '119', type: 'express', times: [780, 750, 732, 700, 660, 630, 600, 565, 530, 500, 470] },
+      { trainNo: '121', type: 'express', times: [900, 870, 852, 820, 780, 750, 720, 685, 650, 620, 590] },
+      { trainNo: '123', type: 'express', times: [1020, 990, 972, 940, 900, 870, 840, 805, 770, 740, 710] },
+    ]
+  },
+  YL: {
+    southbound: [
+      { trainNo: '4102', type: 'local', times: [365, 405, 455, 490, 515, 540] },
+      { trainNo: '206', type: 'express', times: [420, 445, 480, 500, 520, 540] },
+      { trainNo: '4106', type: 'local', times: [485, 525, 575, 610, 635, 660] },
+      { trainNo: '208', type: 'express', times: [540, 565, 600, 620, 640, 660] },
+      { trainNo: '4110', type: 'local', times: [605, 645, 695, 730, 755, 780] },
+      { trainNo: '210', type: 'express', times: [660, 685, 720, 740, 760, 780] },
+      { trainNo: '4114', type: 'local', times: [725, 765, 815, 850, 875, 900] },
+      { trainNo: '212', type: 'express', times: [780, 805, 840, 860, 880, 900] },
+    ],
+    northbound: [
+      { trainNo: '4101', type: 'local', times: [900, 875, 840, 815, 795, 770] },
+      { trainNo: '207', type: 'express', times: [420, 400, 370, 355, 340, 320] },
+      { trainNo: '4105', type: 'local', times: [480, 455, 420, 395, 375, 350] },
+      { trainNo: '209', type: 'express', times: [540, 520, 490, 475, 460, 440] },
+      { trainNo: '4109', type: 'local', times: [600, 575, 540, 515, 495, 470] },
+      { trainNo: '211', type: 'express', times: [660, 640, 610, 595, 580, 560] },
+      { trainNo: '4113', type: 'local', times: [720, 695, 660, 635, 615, 590] },
+      { trainNo: '213', type: 'express', times: [780, 760, 730, 715, 700, 680] },
+    ]
+  }
+};
+
 // State
 let map = null;
 let markers = {};
@@ -521,6 +846,9 @@ let currentClass = 'all';
 let selectedStation = null;
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 let userLocation = null;
+let currentScheduleLine = 'WL';
+let currentDirection = 'south';
+let timeUpdateInterval = null;
 
 // Distance calculation utilities
 const deg2rad = (deg) => deg * (Math.PI / 180);
@@ -539,6 +867,38 @@ function getDistanceInMeters(lat1, lon1, lat2, lon2) {
 function formatDistance(meters) {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function formatTime(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function getCurrentMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function getCountdown(departureMinutes) {
+  const now = getCurrentMinutes();
+  let diff = departureMinutes - now;
+  if (diff < 0) diff += 24 * 60; // next day
+  if (diff < 1) return isZh ? '即將發車' : 'Departing';
+  if (diff < 60) return `${diff} ${isZh ? '分鐘' : 'min'}`;
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+  return `${h}${isZh ? '時' : 'h'} ${m}${isZh ? '分' : 'm'}`;
+}
+
+function getTrainTypeName(type) {
+  const trainType = TRAIN_TYPES[type];
+  return trainType ? (isZh ? trainType.name.zh : trainType.name.en) : type;
+}
+
+function getTrainTypeClass(type) {
+  const trainType = TRAIN_TYPES[type];
+  return trainType ? trainType.class : '';
 }
 
 function isChineseLocale() {
@@ -567,6 +927,12 @@ function updateUI() {
     if (text) btn.textContent = text;
   });
 
+  // Update all data-en/data-zh elements
+  document.querySelectorAll('[data-en]').forEach(el => {
+    const text = isZh ? el.dataset.zh : el.dataset.en;
+    if (text) el.textContent = text;
+  });
+
   // Update line and class selects
   initLineSelect();
   initClassSelect();
@@ -574,6 +940,11 @@ function updateUI() {
   // Restore current selections
   document.getElementById('line-select').value = currentLine;
   document.getElementById('class-select').value = currentClass;
+
+  // Update schedule selectors and render
+  updateScheduleLineSelector();
+  updateScheduleStationSelector();
+  renderTrainSchedule();
 
   // Re-render station list and update popups
   updateDisplay();
@@ -813,6 +1184,188 @@ function initClassSelect() {
   classSelect.innerHTML = options;
 }
 
+// ===== Train Schedule Functions =====
+
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+}
+
+function updateScheduleLineSelector() {
+  const select = document.getElementById('schedule-line-select');
+  Array.from(select.options).forEach(option => {
+    const text = isZh ? option.dataset.zh : option.dataset.en;
+    if (text) option.textContent = text;
+  });
+}
+
+function updateScheduleStationSelector() {
+  const select = document.getElementById('schedule-station-select');
+  const currentValue = select.value;
+  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+
+  select.innerHTML = `<option value="">${isZh ? '-- 選擇車站 --' : '-- Select Station --'}</option>`;
+
+  stationIds.forEach(id => {
+    const station = STATIONS.find(s => s.id === id);
+    if (station) {
+      const name = isZh ? station.name.zh : station.name.en;
+      select.innerHTML += `<option value="${id}">${name}</option>`;
+    }
+  });
+
+  // Try to restore selection if still valid
+  if (stationIds.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function onScheduleLineChange() {
+  const select = document.getElementById('schedule-line-select');
+  currentScheduleLine = select.value;
+  updateScheduleStationSelector();
+  renderTrainSchedule();
+}
+
+function onScheduleStationChange() {
+  const stationId = document.getElementById('schedule-station-select').value;
+  if (stationId) {
+    const station = STATIONS.find(s => s.id === stationId);
+    if (station && markers[stationId]) {
+      map.setView([station.lat, station.lng], 12);
+      markers[stationId].openPopup();
+    }
+  }
+  renderTrainSchedule();
+}
+
+function setDirection(dir) {
+  currentDirection = dir;
+  document.querySelectorAll('.direction-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.dir === dir);
+  });
+  renderTrainSchedule();
+}
+
+function getTrainsForStation(stationId, lineCode, direction) {
+  const stationIds = SCHEDULE_STATIONS[lineCode];
+  if (!stationIds) return [];
+
+  const stationIndex = stationIds.indexOf(stationId);
+  if (stationIndex === -1) return [];
+
+  const lineSchedule = TRAIN_SCHEDULE[lineCode];
+  if (!lineSchedule) return [];
+
+  const schedule = direction === 'south' ? lineSchedule.southbound : lineSchedule.northbound;
+  const now = getCurrentMinutes();
+
+  // Get destination (first or last station in line)
+  let destId;
+  if (direction === 'south') {
+    destId = stationIds[stationIds.length - 1];
+  } else {
+    destId = stationIds[0];
+  }
+  const destStation = STATIONS.find(s => s.id === destId);
+
+  const trains = schedule.map(train => {
+    const depTime = train.times[stationIndex];
+    if (depTime === undefined) return null;
+
+    const diff = depTime - now;
+    const isDeparted = diff < -5;
+    const isArriving = diff >= 0 && diff <= 5;
+
+    return {
+      trainNo: train.trainNo,
+      type: train.type,
+      depTime: depTime,
+      depTimeStr: formatTime(depTime),
+      destination: destStation,
+      isDeparted: isDeparted,
+      isArriving: isArriving,
+      countdown: getCountdown(depTime)
+    };
+  }).filter(t => t !== null);
+
+  // Sort by departure time, show next 10 trains
+  return trains
+    .filter(t => !t.isDeparted)
+    .sort((a, b) => {
+      const aNorm = a.depTime < now - 120 ? a.depTime + 1440 : a.depTime;
+      const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
+      return aNorm - bNorm;
+    })
+    .slice(0, 10);
+}
+
+function renderTrainSchedule() {
+  const listEl = document.getElementById('train-list');
+  const stationId = document.getElementById('schedule-station-select').value;
+
+  // Update current time
+  const now = new Date();
+  document.getElementById('current-time').textContent = now.toLocaleTimeString(isZh ? 'zh-TW' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+
+  if (!stationId) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '請選擇車站查看時刻表' : 'Select a station to view schedule'}</li>`;
+    return;
+  }
+
+  // Check if this is terminal station for the direction
+  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+  const stationIndex = stationIds.indexOf(stationId);
+
+  if ((currentDirection === 'south' && stationIndex === stationIds.length - 1) ||
+      (currentDirection === 'north' && stationIndex === 0)) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '此為終點站，無此方向列車' : 'Terminal station - no trains in this direction'}</li>`;
+    return;
+  }
+
+  const trains = getTrainsForStation(stationId, currentScheduleLine, currentDirection);
+
+  if (trains.length === 0) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '目前無列車資訊' : 'No train information available'}</li>`;
+    return;
+  }
+
+  listEl.innerHTML = trains.map(train => {
+    const destName = train.destination ? (isZh ? train.destination.name.zh : train.destination.name.en) : '';
+    const typeName = getTrainTypeName(train.type);
+    const typeClass = getTrainTypeClass(train.type);
+
+    let statusClass = 'ontime';
+    let statusText = isZh ? '準點' : 'On time';
+
+    if (train.isArriving) {
+      statusClass = 'arriving';
+      statusText = isZh ? '即將到站' : 'Arriving';
+    }
+
+    return `
+      <li class="train-item${train.isDeparted ? ' departed' : ''}">
+        <div class="train-time">${train.depTimeStr}</div>
+        <div class="train-info">
+          <div class="train-number">
+            ${train.trainNo}
+            <span class="train-type ${typeClass}">${typeName}</span>
+          </div>
+          <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+        </div>
+        <div class="train-status ${statusClass}">${statusText}</div>
+        <div class="train-countdown">${train.countdown}</div>
+      </li>
+    `;
+  }).join('');
+}
+
 async function initialize() {
   console.log('[Rail] Initializing Taiwan Rail map...');
 
@@ -849,6 +1402,9 @@ async function initialize() {
     maxZoom: 19
   }).addTo(map);
 
+  // Setup tabs
+  setupTabs();
+
   // Setup UI with language
   initLineSelect();
   initClassSelect();
@@ -860,15 +1416,32 @@ async function initialize() {
   // Update page title based on language
   document.getElementById('page-title').textContent = isZh ? '台灣鐵路 (台鐵)' : 'Taiwan Rail (TRA)';
 
-  // Update navigation buttons
+  // Update navigation buttons and data-en/data-zh elements
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const text = isZh ? btn.dataset.zh : btn.dataset.en;
     if (text) btn.textContent = text;
   });
 
+  document.querySelectorAll('[data-en]').forEach(el => {
+    const text = isZh ? el.dataset.zh : el.dataset.en;
+    if (text) el.textContent = text;
+  });
+
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', handleSearch);
   searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
+
+  // Setup train schedule
+  updateScheduleLineSelector();
+  updateScheduleStationSelector();
+  renderTrainSchedule();
+
+  // Update time every minute
+  timeUpdateInterval = setInterval(() => {
+    if (document.getElementById('schedule-station-select').value) {
+      renderTrainSchedule();
+    }
+  }, 60000);
 
   // Initial load
   updateDisplay();
