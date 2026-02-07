@@ -21,8 +21,7 @@ const LABELS = {
     bikes: 'Bikes',
     slots: 'Slots',
     location: 'Location',
-    distance: 'Distance',
-    switchLang: '中文'
+    distance: 'Distance'
   },
   zh: {
     title: '微笑單車',
@@ -35,8 +34,7 @@ const LABELS = {
     bikes: '可借車輛',
     slots: '可停空位',
     location: '站點位置',
-    distance: '距離',
-    switchLang: 'EN'
+    distance: '距離'
   }
 };
 
@@ -123,8 +121,6 @@ function updateUI() {
   // Update search placeholder
   document.getElementById('search-input').placeholder = L.searchPlaceholder;
 
-  // Update lang button
-  document.querySelector('.lang-toggle').textContent = L.switchLang;
 
   // Update navigation buttons
   updateNavButtons(isZh ? 'zh' : 'en');
