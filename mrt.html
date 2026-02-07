@@ -13,12 +13,29 @@
       margin: 0;
       padding: 0;
     }
-    h1 {
-      margin: 0;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 10px 15px;
       background: #0072c6;
       color: white;
+    }
+    h1 {
+      margin: 0;
       font-size: 1.5em;
+    }
+    #lang-btn {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #lang-btn:hover {
+      background: rgba(255,255,255,0.3);
     }
     .container {
       display: flex;
@@ -146,7 +163,10 @@
   </style>
 </head>
 <body>
-  <h1>Taiwan MRT</h1>
+  <header>
+    <h1 id="page-title">Taiwan MRT</h1>
+    <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+  </header>
   <div class="container">
     <div id="panel">
       <div class="search-box">
@@ -456,10 +476,53 @@ let stations = [...STATIONS];
 let currentSystem = 'TRTC';
 let currentLine = 'all';
 let selectedStation = null;
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 
 function isChineseLocale() {
-  const userLang = navigator.language || navigator.userLanguage;
-  return userLang === 'zh-TW' || userLang === 'zh-CN';
+  return isZh;
+}
+
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('mrt-lang', isZh ? 'zh' : 'en');
+  updateUI();
+}
+
+function updateUI() {
+  // Update page title
+  document.getElementById('page-title').textContent = isZh ? '台灣捷運' : 'Taiwan MRT';
+
+  // Update search placeholder
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
+  }
+
+  // Update system select options
+  const systemSelect = document.getElementById('system-select');
+  if (systemSelect) {
+    systemSelect.options[0].textContent = isZh ? '全部系統' : 'All Systems';
+    Array.from(systemSelect.options).forEach(option => {
+      if (option.value !== 'all' && MRT_SYSTEMS[option.value]) {
+        option.textContent = isZh ? MRT_SYSTEMS[option.value].name.zh : MRT_SYSTEMS[option.value].name.en;
+      }
+    });
+  }
+
+  // Update line select options
+  updateLineSelect();
+
+  // Re-render station list and update popups
+  const filtered = filterStations();
+  renderStationList(filtered);
+
+  // Update all marker popups
+  Object.keys(markers).forEach(id => {
+    const station = STATIONS.find(s => s.id === id);
+    if (station && markers[id]) {
+      markers[id].setPopupContent(getPopupContent(station));
+    }
+  });
 }
 
 function getSystemInfo(systemCode) {
@@ -669,12 +732,21 @@ function handleSearch(e) {
 function initialize() {
   console.log('[MRT] Initializing MRT map...');
 
-  // Restore preferences
+  // Restore language preference
+  const savedLang = localStorage.getItem('mrt-lang');
+  if (savedLang) {
+    isZh = savedLang === 'zh';
+  }
+
+  // Restore system preference
   const savedSystem = localStorage.getItem('mrt-system');
   if (savedSystem && (MRT_SYSTEMS[savedSystem] || savedSystem === 'all')) {
     currentSystem = savedSystem;
     document.getElementById('system-select').value = currentSystem;
   }
+
+  // Update UI with language
+  updateUI();
 
   // Create map
   const center = MRT_SYSTEMS[currentSystem]?.center || CONFIG.DEFAULT_CENTER;
@@ -685,12 +757,9 @@ function initialize() {
     maxZoom: 19
   }).addTo(map);
 
-  // Setup UI
-  updateLineSelect();
-
+  // Setup search
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', handleSearch);
-  searchInput.placeholder = isChineseLocale() ? '搜尋車站...' : 'Search stations...';
 
   // Initial load
   const filtered = filterStations();

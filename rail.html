@@ -13,12 +13,29 @@
       margin: 0;
       padding: 0;
     }
-    h1 {
-      margin: 0;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 10px 15px;
       background: #0d47a1;
       color: white;
+    }
+    h1 {
+      margin: 0;
       font-size: 1.5em;
+    }
+    #lang-btn {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #lang-btn:hover {
+      background: rgba(255,255,255,0.3);
     }
     .container {
       display: flex;
@@ -158,7 +175,10 @@
   </style>
 </head>
 <body>
-  <h1>Taiwan Rail (TRA)</h1>
+  <header>
+    <h1 id="page-title">Taiwan Rail (TRA)</h1>
+    <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+  </header>
   <div class="container">
     <div id="panel">
       <div class="search-box">
@@ -458,10 +478,46 @@ let filteredStations = [...STATIONS];
 let currentLine = 'all';
 let currentClass = 'all';
 let selectedStation = null;
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 
 function isChineseLocale() {
-  const userLang = navigator.language || navigator.userLanguage;
-  return userLang === 'zh-TW' || userLang === 'zh-CN';
+  return isZh;
+}
+
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('rail-lang', isZh ? 'zh' : 'en');
+  updateUI();
+}
+
+function updateUI() {
+  // Update page title
+  document.getElementById('page-title').textContent = isZh ? '台灣鐵路 (台鐵)' : 'Taiwan Rail (TRA)';
+
+  // Update search placeholder
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
+  }
+
+  // Update line and class selects
+  initLineSelect();
+  initClassSelect();
+
+  // Restore current selections
+  document.getElementById('line-select').value = currentLine;
+  document.getElementById('class-select').value = currentClass;
+
+  // Re-render station list and update popups
+  updateDisplay();
+
+  // Update all marker popups
+  Object.keys(markers).forEach(id => {
+    const station = STATIONS.find(s => s.id === id);
+    if (station && markers[id]) {
+      markers[id].setPopupContent(getPopupContent(station));
+    }
+  });
 }
 
 function getLineInfo(lineCode) {
@@ -673,7 +729,13 @@ function initClassSelect() {
 function initialize() {
   console.log('[Rail] Initializing Taiwan Rail map...');
 
-  // Restore preferences
+  // Restore language preference
+  const savedLang = localStorage.getItem('rail-lang');
+  if (savedLang) {
+    isZh = savedLang === 'zh';
+  }
+
+  // Restore line preference
   const savedLine = localStorage.getItem('rail-line');
   if (savedLine && (RAIL_LINES[savedLine] || savedLine === 'all')) {
     currentLine = savedLine;
@@ -687,7 +749,7 @@ function initialize() {
     maxZoom: 19
   }).addTo(map);
 
-  // Setup UI
+  // Setup UI with language
   initLineSelect();
   initClassSelect();
 
@@ -695,9 +757,12 @@ function initialize() {
     document.getElementById('line-select').value = currentLine;
   }
 
+  // Update page title based on language
+  document.getElementById('page-title').textContent = isZh ? '台灣鐵路 (台鐵)' : 'Taiwan Rail (TRA)';
+
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', handleSearch);
-  searchInput.placeholder = isChineseLocale() ? '搜尋車站...' : 'Search stations...';
+  searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
 
   // Initial load
   updateDisplay();
