@@ -50,10 +50,10 @@ var pinShadow = new google.maps.MarkerImage("http://chart.apis.google.com/chart?
 function getInfoTitle(site) {
   var userLang = navigator.language || navigator.userLanguage;
   if (userLang == 'zh-TW' || userLang == 'zh-CN') {
-    return site.ar + "\n(" + site.sbi + "/" + (site.tot - site.sbi) + ")";
+    return site.ar + "\n(" + site.available_rent_bikes + "/" + site.available_return_bikes + ")";
   }
   // use en-US as default
-  return site.aren + "\n( bikes: " + site.sbi + "/ slots: " + (site.tot - site.sbi) + ")";
+  return site.aren + "\n( bikes: " + site.available_rent_bikes + "/ slots: " + site.available_return_bikes + ")";
 }
 
 function getInfoContent(site) {
@@ -62,16 +62,16 @@ function getInfoContent(site) {
     return '<div id="content">' +
       '<h4 id="firstHeading" class="firstHeading">' + site.sna + '</h3>' +
       '&#31449;&#40670;&#20301;&#32622; : ' + site.ar +
-      '<br>&#21487;&#20511;&#36554;&#36635; : ' + site.sbi + ' &#36635; ' +
-      '<br>&#21487;&#20572;&#31354;&#20301; : ' + (site.tot - site.sbi) + ' &#36635; ' +
+      '<br>&#21487;&#20511;&#36554;&#36635; : ' + site.available_rent_bikes + ' &#36635; ' +
+      '<br>&#21487;&#20572;&#31354;&#20301; : ' + site.available_return_bikes + ' &#36635; ' +
       '</div>';
   }
   // use en-US as default
   return '<div id="content">' +
     '<h4 id="firstHeading" class="firstHeading">' + site.snaen + '</h3>' +
     'location: ' + site.aren +
-    '<br>bikes: ' + site.sbi +
-    '<br>slots: ' + (site.tot - site.sbi) +
+    '<br>bikes: ' + site.available_rent_bikes +
+    '<br>slots: ' + site.available_return_bikes +
     '</div>';
 }
 
@@ -84,23 +84,23 @@ function httpGet(url) {
   return xmlHttp.responseText;
 }
 
-function updateMarkers(map, retVal) {
+function updateMarkers(map, stations) {
   // clear
   for (var i = 0; i < markers.length; i++) {
     markers[i].setMap(null);
   }
   markers = [];
-  for (i in retVal) {
-    latlng = new google.maps.LatLng(retVal[i].lat, retVal[i].lng);
+  for (i in stations) {
+    latlng = new google.maps.LatLng(stations[i].latitude, stations[i].longitude);
     var image = okImage;
-    if (retVal[i].sbi == 0) {
+    if (stations[i].available_rent_bikes == 0) {
       image = emptyImage;
     }
-    else if ((retVal[i].tot - retVal[i].sbi) == 0) {
+    else if (stations[i].available_return_bikes == 0) {
       image = fullImage;
     }
 
-    var infoTitle = getInfoTitle(retVal[i]);
+    var infoTitle = getInfoTitle(stations[i]);
     var marker = new google.maps.Marker({
       position: latlng,
       map: map,
@@ -111,7 +111,7 @@ function updateMarkers(map, retVal) {
     });
     markers.push(marker);
     (function(marker, i) {
-      var infoContent = getInfoContent(retVal[i]);
+      var infoContent = getInfoContent(stations[i]);
       var infowindow = new google.maps.InfoWindow({
         content: infoContent
       });
@@ -133,9 +133,9 @@ function updateMarkers(map, retVal) {
 
 function updateMap(map) {
   // refresh
-  jsonstr = httpGet('http://ubike.net46.net/ubikejson.php');
-  var retVal = JSON.parse(jsonstr).retVal;
-  updateMarkers(map, retVal);
+  jsonstr = httpGet('https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json');
+  var stations = JSON.parse(jsonstr);
+  updateMarkers(map, stations);
 
   setTimeout(function() {
     updateMap(map);

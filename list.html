@@ -15,16 +15,14 @@
 		}
 
 		function init() {
-			var url = "http://opendata.dot.taipei.gov.twopendata/gwjs_cityhall.json";
-			url = 'http://ubike.net46.net/ubikejson.php';
+			var url = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
 			var userLang = navigator.language || navigator.userLanguage;
 			var isZh = false;
 			if (userLang == 'zh-TW' || userLang == 'zh-CN') {
 				isZh = true;
 			}
 			var response = httpGet(url);
-			//document.getElementById("ubike").innerHTML = response;
-			var obj = JSON.parse(response).retVal;
+			var obj = JSON.parse(response);
 			var content = '<table border=1><tr><th>#</th><th>Station</th><th>Location</th>' + '<th>Lat</th><th>Lng</th><th>Bike #</th><th>Park #</th></tr>';
 			if (isZh) {
 				content = '<table border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
@@ -38,10 +36,10 @@
 					sna = obj[i].snaen;
 					ar = obj[i].sareaen + ' ' + obj[i].aren;
 				}
-				content = content + "<tr><td>" + i + "</td><td>"
+				content = content + "<tr><td>" + (parseInt(i) + 1) + "</td><td>"
 					+ sna + "</td><td>" + ar + "</td><td>"
-					+ obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>"
-					+ obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+					+ obj[i].latitude + "</td><td>" + obj[i].longitude + "</td><td>"
+					+ obj[i].available_rent_bikes + "</td><td>" + obj[i].available_return_bikes + "</td></tr>\n";
 			}
 			content = content + "</table>";
 			document.getElementById("ubike").innerHTML = content;
