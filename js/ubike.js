@@ -634,7 +634,8 @@ async function centerToUserLocation() {
     const position = await new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
         enableHighAccuracy: true,
-        timeout: 10000
+        timeout: 15000,
+        maximumAge: 60000
       });
     });
 
@@ -656,8 +657,18 @@ async function centerToUserLocation() {
 
     console.log('[UBike] Centered to user location:', userLocation);
   } catch (error) {
-    console.warn('[UBike] Could not get location:', error.message);
-    alert(isZh ? '無法取得您的位置' : 'Could not get your location');
+    console.warn('[UBike] Could not get location:', error.code, error.message);
+    let msg;
+    if (error.code === 1) {
+      msg = isZh ? '請允許位置權限' : 'Please allow location permission';
+    } else if (error.code === 2) {
+      msg = isZh ? '無法取得位置資訊' : 'Location unavailable';
+    } else if (error.code === 3) {
+      msg = isZh ? '定位逾時，請重試' : 'Location timeout, please retry';
+    } else {
+      msg = isZh ? '無法取得您的位置' : 'Could not get your location';
+    }
+    alert(msg);
   } finally {
     if (btn) btn.classList.remove('locating');
   }
