@@ -17,10 +17,22 @@
         bottom: 34px;
         right: 5px;
         background-color: #fff;
-        padding: 5px;
+        padding: 8px;
         border: 1px solid #999;
         z-index: 1000;
         border-radius: 4px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      #city-select {
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      #refresh-btn {
+        padding: 6px 12px;
+        cursor: pointer;
       }
       .marker-icon {
         border-radius: 50%;
@@ -30,28 +42,79 @@
       .marker-ok { background-color: #80FF00; }
       .marker-empty { background-color: #FF9E21; }
       .marker-full { background-color: #FF4D00; }
+      #loading {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        z-index: 1000;
+        display: none;
+      }
     </style>
   </head>
   <body>
+    <div id="loading">Loading...</div>
     <div id="panel">
-      <input onclick="refreshUbike();" type="button" value="refresh">
+      <select id="city-select" onchange="changeCity()">
+        <option value="taipei">台北市 Taipei</option>
+        <option value="newtaipei">新北市 New Taipei</option>
+        <option value="all">全部 All Cities</option>
+      </select>
+      <input id="refresh-btn" onclick="refreshUbike();" type="button" value="Refresh">
     </div>
     <div id="map-canvas"></div>
     <script>
 'use strict';
 
-// Configuration
-const CONFIG = {
-  API_URL: 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json',
-  REFRESH_INTERVAL: 5 * 60 * 1000, // 5 minutes
-  DEFAULT_CENTER: [25.03304, 121.5656],
-  DEFAULT_ZOOM: 16,
-  BOUNDS: {
-    maxLat: 26,
-    minLat: 23,
-    maxLng: 121.7,
-    minLng: 121.4
+// City configurations
+const CITIES = {
+  taipei: {
+    name: { en: 'Taipei', zh: '台北市' },
+    api: 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json',
+    center: [25.03304, 121.5656],
+    normalize: (data) => data.map(s => ({
+      sno: s.sno,
+      sna: s.sna,
+      snaen: s.snaen,
+      sarea: s.sarea,
+      sareaen: s.sareaen,
+      ar: s.ar,
+      aren: s.aren,
+      latitude: parseFloat(s.latitude),
+      longitude: parseFloat(s.longitude),
+      available_rent_bikes: parseInt(s.available_rent_bikes) || 0,
+      available_return_bikes: parseInt(s.available_return_bikes) || 0,
+      city: 'taipei'
+    }))
+  },
+  newtaipei: {
+    name: { en: 'New Taipei', zh: '新北市' },
+    api: 'https://data.ntpc.gov.tw/api/datasets/010e5b15-3823-4b20-b401-b1cf000550c5/json?size=2000',
+    center: [25.0119, 121.4650],
+    normalize: (data) => data.map(s => ({
+      sno: s.sno,
+      sna: s.sna,
+      snaen: s.snaen,
+      sarea: s.sarea,
+      sareaen: s.sareaen,
+      ar: s.ar,
+      aren: s.aren,
+      latitude: parseFloat(s.lat),
+      longitude: parseFloat(s.lng),
+      available_rent_bikes: parseInt(s.sbi_quantity) || 0,
+      available_return_bikes: parseInt(s.bemp) || 0,
+      city: 'newtaipei'
+    }))
   }
+};
+
+const CONFIG = {
+  REFRESH_INTERVAL: 5 * 60 * 1000,
+  DEFAULT_ZOOM: 14
 };
 
 // State
@@ -60,21 +123,19 @@ let markers = [];
 let refreshTimer = null;
 let routePath = null;
 let routeCoords = [];
+let currentCity = 'taipei';
 
-// Locale detection
 function isChineseLocale() {
   const userLang = navigator.language || navigator.userLanguage;
   return userLang === 'zh-TW' || userLang === 'zh-CN';
 }
 
-// Create custom marker icon
-function createMarkerIcon(type) {
-  const colorClass = {
-    ok: 'marker-ok',
-    empty: 'marker-empty',
-    full: 'marker-full'
-  }[type];
+function showLoading(show) {
+  document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
 
+function createMarkerIcon(type) {
+  const colorClass = { ok: 'marker-ok', empty: 'marker-empty', full: 'marker-full' }[type];
   return L.divIcon({
     className: '',
     html: `<div class="marker-icon ${colorClass}" style="width:12px;height:12px;"></div>`,
@@ -84,51 +145,50 @@ function createMarkerIcon(type) {
   });
 }
 
-// Determine marker type based on availability
 function getMarkerType(station) {
   if (station.available_rent_bikes === 0) return 'empty';
   if (station.available_return_bikes === 0) return 'full';
   return 'ok';
 }
 
-// Generate popup content
 function getPopupContent(site) {
   const bikes = site.available_rent_bikes;
   const slots = site.available_return_bikes;
+  const isZh = isChineseLocale();
+  const cityName = CITIES[site.city]?.name[isZh ? 'zh' : 'en'] || site.city;
 
-  if (isChineseLocale()) {
+  if (isZh) {
     return `<div>
       <strong>${site.sna}</strong><br>
+      <small>${cityName}</small><br>
       站點位置: ${site.ar}<br>
       可借車輛: ${bikes} 輛<br>
       可停空位: ${slots} 輛
     </div>`;
   }
   return `<div>
-    <strong>${site.snaen}</strong><br>
-    Location: ${site.aren}<br>
+    <strong>${site.snaen || site.sna}</strong><br>
+    <small>${cityName}</small><br>
+    Location: ${site.aren || site.ar}<br>
     Bikes: ${bikes}<br>
     Slots: ${slots}
   </div>`;
 }
 
-// Clear all markers from map
 function clearMarkers() {
   markers.forEach(marker => map.removeLayer(marker));
   markers = [];
 }
 
-// Create markers for all stations
 function updateMarkers(stations) {
   console.log(`[UBike] Updating ${stations.length} markers`);
   clearMarkers();
 
   stations.forEach(station => {
-    const markerType = getMarkerType(station);
+    if (!station.latitude || !station.longitude) return;
     const marker = L.marker([station.latitude, station.longitude], {
-      icon: createMarkerIcon(markerType)
+      icon: createMarkerIcon(getMarkerType(station))
     });
-
     marker.bindPopup(getPopupContent(station));
     marker.addTo(map);
     markers.push(marker);
@@ -137,130 +197,132 @@ function updateMarkers(stations) {
   console.log('[UBike] Markers updated successfully');
 }
 
-// Fetch station data from API
-async function fetchStations() {
-  console.log('[UBike] Fetching station data...');
-  const response = await fetch(CONFIG.API_URL);
+async function fetchStations(cityKey) {
+  const city = CITIES[cityKey];
+  if (!city) throw new Error(`Unknown city: ${cityKey}`);
+
+  console.log(`[UBike] Fetching ${cityKey} stations...`);
+  const response = await fetch(city.api);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
   const data = await response.json();
-  console.log(`[UBike] Loaded ${data.length} stations`);
-  return data;
+  const normalized = city.normalize(data);
+  console.log(`[UBike] Loaded ${normalized.length} stations from ${cityKey}`);
+  return normalized;
 }
 
-// Update map with fresh data
+async function fetchAllStations() {
+  const results = await Promise.allSettled([
+    fetchStations('taipei'),
+    fetchStations('newtaipei')
+  ]);
+
+  const allStations = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      allStations.push(...result.value);
+    } else {
+      console.error(`[UBike] Failed to load city ${index}:`, result.reason);
+    }
+  });
+
+  return allStations;
+}
+
 async function updateMap() {
+  showLoading(true);
   try {
-    const stations = await fetchStations();
+    let stations;
+    if (currentCity === 'all') {
+      stations = await fetchAllStations();
+    } else {
+      stations = await fetchStations(currentCity);
+    }
     updateMarkers(stations);
   } catch (error) {
     console.error('[UBike] Failed to update map:', error.message);
   }
+  showLoading(false);
 
-  // Schedule next refresh
   refreshTimer = setTimeout(updateMap, CONFIG.REFRESH_INTERVAL);
   console.log(`[UBike] Next refresh in ${CONFIG.REFRESH_INTERVAL / 1000}s`);
 }
 
-// Manual refresh handler
-function refreshUbike() {
-  console.log('[UBike] Manual refresh triggered');
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
+function changeCity() {
+  const select = document.getElementById('city-select');
+  currentCity = select.value;
+  localStorage.setItem('ubike-city', currentCity);
+  console.log(`[UBike] City changed to: ${currentCity}`);
+
+  // Pan to city center
+  if (currentCity !== 'all' && CITIES[currentCity]) {
+    map.setView(CITIES[currentCity].center, CONFIG.DEFAULT_ZOOM);
   }
+
+  if (refreshTimer) clearTimeout(refreshTimer);
   updateMap();
 }
 
-// Check if coordinates are within bounds
-function isWithinBounds(lat, lng) {
-  const { maxLat, minLat, maxLng, minLng } = CONFIG.BOUNDS;
-  return lat < maxLat && lat > minLat && lng < maxLng && lng > minLng;
+function refreshUbike() {
+  console.log('[UBike] Manual refresh triggered');
+  if (refreshTimer) clearTimeout(refreshTimer);
+  updateMap();
 }
 
-// Initialize geolocation tracking
 function initGeolocationTracking() {
-  if (!('geolocation' in navigator)) {
-    console.warn('[UBike] Geolocation not supported');
-    return;
-  }
-
-  const options = {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 2000
-  };
+  if (!('geolocation' in navigator)) return;
 
   navigator.geolocation.watchPosition(
     (position) => {
       const { latitude, longitude } = position.coords;
-      console.log(`[UBike] Position update: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
-
       routeCoords.push([latitude, longitude]);
-
-      if (routePath) {
-        map.removeLayer(routePath);
-      }
-
+      if (routePath) map.removeLayer(routePath);
       routePath = L.polyline(routeCoords, {
-        color: '#0000FF',
-        weight: 2,
-        opacity: 1.0
+        color: '#0000FF', weight: 2, opacity: 1.0
       }).addTo(map);
     },
-    (error) => {
-      console.warn('[UBike] Geolocation error:', error.message);
-    },
-    options
+    (error) => console.warn('[UBike] Geolocation error:', error.message),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 }
   );
 }
 
-// Initialize the map
 async function initialize() {
   console.log('[UBike] Initializing map...');
 
-  let center = CONFIG.DEFAULT_CENTER;
+  // Restore saved city preference
+  const savedCity = localStorage.getItem('ubike-city');
+  if (savedCity && (CITIES[savedCity] || savedCity === 'all')) {
+    currentCity = savedCity;
+    document.getElementById('city-select').value = currentCity;
+  }
 
-  // Try to get user's location for initial center
+  let center = CITIES[currentCity]?.center || CITIES.taipei.center;
+
+  // Try user location
   if ('geolocation' in navigator) {
     try {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
       });
-      const { latitude, longitude } = position.coords;
-      console.log(`[UBike] User location: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
-
-      if (isWithinBounds(latitude, longitude)) {
-        center = [latitude, longitude];
-        console.log('[UBike] Centering map on user location');
-      } else {
-        console.log('[UBike] User location outside service area, using default center');
-      }
+      center = [position.coords.latitude, position.coords.longitude];
+      console.log(`[UBike] Using user location`);
     } catch (error) {
-      console.warn('[UBike] Could not get user location:', error.message);
+      console.warn('[UBike] Could not get user location');
     }
   }
 
-  // Create map with OpenStreetMap tiles
   map = L.map('map-canvas').setView(center, CONFIG.DEFAULT_ZOOM);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
 
-  console.log('[UBike] Map created with OpenStreetMap');
-
-  // Load initial data
   await updateMap();
-
-  // Start tracking user location
   initGeolocationTracking();
-
   console.log('[UBike] Initialization complete');
 }
 
-// Start app when DOM is ready
 document.addEventListener('DOMContentLoaded', initialize);
     </script>
   </body>

@@ -48,6 +48,14 @@
         border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 14px;
+        margin-bottom: 8px;
+      }
+      .search-box select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
       }
       .station-list {
         padding: 0;
@@ -110,6 +118,11 @@
       <div id="panel">
         <div class="search-box">
           <input type="text" id="search-input" placeholder="Search stations...">
+          <select id="city-select" onchange="changeCity()">
+            <option value="all">全部 All Cities</option>
+            <option value="taipei">台北市 Taipei</option>
+            <option value="newtaipei">新北市 New Taipei</option>
+          </select>
         </div>
         <div id="result-count" class="result-count"></div>
         <ul id="station-list" class="station-list"></ul>
