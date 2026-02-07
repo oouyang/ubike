@@ -15,6 +15,7 @@ sudo apt-get install libnss3-tools
 ## Quick Start
 
 1. **Start Chrome DevTools MCP** in Claude Code:
+
    ```
    /mcp
    ```
@@ -28,52 +29,60 @@ sudo apt-get install libnss3-tools
 ## Common Commands
 
 ### Navigation
+
 ```javascript
 // Navigate to URL
-mcp__chrome-devtools__navigate_page({ type: "url", url: "https://example.com" })
+mcp__chrome -
+  devtools__navigate_page({ type: "url", url: "https://example.com" });
 
 // Reload page
-mcp__chrome-devtools__navigate_page({ type: "reload", ignoreCache: true })
+mcp__chrome - devtools__navigate_page({ type: "reload", ignoreCache: true });
 
 // Go back/forward
-mcp__chrome-devtools__navigate_page({ type: "back" })
-mcp__chrome-devtools__navigate_page({ type: "forward" })
+mcp__chrome - devtools__navigate_page({ type: "back" });
+mcp__chrome - devtools__navigate_page({ type: "forward" });
 ```
 
 ### Page Inspection
+
 ```javascript
 // Take accessibility snapshot (preferred over screenshots)
-mcp__chrome-devtools__take_snapshot()
+mcp__chrome - devtools__take_snapshot();
 
 // Take screenshot
-mcp__chrome-devtools__take_screenshot()
+mcp__chrome - devtools__take_screenshot();
 
 // List all pages
-mcp__chrome-devtools__list_pages()
+mcp__chrome - devtools__list_pages();
 ```
 
 ### Console & Network
+
 ```javascript
 // List console errors/warnings
-mcp__chrome-devtools__list_console_messages({ types: ["error", "warn"] })
+mcp__chrome - devtools__list_console_messages({ types: ["error", "warn"] });
 
 // Get specific console message details
-mcp__chrome-devtools__get_console_message({ msgid: 9 })
+mcp__chrome - devtools__get_console_message({ msgid: 9 });
 
 // List network requests by type
-mcp__chrome-devtools__list_network_requests({ resourceTypes: ["script", "xhr", "fetch"] })
+mcp__chrome -
+  devtools__list_network_requests({
+    resourceTypes: ["script", "xhr", "fetch"],
+  });
 ```
 
 ### Interaction
+
 ```javascript
 // Click element (use uid from snapshot)
-mcp__chrome-devtools__click({ uid: "1_32" })
+mcp__chrome - devtools__click({ uid: "1_32" });
 
 // Fill input field
-mcp__chrome-devtools__fill({ uid: "1_33", value: "search text" })
+mcp__chrome - devtools__fill({ uid: "1_33", value: "search text" });
 
 // Press key
-mcp__chrome-devtools__press_key({ key: "Enter" })
+mcp__chrome - devtools__press_key({ key: "Enter" });
 ```
 
 ## Troubleshooting
@@ -87,22 +96,26 @@ mcp__chrome-devtools__press_key({ key: "Enter" })
 **Solution:** Add the corporate CA certificate to Chrome's NSS database
 
 #### Step 1: Identify the certificate issuer
+
 ```bash
 openssl s_client -connect unpkg.com:443 -servername unpkg.com </dev/null 2>&1 | openssl x509 -noout -issuer
 ```
 
 Example output:
+
 ```
-issuer=C=US, L=Boise, ST=Idaho, O=Micron Technologies, OU=Security Operations, CN=zscaler.micron.com (t)
+issuer=C=US, L=Boise, ST=Idaho, O=cdn tool, OU=Security Operations, CN=test.example.com (t)
 ```
 
 #### Step 2: Split certificate bundle (if multiple certs)
+
 ```bash
 cd /tmp
 csplit -f cert- -b '%03d.pem' /path/to/ca-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}'
 ```
 
 #### Step 3: Add certificates to Chrome's NSS database
+
 ```bash
 # Add single certificate
 certutil -d sql:$HOME/.pki/nssdb -A -t "CT,C,C" -n "Certificate Name" -i /path/to/cert.pem
@@ -118,11 +131,13 @@ done
 ```
 
 #### Step 4: Verify certificate was added
+
 ```bash
 certutil -L -d sql:$HOME/.pki/nssdb | grep -i "your-cert-name"
 ```
 
 #### Step 5: Restart Chrome
+
 Run `/mcp` in Claude Code to restart Chrome with the updated certificate store.
 
 ### Leaflet/Library Not Loading
@@ -130,17 +145,20 @@ Run `/mcp` in Claude Code to restart Chrome with the updated certificate store.
 **Symptom:** `L is not defined` or similar errors for CDN libraries
 
 **Diagnosis:**
+
 1. Check console errors:
+
    ```javascript
-   mcp__chrome-devtools__list_console_messages({ types: ["error"] })
+   mcp__chrome - devtools__list_console_messages({ types: ["error"] });
    ```
 
 2. Check network requests:
    ```javascript
-   mcp__chrome-devtools__list_network_requests({ resourceTypes: ["script"] })
+   mcp__chrome - devtools__list_network_requests({ resourceTypes: ["script"] });
    ```
 
 **Common causes:**
+
 - SSL certificate issues (see above)
 - CDN blocked by firewall
 - Script loading order issues
@@ -148,9 +166,11 @@ Run `/mcp` in Claude Code to restart Chrome with the updated certificate store.
 ### Page Not Responding
 
 **Solution:** Kill and restart the MCP:
+
 ```bash
 pkill -f "chrome-devtools-mcp"
 ```
+
 Then run `/mcp` again in Claude Code.
 
 ### NSS Database Issues
@@ -158,11 +178,13 @@ Then run `/mcp` again in Claude Code.
 **Symptom:** `SEC_ERROR_BAD_DATABASE` when using certutil
 
 **Solution:** Run certutil from the nssdb directory:
+
 ```bash
 cd ~/.pki/nssdb && certutil -L -d sql:.
 ```
 
 Or recreate the database:
+
 ```bash
 rm -rf ~/.pki/nssdb
 mkdir -p ~/.pki/nssdb
@@ -172,6 +194,7 @@ certutil -d sql:$HOME/.pki/nssdb -N --empty-password
 ## Chrome Profile Location
 
 Chrome DevTools MCP uses a separate profile at:
+
 ```
 ~/.cache/chrome-devtools-mcp/chrome-profile/
 ```
@@ -180,25 +203,25 @@ This is independent of your regular Chrome profile.
 
 ## Resource Types for Network Filtering
 
-| Type | Description |
-|------|-------------|
-| `document` | HTML documents |
-| `stylesheet` | CSS files |
-| `script` | JavaScript files |
-| `image` | Images |
-| `font` | Web fonts |
-| `xhr` | XMLHttpRequest |
-| `fetch` | Fetch API requests |
-| `websocket` | WebSocket connections |
-| `media` | Audio/Video |
+| Type         | Description           |
+| ------------ | --------------------- |
+| `document`   | HTML documents        |
+| `stylesheet` | CSS files             |
+| `script`     | JavaScript files      |
+| `image`      | Images                |
+| `font`       | Web fonts             |
+| `xhr`        | XMLHttpRequest        |
+| `fetch`      | Fetch API requests    |
+| `websocket`  | WebSocket connections |
+| `media`      | Audio/Video           |
 
 ## Console Message Types
 
-| Type | Description |
-|------|-------------|
-| `log` | console.log() |
-| `info` | console.info() |
-| `warn` | console.warn() |
+| Type    | Description     |
+| ------- | --------------- |
+| `log`   | console.log()   |
+| `info`  | console.info()  |
+| `warn`  | console.warn()  |
 | `error` | console.error() |
 | `debug` | console.debug() |
 
@@ -214,17 +237,18 @@ This is independent of your regular Chrome profile.
 
 ```javascript
 // 1. Navigate to page
-mcp__chrome-devtools__navigate_page({ type: "url", url: "https://example.com" })
+mcp__chrome -
+  devtools__navigate_page({ type: "url", url: "https://example.com" });
 
 // 2. Check for errors
-mcp__chrome-devtools__list_console_messages({ types: ["error", "warn"] })
+mcp__chrome - devtools__list_console_messages({ types: ["error", "warn"] });
 
 // 3. Check if scripts loaded
-mcp__chrome-devtools__list_network_requests({ resourceTypes: ["script"] })
+mcp__chrome - devtools__list_network_requests({ resourceTypes: ["script"] });
 
 // 4. Take snapshot to see page state
-mcp__chrome-devtools__take_snapshot()
+mcp__chrome - devtools__take_snapshot();
 
 // 5. Interact with elements using UIDs from snapshot
-mcp__chrome-devtools__click({ uid: "1_5", includeSnapshot: true })
+mcp__chrome - devtools__click({ uid: "1_5", includeSnapshot: true });
 ```
