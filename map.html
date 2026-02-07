@@ -4,6 +4,8 @@
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <title>Ubike information</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
       html, body, #map-canvas {
         height: 100%;
@@ -17,11 +19,24 @@
         background-color: #fff;
         padding: 5px;
         border: 1px solid #999;
+        z-index: 1000;
+        border-radius: 4px;
       }
+      .marker-icon {
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      }
+      .marker-ok { background-color: #80FF00; }
+      .marker-empty { background-color: #FF9E21; }
+      .marker-full { background-color: #FF4D00; }
     </style>
-    <script src="https://cdn.flurry.com/js/flurry.js"></script>
-    <script>FlurryAgent.startSession('PC3GQQ4V4RFBV7CSG4FJ');</script>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+  </head>
+  <body>
+    <div id="panel">
+      <input onclick="refreshUbike();" type="button" value="refresh">
+    </div>
+    <div id="map-canvas"></div>
     <script>
 'use strict';
 
@@ -29,7 +44,7 @@
 const CONFIG = {
   API_URL: 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json',
   REFRESH_INTERVAL: 5 * 60 * 1000, // 5 minutes
-  DEFAULT_CENTER: { lat: 25.03304, lng: 121.5656 },
+  DEFAULT_CENTER: [25.03304, 121.5656],
   DEFAULT_ZOOM: 16,
   BOUNDS: {
     maxLat: 26,
@@ -39,39 +54,12 @@ const CONFIG = {
   }
 };
 
-// Marker colors
-const COLORS = {
-  OK: '80FF00',      // Green - bikes & slots available
-  EMPTY: 'FF9E21',   // Orange - no bikes
-  FULL: 'FF4D00'     // Red - no parking slots
-};
-
-// Create marker images
-function createMarkerImage(color) {
-  return new google.maps.MarkerImage(
-    `http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${color}`,
-    new google.maps.Size(21, 34),
-    new google.maps.Point(0, 0),
-    new google.maps.Point(10, 34)
-  );
-}
-
-const MARKER_IMAGES = {
-  ok: createMarkerImage(COLORS.OK),
-  empty: createMarkerImage(COLORS.EMPTY),
-  full: createMarkerImage(COLORS.FULL),
-  shadow: new google.maps.MarkerImage(
-    'http://chart.apis.google.com/chart?chst=d_map_pin_shadow',
-    new google.maps.Size(40, 37),
-    new google.maps.Point(0, 0),
-    new google.maps.Point(12, 35)
-  )
-};
-
 // State
 let map = null;
 let markers = [];
 let refreshTimer = null;
+let routePath = null;
+let routeCoords = [];
 
 // Locale detection
 function isChineseLocale() {
@@ -79,51 +67,54 @@ function isChineseLocale() {
   return userLang === 'zh-TW' || userLang === 'zh-CN';
 }
 
-// Info window content generators
-function getInfoTitle(site) {
-  const bikes = site.available_rent_bikes;
-  const slots = site.available_return_bikes;
+// Create custom marker icon
+function createMarkerIcon(type) {
+  const colorClass = {
+    ok: 'marker-ok',
+    empty: 'marker-empty',
+    full: 'marker-full'
+  }[type];
 
-  if (isChineseLocale()) {
-    return `${site.ar}\n(${bikes}/${slots})`;
-  }
-  return `${site.aren}\n(bikes: ${bikes} / slots: ${slots})`;
+  return L.divIcon({
+    className: '',
+    html: `<div class="marker-icon ${colorClass}" style="width:12px;height:12px;"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+    popupAnchor: [0, -6]
+  });
 }
 
-function getInfoContent(site) {
+// Determine marker type based on availability
+function getMarkerType(station) {
+  if (station.available_rent_bikes === 0) return 'empty';
+  if (station.available_return_bikes === 0) return 'full';
+  return 'ok';
+}
+
+// Generate popup content
+function getPopupContent(site) {
   const bikes = site.available_rent_bikes;
   const slots = site.available_return_bikes;
 
   if (isChineseLocale()) {
-    return `<div id="content">
-      <h4 class="firstHeading">${site.sna}</h4>
+    return `<div>
+      <strong>${site.sna}</strong><br>
       站點位置: ${site.ar}<br>
       可借車輛: ${bikes} 輛<br>
       可停空位: ${slots} 輛
     </div>`;
   }
-  return `<div id="content">
-    <h4 class="firstHeading">${site.snaen}</h4>
+  return `<div>
+    <strong>${site.snaen}</strong><br>
     Location: ${site.aren}<br>
     Bikes: ${bikes}<br>
     Slots: ${slots}
   </div>`;
 }
 
-// Determine marker image based on availability
-function getMarkerImage(station) {
-  if (station.available_rent_bikes === 0) {
-    return MARKER_IMAGES.empty;
-  }
-  if (station.available_return_bikes === 0) {
-    return MARKER_IMAGES.full;
-  }
-  return MARKER_IMAGES.ok;
-}
-
 // Clear all markers from map
 function clearMarkers() {
-  markers.forEach(marker => marker.setMap(null));
+  markers.forEach(marker => map.removeLayer(marker));
   markers = [];
 }
 
@@ -132,43 +123,14 @@ function updateMarkers(stations) {
   console.log(`[UBike] Updating ${stations.length} markers`);
   clearMarkers();
 
-  stations.forEach((station, index) => {
-    const position = new google.maps.LatLng(station.latitude, station.longitude);
-    const marker = new google.maps.Marker({
-      position,
-      map,
-      icon: getMarkerImage(station),
-      shadow: MARKER_IMAGES.shadow,
-      title: getInfoTitle(station)
+  stations.forEach(station => {
+    const markerType = getMarkerType(station);
+    const marker = L.marker([station.latitude, station.longitude], {
+      icon: createMarkerIcon(markerType)
     });
 
-    // Info window setup
-    const infoWindow = new google.maps.InfoWindow({
-      content: getInfoContent(station)
-    });
-
-    let closeTimeout = null;
-
-    marker.addListener('mouseover', () => {
-      if (closeTimeout) {
-        clearTimeout(closeTimeout);
-        closeTimeout = null;
-      }
-      infoWindow.open(map, marker);
-    });
-
-    marker.addListener('mouseout', () => {
-      closeTimeout = setTimeout(() => infoWindow.close(), 3000);
-    });
-
-    marker.addListener('click', () => {
-      if (closeTimeout) {
-        clearTimeout(closeTimeout);
-        closeTimeout = null;
-      }
-      infoWindow.open(map, marker);
-    });
-
+    marker.bindPopup(getPopupContent(station));
+    marker.addTo(map);
     markers.push(marker);
   });
 
@@ -223,9 +185,6 @@ function initGeolocationTracking() {
     return;
   }
 
-  const routeCoords = [];
-  let routePath = null;
-
   const options = {
     enableHighAccuracy: true,
     maximumAge: 0,
@@ -237,19 +196,17 @@ function initGeolocationTracking() {
       const { latitude, longitude } = position.coords;
       console.log(`[UBike] Position update: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
 
-      routeCoords.push(new google.maps.LatLng(latitude, longitude));
+      routeCoords.push([latitude, longitude]);
 
       if (routePath) {
-        routePath.setMap(null);
+        map.removeLayer(routePath);
       }
 
-      routePath = new google.maps.Polyline({
-        path: routeCoords,
-        strokeColor: '#0000FF',
-        strokeOpacity: 1.0,
-        strokeWeight: 2
-      });
-      routePath.setMap(map);
+      routePath = L.polyline(routeCoords, {
+        color: '#0000FF',
+        weight: 2,
+        opacity: 1.0
+      }).addTo(map);
     },
     (error) => {
       console.warn('[UBike] Geolocation error:', error.message);
@@ -262,7 +219,7 @@ function initGeolocationTracking() {
 async function initialize() {
   console.log('[UBike] Initializing map...');
 
-  let center = new google.maps.LatLng(CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng);
+  let center = CONFIG.DEFAULT_CENTER;
 
   // Try to get user's location for initial center
   if ('geolocation' in navigator) {
@@ -274,7 +231,7 @@ async function initialize() {
       console.log(`[UBike] User location: (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`);
 
       if (isWithinBounds(latitude, longitude)) {
-        center = new google.maps.LatLng(latitude, longitude);
+        center = [latitude, longitude];
         console.log('[UBike] Centering map on user location');
       } else {
         console.log('[UBike] User location outside service area, using default center');
@@ -284,12 +241,15 @@ async function initialize() {
     }
   }
 
-  // Create map
-  map = new google.maps.Map(document.getElementById('map-canvas'), {
-    zoom: CONFIG.DEFAULT_ZOOM,
-    center
-  });
-  console.log('[UBike] Map created');
+  // Create map with OpenStreetMap tiles
+  map = L.map('map-canvas').setView(center, CONFIG.DEFAULT_ZOOM);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  console.log('[UBike] Map created with OpenStreetMap');
 
   // Load initial data
   await updateMap();
@@ -300,34 +260,8 @@ async function initialize() {
   console.log('[UBike] Initialization complete');
 }
 
-// Start app when Google Maps is ready
-google.maps.event.addDomListener(window, 'load', initialize);
-    </script>
-  </head>
-  <body>
-    <div id="panel">
-      <input onclick="refreshUbike();" type="button" value="refresh">
-    </div>
-    <div id="map-canvas"></div>
-    <script>
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-      ga('create', 'UA-56849136-1', 'auto');
-      ga('require', 'displayfeatures');
-      ga('send', 'pageview');
-
-    </script>
-    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-    <!-- FxOS Ubike -->
-    <ins class="adsbygoogle"
-         style="display:inline-block;width:320px;height:100px"
-         data-ad-client="ca-pub-0983430695379728"
-         data-ad-slot="6114326151"></ins>
-    <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
+// Start app when DOM is ready
+document.addEventListener('DOMContentLoaded', initialize);
     </script>
   </body>
 </html>

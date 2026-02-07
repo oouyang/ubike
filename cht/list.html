@@ -3,97 +3,145 @@
 
 <head>
 	<meta charset='UTF-8'>
-	<title>ubike site list</title>
-	<script type="text/javascript" src="../sorttable.js"></script>
-	<link rel="stylesheet" href="../css/sortable-theme-finder.css" type="text/css" />
+	<title>微笑單車站點列表</title>
+	<script src="../sorttable.js"></script>
+	<link rel="stylesheet" href="../css/sortable-theme-finder.css">
 	<script>
-		function httpGet(url) {
-			var xmlHttp = new XMLHttpRequest({
-				mozSystem: true
-			});
-			xmlHttp.open("GET", url, false);
-			xmlHttp.send(null);
-			return xmlHttp.responseText;
-		}
+		'use strict';
+
+		const API_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
+
+		const deg2rad = (deg) => deg * (Math.PI / 180);
 
 		function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-			var R = 6371000; // Radius of the earth in km
-			var dLat = deg2rad(lat2 - lat1); // deg2rad below
-			var dLon = deg2rad(lon2 - lon1);
-			var a =
-				Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			const R = 6371000; // Earth radius in meters
+			const dLat = deg2rad(lat2 - lat1);
+			const dLon = deg2rad(lon2 - lon1);
+			const a = Math.sin(dLat / 2) ** 2 +
 				Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-				Math.sin(dLon / 2) * Math.sin(dLon / 2);
-			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-			var d = R * c; // Distance in km
-			return d;
+				Math.sin(dLon / 2) ** 2;
+			const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+			return R * c;
 		}
 
-		function deg2rad(deg) {
-			return deg * (Math.PI / 180)
-		}
-
-		function init() {
-			var url = 'http://ubike.net46.net/ubikecht.php';
-			var response = httpGet(url);
-			response = response.substring(0, response.indexOf('<') - 1);
-			var obj = JSON.parse(response);
-			var content = '<table class="sorttable sortable-theme-finder"  id=tbl border=1><tr><th>#</th><th>站名</th><th>位置</th>' + '<th>經度</th><th>緯度</th><th>可借數</th><th>可停數</th></tr>';
-			for (var i in obj) {
-				var sna, ar;
-				sna = obj[i].sna;
-				ar = obj[i].sarea + ' ' + obj[i].ar;
-				content = content + "<tr><td>" + i + "</td><td>" + sna + "</td><td>" + ar + "</td><td>" + obj[i].lat + "</td><td>" + obj[i].lng + "</td><td>" + obj[i].sbi + "</td><td>" + (obj[i].tot - obj[i].sbi) + "</td></tr>\n";
+		async function fetchStations() {
+			console.log('[UBike] 正在載入站點資料...');
+			const response = await fetch(API_URL);
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
-			content = content + "</table>";
-			document.getElementById("ubike").innerHTML = content;
-			var tbl = document.getElementById('tbl');
-			if ("geolocation" in navigator) {
-				navigator.geolocation.getCurrentPosition(function(pos) {
-					var lat = pos.coords.latitude;
-					var lng = pos.coords.longitude;
-					var myth;
+			const data = await response.json();
+			console.log(`[UBike] 已載入 ${data.length} 個站點`);
+			return data;
+		}
 
-					var rows = tbl.getElementsByTagName('tr');
-					for (var i = 0; i < rows.length; i++ ) {
-					 var trow = tbl.getElementsByTagName('tr')[i];
-					 var td = document.createElement((i==0)?'th':'td');
-					 if ( trow.rowIndex === 0) {
-					   var txt = document.createTextNode('距離(m)');
-					   myth = td;
-					 } else {
-					 	var lat1 = eval(trow.getElementsByTagName('td')[3].innerHTML);
-					 	var lng1 = eval(trow.getElementsByTagName('td')[4].innerHTML);
-					 	var dist = getDistanceFromLatLonInM(lat, lng,
-					 		lat1, lng1).toFixed(2);
-					    var txt = document.createTextNode(dist);
-					    // trow.onclick = function(){
-         //                 var cell = this.getElementsByTagName("td")[2];
-         //                 var id = cell.innerHTML;
-         //                 window.open('https://www.google.com/maps/place/' + id,'_self');
-         //               };
-					 }
-					 td.appendChild(txt);
-					 trow.appendChild(td);
-					}
-					sorttable.makeSortable(tbl);
-					sorttable.innerSortFunction.apply(myth, []);
-				});
+		function buildTableRow(station, index) {
+			const location = `${station.sarea} ${station.ar}`;
+			return `<tr>
+				<td>${index + 1}</td>
+				<td>${station.sna}</td>
+				<td>${location}</td>
+				<td>${station.latitude}</td>
+				<td>${station.longitude}</td>
+				<td>${station.available_rent_bikes}</td>
+				<td>${station.available_return_bikes}</td>
+			</tr>`;
+		}
+
+		function renderTable(stations) {
+			console.log('[UBike] 正在建立表格...');
+			let html = `<table class="sortable sortable-theme-finder" id="tbl" border="1">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>站名</th>
+						<th>位置</th>
+						<th>緯度</th>
+						<th>經度</th>
+						<th>可借數</th>
+						<th>可停數</th>
+					</tr>
+				</thead>
+				<tbody>`;
+
+			for (let i = 0; i < stations.length; i++) {
+				html += buildTableRow(stations[i], i);
+			}
+
+			html += '</tbody></table>';
+			return html;
+		}
+
+		function addDistanceColumn(table, userLat, userLng) {
+			console.log(`[UBike] 計算距離 (使用者位置: ${userLat.toFixed(5)}, ${userLng.toFixed(5)})`);
+
+			const headerRow = table.querySelector('thead tr');
+			const distanceHeader = document.createElement('th');
+			distanceHeader.textContent = '距離(m)';
+			headerRow.appendChild(distanceHeader);
+
+			const rows = table.querySelectorAll('tbody tr');
+			rows.forEach(row => {
+				const cells = row.getElementsByTagName('td');
+				const lat = parseFloat(cells[3].textContent);
+				const lng = parseFloat(cells[4].textContent);
+				const distance = getDistanceFromLatLonInM(userLat, userLng, lat, lng);
+
+				const distanceCell = document.createElement('td');
+				distanceCell.textContent = distance.toFixed(2);
+				distanceCell.setAttribute('data-value', distance);
+				row.appendChild(distanceCell);
+			});
+
+			// Re-initialize sortable and sort by distance
+			if (typeof sorttable !== 'undefined') {
+				sorttable.makeSortable(table);
+				distanceHeader.click(); // Sort by distance ascending
+				console.log('[UBike] 已依距離排序');
 			}
 		}
+
+		async function init() {
+			const container = document.getElementById('ubike');
+
+			try {
+				container.innerHTML = '<p>載入中...</p>';
+				const stations = await fetchStations();
+				container.innerHTML = renderTable(stations);
+
+				const table = document.getElementById('tbl');
+
+				// Add distance column if geolocation available
+				if ('geolocation' in navigator) {
+					navigator.geolocation.getCurrentPosition(
+						(pos) => {
+							addDistanceColumn(table, pos.coords.latitude, pos.coords.longitude);
+						},
+						(error) => {
+							console.warn('[UBike] 無法取得位置:', error.message);
+						},
+						{ timeout: 10000 }
+					);
+				}
+
+				console.log('[UBike] 表格建立完成');
+			} catch (error) {
+				console.error('[UBike] 載入失敗:', error.message);
+				container.innerHTML = `<p style="color: red;">載入失敗: ${error.message}</p>`;
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded', init);
 	</script>
-	<!--<style>-->
-	<!--	tr:nth-child(even) {-->
-	<!--		background: #CCC-->
-	<!--	}-->
-	<!--	tr:nth-child(odd) {-->
-	<!--		background: #FFF-->
-	<!--	http://x.co/8suor }-->
-	<!--</style>-->
+	<style>
+		body {
+			font-family: sans-serif;
+		}
+	</style>
 </head>
 
-<body onload=init()>
-	<p id='ubike'></p>
+<body>
+	<div id='ubike'></div>
 </body>
 
 </html>
