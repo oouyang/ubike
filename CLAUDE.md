@@ -55,7 +55,10 @@ There are no npm dependencies, build commands, or test frameworks.
 - **Red (FF4D00)** - `available_return_bikes == 0` (no parking slots)
 
 ### Key Files
-- `js/util.js` - XHR helpers and Haversine distance calculation
+- `js/util.js` - Utility functions:
+  - `fetchJSON(url)` - Async fetch with Promise (modern)
+  - `httpGet(url)` - Synchronous XHR (legacy, used by map.html/list.html)
+  - `getDistanceFromLatLonInM()` - Haversine distance calculation
 - `js/store-locator.min.js` - Google Maps store locator library
 - `manifest.webapp` - Firefox OS / PWA manifest with i18n support
 
