@@ -209,6 +209,127 @@
             color: #999;
             font-style: italic;
         }
+        /* Tab styles */
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { background: #E3F2FD; }
+        .tab-btn.active {
+            color: #1976D2;
+            border-bottom-color: #1976D2;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Direction tabs */
+        .direction-tabs {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .direction-tab {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .direction-tab:hover { background: #E3F2FD; }
+        .direction-tab.active {
+            background: #1976D2;
+            color: white;
+            border-color: #1976D2;
+        }
+        /* Schedule styles */
+        .schedule-header {
+            padding: 12px 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .current-time {
+            font-size: 0.9em;
+            color: #1976D2;
+        }
+        .route-stop-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        .route-stop-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .route-stop-item:hover { background: #E3F2FD; }
+        .route-stop-item.current { background: #BBDEFB; }
+        .stop-sequence {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #1976D2;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .stop-sequence.terminal { background: #c62828; }
+        .route-stop-info { flex: 1; }
+        .route-stop-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .route-stop-time {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .bus-eta {
+            font-size: 0.85em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .bus-eta.arriving {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+        .bus-eta.scheduled {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        .no-schedule {
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+        }
         @media (max-width: 768px) {
             .container { flex-direction: column; }
             #panel { width: 100%; height: 50%; }
@@ -233,41 +354,79 @@
     </header>
     <div class="container">
         <div id="panel">
-            <div class="controls">
-                <select id="city-select" onchange="changeCity()">
-                    <option value="Taipei">台北市 Taipei</option>
-                    <option value="NewTaipei">新北市 New Taipei</option>
-                    <option value="Taoyuan">桃園市 Taoyuan</option>
-                    <option value="Taichung">台中市 Taichung</option>
-                    <option value="Tainan">台南市 Tainan</option>
-                    <option value="Kaohsiung">高雄市 Kaohsiung</option>
-                    <option value="Keelung">基隆市 Keelung</option>
-                    <option value="Hsinchu">新竹市 Hsinchu</option>
-                    <option value="HsinchuCounty">新竹縣 Hsinchu County</option>
-                    <option value="MiaoliCounty">苗栗縣 Miaoli</option>
-                    <option value="ChanghuaCounty">彰化縣 Changhua</option>
-                    <option value="NantouCounty">南投縣 Nantou</option>
-                    <option value="YunlinCounty">雲林縣 Yunlin</option>
-                    <option value="ChiayiCounty">嘉義縣 Chiayi County</option>
-                    <option value="Chiayi">嘉義市 Chiayi City</option>
-                    <option value="PingtungCounty">屏東縣 Pingtung</option>
-                    <option value="YilanCounty">宜蘭縣 Yilan</option>
-                    <option value="HualienCounty">花蓮縣 Hualien</option>
-                    <option value="TaitungCounty">台東縣 Taitung</option>
-                    <option value="KinmenCounty">金門縣 Kinmen</option>
-                    <option value="PenghuCounty">澎湖縣 Penghu</option>
-                </select>
-                <input type="text" id="search-input" placeholder="Search stops or routes...">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="schedule" data-en="Route Schedule" data-zh="路線時刻">Route Schedule</button>
+                <button class="tab-btn" data-tab="nearby" data-en="Nearby Stops" data-zh="附近站牌">Nearby Stops</button>
             </div>
-            <div class="info-bar" id="info-bar">
-                Finding nearby bus stops...
+
+            <div id="tab-schedule" class="tab-content active">
+                <div class="controls">
+                    <select id="route-city-select" onchange="onRouteCityChange()">
+                        <option value="Taipei">台北市 Taipei</option>
+                        <option value="NewTaipei">新北市 New Taipei</option>
+                        <option value="Taoyuan">桃園市 Taoyuan</option>
+                        <option value="Taichung">台中市 Taichung</option>
+                        <option value="Tainan">台南市 Tainan</option>
+                        <option value="Kaohsiung">高雄市 Kaohsiung</option>
+                    </select>
+                    <select id="route-select" onchange="onRouteChange()">
+                        <option value="">-- Select Route --</option>
+                    </select>
+                    <div class="direction-tabs">
+                        <div class="direction-tab active" data-dir="go" onclick="setRouteDirection('go')">
+                            <span data-en="→ Outbound" data-zh="→ 去程">→ Outbound</span>
+                        </div>
+                        <div class="direction-tab" data-dir="back" onclick="setRouteDirection('back')">
+                            <span data-en="← Return" data-zh="← 返程">← Return</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-header">
+                    <span id="schedule-title" data-en="Route Stops" data-zh="路線站點">Route Stops</span>
+                    <span class="current-time" id="schedule-time"></span>
+                </div>
+                <ul id="route-stop-list" class="route-stop-list">
+                    <li class="no-schedule" data-en="Select a route to view stops" data-zh="請選擇路線查看站點">Select a route to view stops</li>
+                </ul>
             </div>
-            <ul id="stop-list" class="stop-list">
-                <li class="loading">
-                    <div class="loading-spinner"></div>
-                    <div id="loading-text">Getting your location...</div>
-                </li>
-            </ul>
+
+            <div id="tab-nearby" class="tab-content">
+                <div class="controls">
+                    <select id="city-select" onchange="changeCity()">
+                        <option value="Taipei">台北市 Taipei</option>
+                        <option value="NewTaipei">新北市 New Taipei</option>
+                        <option value="Taoyuan">桃園市 Taoyuan</option>
+                        <option value="Taichung">台中市 Taichung</option>
+                        <option value="Tainan">台南市 Tainan</option>
+                        <option value="Kaohsiung">高雄市 Kaohsiung</option>
+                        <option value="Keelung">基隆市 Keelung</option>
+                        <option value="Hsinchu">新竹市 Hsinchu</option>
+                        <option value="HsinchuCounty">新竹縣 Hsinchu County</option>
+                        <option value="MiaoliCounty">苗栗縣 Miaoli</option>
+                        <option value="ChanghuaCounty">彰化縣 Changhua</option>
+                        <option value="NantouCounty">南投縣 Nantou</option>
+                        <option value="YunlinCounty">雲林縣 Yunlin</option>
+                        <option value="ChiayiCounty">嘉義縣 Chiayi County</option>
+                        <option value="Chiayi">嘉義市 Chiayi City</option>
+                        <option value="PingtungCounty">屏東縣 Pingtung</option>
+                        <option value="YilanCounty">宜蘭縣 Yilan</option>
+                        <option value="HualienCounty">花蓮縣 Hualien</option>
+                        <option value="TaitungCounty">台東縣 Taitung</option>
+                        <option value="KinmenCounty">金門縣 Kinmen</option>
+                        <option value="PenghuCounty">澎湖縣 Penghu</option>
+                    </select>
+                    <input type="text" id="search-input" placeholder="Search stops or routes...">
+                </div>
+                <div class="info-bar" id="info-bar">
+                    Finding nearby bus stops...
+                </div>
+                <ul id="stop-list" class="stop-list">
+                    <li class="loading">
+                        <div class="loading-spinner"></div>
+                        <div id="loading-text">Getting your location...</div>
+                    </li>
+                </ul>
+            </div>
         </div>
         <div id="map-canvas"></div>
     </div>

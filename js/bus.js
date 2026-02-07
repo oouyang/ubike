@@ -25,6 +25,138 @@ const TDX_CONFIG = {
 // If neither is configured, demo mode will be used
 // ===========================================
 
+// Demo bus routes with stops and schedule (for Route Schedule tab)
+const BUS_ROUTES = {
+    Taipei: [
+        { id: '307', name: { en: '307', zh: '307' }, terminals: { en: 'Banqiao - MRT Gongguan', zh: '板橋－捷運公館站' } },
+        { id: '299', name: { en: '299', zh: '299' }, terminals: { en: 'Yonghe - MRT Taipei 101', zh: '永和－捷運台北101' } },
+        { id: '信義幹線', name: { en: 'Xinyi', zh: '信義幹線' }, terminals: { en: 'Songshan Station - Yongchun', zh: '松山車站－永春' } },
+        { id: '藍27', name: { en: 'Blue 27', zh: '藍27' }, terminals: { en: 'Neihu - Nangang', zh: '內湖－南港' } },
+        { id: '紅5', name: { en: 'Red 5', zh: '紅5' }, terminals: { en: 'Taipei Main - Yangmingshan', zh: '台北車站－陽明山' } },
+        { id: '綠1', name: { en: 'Green 1', zh: '綠1' }, terminals: { en: 'Xinyi - Taipei Zoo', zh: '信義－台北動物園' } },
+    ],
+    NewTaipei: [
+        { id: '275', name: { en: '275', zh: '275' }, terminals: { en: 'Sanchong - Taipei', zh: '三重－台北' } },
+        { id: '橘12', name: { en: 'Orange 12', zh: '橘12' }, terminals: { en: 'Zhonghe - Taipei', zh: '中和－台北' } },
+        { id: '藍38', name: { en: 'Blue 38', zh: '藍38' }, terminals: { en: 'Tucheng - Banqiao', zh: '土城－板橋' } },
+    ],
+    Taoyuan: [
+        { id: '206', name: { en: '206', zh: '206' }, terminals: { en: 'Taoyuan Station - Airport', zh: '桃園車站－機場' } },
+        { id: '501', name: { en: '501', zh: '501' }, terminals: { en: 'Zhongli - HSR Station', zh: '中壢－高鐵站' } },
+    ],
+    Taichung: [
+        { id: '300', name: { en: '300', zh: '300' }, terminals: { en: 'Taichung Station - HSR', zh: '台中車站－高鐵站' } },
+        { id: '301', name: { en: '301', zh: '301' }, terminals: { en: 'Xinmin - Taichung Station', zh: '新民－台中車站' } },
+        { id: '藍1', name: { en: 'Blue 1', zh: '藍1' }, terminals: { en: 'Taichung Port - Station', zh: '台中港－台中車站' } },
+    ],
+    Tainan: [
+        { id: '2', name: { en: '2', zh: '2' }, terminals: { en: 'Tainan Station - Anping', zh: '台南車站－安平' } },
+        { id: '紅幹線', name: { en: 'Red Line', zh: '紅幹線' }, terminals: { en: 'Tainan - Shanhua', zh: '台南－善化' } },
+    ],
+    Kaohsiung: [
+        { id: '紅27', name: { en: 'Red 27', zh: '紅27' }, terminals: { en: 'HSR Zuoying - Siaogang', zh: '高鐵左營－小港' } },
+        { id: '橘8', name: { en: 'Orange 8', zh: '橘8' }, terminals: { en: 'Zuoying - Fongshan', zh: '左營－鳳山' } },
+        { id: '205', name: { en: '205', zh: '205' }, terminals: { en: 'Kaohsiung Station - MRT', zh: '高雄車站－捷運' } },
+    ]
+};
+
+// Demo route stops data
+const ROUTE_STOPS = {
+    '307': {
+        go: [
+            { name: { en: 'Banqiao Station', zh: '板橋車站' }, time: '06:00' },
+            { name: { en: 'Fuzhong', zh: '府中' }, time: '06:05' },
+            { name: { en: 'Jiangzicui', zh: '江子翠' }, time: '06:10' },
+            { name: { en: 'Longshan Temple', zh: '龍山寺' }, time: '06:18' },
+            { name: { en: 'Ximen', zh: '西門' }, time: '06:23' },
+            { name: { en: 'Taipei Main Station', zh: '台北車站' }, time: '06:30' },
+            { name: { en: 'Zhongxiao Xinsheng', zh: '忠孝新生' }, time: '06:38' },
+            { name: { en: 'Guting', zh: '古亭' }, time: '06:45' },
+            { name: { en: 'Taipower Building', zh: '台電大樓' }, time: '06:50' },
+            { name: { en: 'MRT Gongguan', zh: '捷運公館站' }, time: '06:55' },
+        ],
+        back: [
+            { name: { en: 'MRT Gongguan', zh: '捷運公館站' }, time: '07:00' },
+            { name: { en: 'Taipower Building', zh: '台電大樓' }, time: '07:05' },
+            { name: { en: 'Guting', zh: '古亭' }, time: '07:10' },
+            { name: { en: 'Zhongxiao Xinsheng', zh: '忠孝新生' }, time: '07:17' },
+            { name: { en: 'Taipei Main Station', zh: '台北車站' }, time: '07:25' },
+            { name: { en: 'Ximen', zh: '西門' }, time: '07:32' },
+            { name: { en: 'Longshan Temple', zh: '龍山寺' }, time: '07:37' },
+            { name: { en: 'Jiangzicui', zh: '江子翠' }, time: '07:45' },
+            { name: { en: 'Fuzhong', zh: '府中' }, time: '07:50' },
+            { name: { en: 'Banqiao Station', zh: '板橋車站' }, time: '07:55' },
+        ]
+    },
+    '299': {
+        go: [
+            { name: { en: 'Yonghe', zh: '永和' }, time: '06:00' },
+            { name: { en: 'Dingxi', zh: '頂溪' }, time: '06:06' },
+            { name: { en: 'Guting', zh: '古亭' }, time: '06:14' },
+            { name: { en: 'Dongmen', zh: '東門' }, time: '06:20' },
+            { name: { en: 'Zhongxiao Fuxing', zh: '忠孝復興' }, time: '06:28' },
+            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '06:38' },
+            { name: { en: 'MRT Taipei 101', zh: '捷運台北101' }, time: '06:45' },
+        ],
+        back: [
+            { name: { en: 'MRT Taipei 101', zh: '捷運台北101' }, time: '07:00' },
+            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '07:07' },
+            { name: { en: 'Zhongxiao Fuxing', zh: '忠孝復興' }, time: '07:17' },
+            { name: { en: 'Dongmen', zh: '東門' }, time: '07:25' },
+            { name: { en: 'Guting', zh: '古亭' }, time: '07:31' },
+            { name: { en: 'Dingxi', zh: '頂溪' }, time: '07:39' },
+            { name: { en: 'Yonghe', zh: '永和' }, time: '07:45' },
+        ]
+    },
+    '信義幹線': {
+        go: [
+            { name: { en: 'Songshan Station', zh: '松山車站' }, time: '06:10' },
+            { name: { en: 'Songshan', zh: '松山' }, time: '06:14' },
+            { name: { en: 'Nanjing Sanmin', zh: '南京三民' }, time: '06:19' },
+            { name: { en: 'Taipei Arena', zh: '小巨蛋' }, time: '06:25' },
+            { name: { en: 'Zhongxiao Dunhua', zh: '忠孝敦化' }, time: '06:32' },
+            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '06:40' },
+            { name: { en: 'Yongchun', zh: '永春' }, time: '06:48' },
+        ],
+        back: [
+            { name: { en: 'Yongchun', zh: '永春' }, time: '07:00' },
+            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '07:08' },
+            { name: { en: 'Zhongxiao Dunhua', zh: '忠孝敦化' }, time: '07:16' },
+            { name: { en: 'Taipei Arena', zh: '小巨蛋' }, time: '07:23' },
+            { name: { en: 'Nanjing Sanmin', zh: '南京三民' }, time: '07:29' },
+            { name: { en: 'Songshan', zh: '松山' }, time: '07:34' },
+            { name: { en: 'Songshan Station', zh: '松山車站' }, time: '07:38' },
+        ]
+    },
+    // Default route data for routes without detailed stops
+    _default: {
+        go: [
+            { name: { en: 'Terminal A', zh: '起點站' }, time: '06:00' },
+            { name: { en: 'Stop 1', zh: '站點1' }, time: '06:08' },
+            { name: { en: 'Stop 2', zh: '站點2' }, time: '06:16' },
+            { name: { en: 'Stop 3', zh: '站點3' }, time: '06:24' },
+            { name: { en: 'Stop 4', zh: '站點4' }, time: '06:32' },
+            { name: { en: 'Terminal B', zh: '終點站' }, time: '06:40' },
+        ],
+        back: [
+            { name: { en: 'Terminal B', zh: '終點站' }, time: '07:00' },
+            { name: { en: 'Stop 4', zh: '站點4' }, time: '07:08' },
+            { name: { en: 'Stop 3', zh: '站點3' }, time: '07:16' },
+            { name: { en: 'Stop 2', zh: '站點2' }, time: '07:24' },
+            { name: { en: 'Stop 1', zh: '站點1' }, time: '07:32' },
+            { name: { en: 'Terminal A', zh: '起點站' }, time: '07:40' },
+        ]
+    }
+};
+
+// Schedule intervals (first/last bus times and frequency)
+const ROUTE_SCHEDULE = {
+    '307': { firstBus: '05:30', lastBus: '23:30', peakInterval: 8, offPeakInterval: 15 },
+    '299': { firstBus: '05:40', lastBus: '23:00', peakInterval: 10, offPeakInterval: 20 },
+    '信義幹線': { firstBus: '06:00', lastBus: '22:30', peakInterval: 10, offPeakInterval: 15 },
+    _default: { firstBus: '06:00', lastBus: '22:00', peakInterval: 15, offPeakInterval: 20 }
+};
+
 // City configurations
 const BUS_CITIES = {
     Taipei: { name: { en: 'Taipei', zh: '台北市' }, center: [25.0330, 121.5654] },
@@ -64,6 +196,12 @@ let accessToken = null;
 let tokenExpiry = 0;
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 let refreshTimer = null;
+let scheduleTimer = null;
+
+// Route schedule state
+let currentRouteCity = 'Taipei';
+let currentRoute = '';
+let routeDirection = 'go';
 
 // Use common.js utilities if available, otherwise define locally
 const deg2rad = (typeof window.deg2rad === 'function') ? window.deg2rad : (deg) => deg * (Math.PI / 180);
@@ -114,6 +252,196 @@ function updateUI() {
 
     renderStopList();
     updatePopups();
+
+    // Update route schedule UI
+    updateRouteSelector();
+    renderRouteSchedule();
+}
+
+// ===== Tab Management =====
+
+function setupTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+    });
+}
+
+// ===== Route Schedule Functions =====
+
+function updateRouteCitySelector() {
+    const select = document.getElementById('route-city-select');
+    if (!select) return;
+
+    Array.from(select.options).forEach(opt => {
+        const city = BUS_CITIES[opt.value];
+        if (city) {
+            opt.textContent = isZh ? city.name.zh : city.name.en;
+        }
+    });
+}
+
+function updateRouteSelector() {
+    const select = document.getElementById('route-select');
+    if (!select) return;
+
+    const routes = BUS_ROUTES[currentRouteCity] || [];
+    const currentValue = select.value;
+
+    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}</option>`;
+    routes.forEach(route => {
+        const name = isZh ? route.name.zh : route.name.en;
+        const terminals = isZh ? route.terminals.zh : route.terminals.en;
+        select.innerHTML += `<option value="${route.id}">${name} (${terminals})</option>`;
+    });
+
+    // Restore selection if still valid
+    if (routes.some(r => r.id === currentValue)) {
+        select.value = currentValue;
+    }
+
+    // Update city selector text
+    updateRouteCitySelector();
+}
+
+function onRouteCityChange() {
+    const select = document.getElementById('route-city-select');
+    currentRouteCity = select.value;
+    currentRoute = '';
+    updateRouteSelector();
+    renderRouteSchedule();
+}
+
+function onRouteChange() {
+    const select = document.getElementById('route-select');
+    currentRoute = select.value;
+    renderRouteSchedule();
+}
+
+function setRouteDirection(dir) {
+    routeDirection = dir;
+    document.querySelectorAll('.direction-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.dir === dir);
+    });
+    renderRouteSchedule();
+}
+
+function getRouteStops(routeId, direction) {
+    const routeData = ROUTE_STOPS[routeId] || ROUTE_STOPS._default;
+    return routeData[direction] || routeData.go;
+}
+
+function getRouteScheduleInfo(routeId) {
+    return ROUTE_SCHEDULE[routeId] || ROUTE_SCHEDULE._default;
+}
+
+function getNextBusTime(scheduleInfo) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Parse first and last bus times
+    const [firstH, firstM] = scheduleInfo.firstBus.split(':').map(Number);
+    const [lastH, lastM] = scheduleInfo.lastBus.split(':').map(Number);
+    const firstBusMinutes = firstH * 60 + firstM;
+    const lastBusMinutes = lastH * 60 + lastM;
+
+    // Check if within service hours
+    if (currentMinutes < firstBusMinutes) {
+        return { time: scheduleInfo.firstBus, waitMinutes: firstBusMinutes - currentMinutes };
+    }
+    if (currentMinutes > lastBusMinutes) {
+        return { time: null, waitMinutes: null, ended: true };
+    }
+
+    // Determine interval (peak hours: 7-9, 17-19)
+    const hour = now.getHours();
+    const isPeak = (hour >= 7 && hour < 9) || (hour >= 17 && hour < 19);
+    const interval = isPeak ? scheduleInfo.peakInterval : scheduleInfo.offPeakInterval;
+
+    // Calculate next bus
+    const minutesSinceFirst = currentMinutes - firstBusMinutes;
+    const bussesPassed = Math.floor(minutesSinceFirst / interval);
+    const nextBusMinutes = firstBusMinutes + (bussesPassed + 1) * interval;
+
+    if (nextBusMinutes > lastBusMinutes) {
+        return { time: null, waitMinutes: null, ended: true };
+    }
+
+    const nextH = Math.floor(nextBusMinutes / 60);
+    const nextM = nextBusMinutes % 60;
+    const timeStr = `${nextH.toString().padStart(2, '0')}:${nextM.toString().padStart(2, '0')}`;
+
+    return { time: timeStr, waitMinutes: nextBusMinutes - currentMinutes };
+}
+
+function renderRouteSchedule() {
+    const listEl = document.getElementById('route-stop-list');
+    const timeEl = document.getElementById('schedule-time');
+    if (!listEl) return;
+
+    // Update current time
+    const now = new Date();
+    if (timeEl) {
+        timeEl.textContent = now.toLocaleTimeString(isZh ? 'zh-TW' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Update data-en/data-zh elements
+    document.querySelectorAll('#tab-schedule [data-en]').forEach(el => {
+        const text = isZh ? el.dataset.zh : el.dataset.en;
+        if (text) el.textContent = text;
+    });
+
+    if (!currentRoute) {
+        listEl.innerHTML = `<li class="no-schedule">${isZh ? '請選擇路線查看站點' : 'Select a route to view stops'}</li>`;
+        return;
+    }
+
+    const stops = getRouteStops(currentRoute, routeDirection);
+    const scheduleInfo = getRouteScheduleInfo(currentRoute);
+    const nextBus = getNextBusTime(scheduleInfo);
+
+    // Route info header
+    let headerHtml = '';
+    if (nextBus.ended) {
+        headerHtml = `<li class="route-stop-item" style="background:#FFF3E0;">
+            <div class="route-stop-info">
+                <div class="route-stop-name" style="color:#E65100;">${isZh ? '今日營運已結束' : 'Service ended for today'}</div>
+                <div class="route-stop-time">${isZh ? '首班車' : 'First bus'}: ${scheduleInfo.firstBus}</div>
+            </div>
+        </li>`;
+    } else if (nextBus.waitMinutes !== null) {
+        const waitText = nextBus.waitMinutes <= 1
+            ? (isZh ? '即將到站' : 'Arriving')
+            : `${nextBus.waitMinutes} ${isZh ? '分鐘' : 'min'}`;
+        headerHtml = `<li class="route-stop-item" style="background:#E8F5E9;">
+            <div class="route-stop-info">
+                <div class="route-stop-name" style="color:#2E7D32;">${isZh ? '下一班車' : 'Next bus'}: ${nextBus.time}</div>
+                <div class="route-stop-time">${isZh ? '班距' : 'Interval'}: ${scheduleInfo.peakInterval}-${scheduleInfo.offPeakInterval} ${isZh ? '分鐘' : 'min'}</div>
+            </div>
+            <div class="bus-eta ${nextBus.waitMinutes <= 5 ? 'arriving' : 'scheduled'}">${waitText}</div>
+        </li>`;
+    }
+
+    const stopsHtml = stops.map((stop, index) => {
+        const isTerminal = index === 0 || index === stops.length - 1;
+        const stopName = isZh ? stop.name.zh : stop.name.en;
+
+        return `
+            <li class="route-stop-item">
+                <div class="stop-sequence ${isTerminal ? 'terminal' : ''}">${index + 1}</div>
+                <div class="route-stop-info">
+                    <div class="route-stop-name">${stopName}</div>
+                    <div class="route-stop-time">${isZh ? '預計' : 'Est.'} ${stop.time}</div>
+                </div>
+            </li>
+        `;
+    }).join('');
+
+    listEl.innerHTML = headerHtml + stopsHtml;
 }
 
 // Check if proxy is configured
@@ -540,7 +868,14 @@ async function init() {
         document.getElementById('city-select').value = currentCity;
     }
 
+    // Setup tabs
+    setupTabs();
+
     updateUI();
+
+    // Initialize route schedule
+    updateRouteSelector();
+    renderRouteSchedule();
 
     // Initialize map
     const cityData = BUS_CITIES[currentCity];
@@ -580,7 +915,7 @@ async function init() {
     // Setup search
     document.getElementById('search-input').addEventListener('input', handleSearch);
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh arrivals every 30 seconds
     refreshTimer = setInterval(async () => {
         if (busStops.length > 0) {
             const stopIds = busStops.map(s => s.id);
@@ -591,12 +926,22 @@ async function init() {
         }
     }, 30000);
 
+    // Update schedule time every minute
+    scheduleTimer = setInterval(() => {
+        if (currentRoute) {
+            renderRouteSchedule();
+        }
+    }, 60000);
+
     console.log('[Bus] Initialization complete');
 }
 
 // Make functions available globally
 window.toggleLang = toggleLang;
 window.changeCity = changeCity;
+window.onRouteCityChange = onRouteCityChange;
+window.onRouteChange = onRouteChange;
+window.setRouteDirection = setRouteDirection;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', init);
