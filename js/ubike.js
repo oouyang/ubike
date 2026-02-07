@@ -623,6 +623,47 @@ function initGeolocationTracking() {
 }
 
 // ============================================================
+// LOCATE USER
+// ============================================================
+
+async function centerToUserLocation() {
+  const btn = document.querySelector('.locate-btn');
+  if (btn) btn.classList.add('locating');
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+    });
+
+    userLocation = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude
+    };
+
+    if (map) {
+      map.setView([userLocation.lat, userLocation.lng], 16);
+    }
+
+    // Update distances
+    if (stationsData.length > 0) {
+      addDistanceToStations();
+      updateStationList(stationsData);
+      updatePopups();
+    }
+
+    console.log('[UBike] Centered to user location:', userLocation);
+  } catch (error) {
+    console.warn('[UBike] Could not get location:', error.message);
+    alert(isZh ? '無法取得您的位置' : 'Could not get your location');
+  } finally {
+    if (btn) btn.classList.remove('locating');
+  }
+}
+
+// ============================================================
 // LOADING INDICATOR
 // ============================================================
 
@@ -704,3 +745,4 @@ window.changeCity = changeCity;
 window.toggleSearchPanel = toggleSearchPanel;
 window.selectStation = selectStation;
 window.sortByColumn = sortByColumn;
+window.centerToUserLocation = centerToUserLocation;

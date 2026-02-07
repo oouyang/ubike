@@ -1122,6 +1122,36 @@ function handleSearch(e) {
     renderStopList();
 }
 
+async function centerToUserLocation() {
+    const btn = document.querySelector('.locate-btn');
+    if (btn) btn.classList.add('locating');
+
+    try {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000
+            });
+        });
+
+        userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+
+        if (map) {
+            map.setView([userLocation.lat, userLocation.lng], 16);
+        }
+
+        // Reload nearby stops for new location
+        await loadNearbyStops();
+
+        console.log('[Bus] Centered to user location:', userLocation);
+    } catch (error) {
+        console.warn('[Bus] Could not get location:', error.message);
+        alert(isZh ? '無法取得您的位置' : 'Could not get your location');
+    } finally {
+        if (btn) btn.classList.remove('locating');
+    }
+}
+
 async function init() {
     console.log('[Bus] Initializing...');
 
@@ -1211,6 +1241,7 @@ window.onRouteChange = onRouteChange;
 window.setRouteDirection = setRouteDirection;
 window.onRouteSearch = onRouteSearch;
 window.onStopSelectorChange = onStopSelectorChange;
+window.centerToUserLocation = centerToUserLocation;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', init);
