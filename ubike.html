@@ -13,12 +13,29 @@
         margin: 0;
         padding: 0;
       }
-      h1 {
-        margin: 0;
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         padding: 10px 15px;
         background: #4CAF50;
         color: white;
+      }
+      h1 {
+        margin: 0;
         font-size: 1.5em;
+      }
+      #lang-btn {
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      #lang-btn:hover {
+        background: rgba(255,255,255,0.3);
       }
       .container {
         display: flex;
@@ -113,7 +130,10 @@
     </style>
   </head>
   <body>
-    <h1>YouBike</h1>
+    <header>
+      <h1>YouBike</h1>
+      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    </header>
     <div class="container">
       <div id="panel">
         <div class="search-box">

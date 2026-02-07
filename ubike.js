@@ -89,10 +89,65 @@ let stations = [];
 let markers = {};
 let selectedStation = null;
 let currentCity = 'all';
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 
 function isChineseLocale() {
-    const userLang = navigator.language || navigator.userLanguage;
-    return userLang === 'zh-TW' || userLang === 'zh-CN';
+    return isZh;
+}
+
+function toggleLang() {
+    isZh = !isZh;
+    localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+    updateUI();
+}
+
+function updateUI() {
+    // Update search placeholder
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.placeholder = isZh ? '搜尋站點...' : 'Search stations...';
+    }
+
+    // Update city selector options
+    const cityOptions = {
+        all: { en: 'All Cities', zh: '全部' },
+        taipei: { en: 'Taipei', zh: '台北市' },
+        newtaipei: { en: 'New Taipei', zh: '新北市' },
+        taoyuan: { en: 'Taoyuan', zh: '桃園市' },
+        hsinchu: { en: 'Hsinchu City', zh: '新竹市' },
+        hsinchuCounty: { en: 'Hsinchu County', zh: '新竹縣' },
+        miaoli: { en: 'Miaoli', zh: '苗栗縣' },
+        taichung: { en: 'Taichung', zh: '台中市' },
+        chiayi: { en: 'Chiayi City', zh: '嘉義市' },
+        chiayiCounty: { en: 'Chiayi County', zh: '嘉義縣' },
+        tainan: { en: 'Tainan', zh: '台南市' },
+        kaohsiung: { en: 'Kaohsiung', zh: '高雄市' },
+        pingtung: { en: 'Pingtung', zh: '屏東縣' },
+        taitung: { en: 'Taitung', zh: '台東縣' }
+    };
+
+    const select = document.getElementById('city-select');
+    if (select) {
+        Array.from(select.options).forEach(option => {
+            const city = cityOptions[option.value];
+            if (city) {
+                option.textContent = isZh ? city.zh : city.en;
+            }
+        });
+    }
+
+    // Re-render station list and update popups
+    if (stations.length > 0) {
+        renderStationList(filterStations(document.getElementById('search-input')?.value || ''));
+        // Update popup content for all markers
+        Object.keys(markers).forEach(key => {
+            const [city, sno] = key.split('-');
+            const station = stations.find(s => s.sno === sno && s.city === city);
+            if (station && markers[key]) {
+                markers[key].setPopupContent(getPopupContent(station));
+            }
+        });
+    }
 }
 
 function createMarkerIcon(type) {
@@ -332,13 +387,22 @@ async function loadStations() {
 async function initStoreLocator() {
     console.log('[UBike] Initializing station locator...');
 
-    // Restore preferences
+    // Restore language preference
+    const savedLang = localStorage.getItem('ubike-lang');
+    if (savedLang) {
+        isZh = savedLang === 'zh';
+    }
+
+    // Restore city preference
     const savedCity = localStorage.getItem('ubike-city');
     if (savedCity && (CITIES[savedCity] || savedCity === 'all')) {
         currentCity = savedCity;
         const select = document.getElementById('city-select');
         if (select) select.value = currentCity;
     }
+
+    // Update UI with language
+    updateUI();
 
     // Create map
     const center = CITIES[currentCity]?.center || CONFIG.DEFAULT_CENTER;
@@ -356,7 +420,6 @@ async function initStoreLocator() {
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
-        searchInput.placeholder = isChineseLocale() ? '搜尋站點...' : 'Search stations...';
     }
 
     console.log('[UBike] Station locator initialized successfully');

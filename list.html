@@ -70,6 +70,7 @@
 			currentLang = lang;
 			localStorage.setItem('ubike-lang', lang);
 			document.title = LABELS[lang].title;
+			document.getElementById('page-title').textContent = LABELS[lang].title;
 			document.getElementById('lang-btn').textContent = LABELS[lang].switchLang;
 			updateCitySelector();
 			console.log(`[UBike] Language set to: ${lang}`);
@@ -468,7 +469,7 @@
 
 <body>
 	<div class="header">
-		<h1>YouBike Station List</h1>
+		<h1 id="page-title">YouBike Station List</h1>
 		<div class="header-controls">
 			<select id="city-select" onchange="changeCity()">
 				<option value="all">All Cities</option>
