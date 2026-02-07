@@ -285,6 +285,12 @@ function updateUI() {
     // Update route schedule UI
     updateRouteSelector();
     renderRouteSchedule();
+
+    // Update locate button title
+    const locateBtn = document.querySelector('.locate-btn');
+    if (locateBtn) {
+        locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
+    }
 }
 
 // ===== Tab Management =====

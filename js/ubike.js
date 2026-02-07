@@ -137,6 +137,12 @@ function updateUI() {
 
   // Update city selector
   updateCitySelector();
+
+  // Update locate button title
+  const locateBtn = document.querySelector('.locate-btn');
+  if (locateBtn) {
+    locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
+  }
 }
 
 function updateCitySelector() {
