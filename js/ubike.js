@@ -124,7 +124,7 @@ function updateUI() {
   document.getElementById('search-input').placeholder = L.searchPlaceholder;
 
   // Update lang button
-  document.getElementById('lang-btn').textContent = L.switchLang;
+  document.querySelector('.lang-toggle').textContent = L.switchLang;
 
   // Update navigation buttons
   updateNavButtons(isZh ? 'zh' : 'en');

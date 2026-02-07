@@ -116,16 +116,15 @@
       font-weight: bold;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    #lang-btn {
+    .lang-toggle {
       padding: 6px 12px;
       background: rgba(255,255,255,0.2);
       border: 1px solid rgba(255,255,255,0.3);
       color: white;
       border-radius: 4px;
       cursor: pointer;
-      font-weight: 500;
     }
-    #lang-btn:hover {
+    .lang-toggle:hover {
       background: rgba(255,255,255,0.3);
     }
 
@@ -444,7 +443,7 @@
         <option value="pingtung">Pingtung</option>
         <option value="taitung">Taitung</option>
       </select>
-      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
     </div>
   </header>
 

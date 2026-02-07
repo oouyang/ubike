@@ -49,16 +49,15 @@
     .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
     .nav-btn.home { background: #FF9800; border-color: #FF9800; }
     .nav-btn.home:hover { background: #F57C00; }
-    #lang-btn {
+    .lang-toggle {
       padding: 6px 12px;
       background: rgba(255,255,255,0.2);
       border: 1px solid rgba(255,255,255,0.3);
       color: white;
       border-radius: 4px;
       cursor: pointer;
-      font-weight: 500;
     }
-    #lang-btn:hover {
+    .lang-toggle:hover {
       background: rgba(255,255,255,0.3);
     }
     .station-distance {
@@ -536,7 +535,7 @@
       <a href="rail.html" class="nav-btn active" data-en="Rail" data-zh="台鐵">Rail</a>
       <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
       <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
     </div>
   </header>
   <div class="container" style="position:relative;">
