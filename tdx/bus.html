@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Taiwan Intercity Bus Terminals</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #7b1fa2, #4a148c);
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h1 { margin: 0; font-size: 1.4em; }
+      .header-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .back-link {
+        color: white;
+        text-decoration: none;
+        opacity: 0.9;
+      }
+      .lang-toggle, .filter-select {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .filter-select option { color: #333; }
+      .container {
+        display: flex;
+        height: calc(100vh - 52px);
+      }
+      #panel {
+        width: 380px;
+        height: 100%;
+        overflow-y: auto;
+        border-right: 1px solid #ccc;
+        background: #f9f9f9;
+      }
+      #map-canvas {
+        flex: 1;
+        height: 100%;
+      }
+      .search-box {
+        padding: 10px 15px;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .search-box input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .info-box {
+        padding: 10px 15px;
+        background: #f3e5f5;
+        border-bottom: 1px solid #ce93d8;
+        font-size: 0.85em;
+        color: #6a1b9a;
+      }
+      .station-list {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .station-item {
+        padding: 14px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .station-item:hover {
+        background: #f3e5f5;
+      }
+      .station-item.selected {
+        background: #e1bee7;
+      }
+      .station-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .station-type-badge {
+        background: #7b1fa2;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75em;
+        font-weight: 500;
+      }
+      .station-type-badge.regional { background: #9c27b0; }
+      .station-type-badge.local { background: #ab47bc; }
+      .station-name {
+        font-weight: bold;
+        flex: 1;
+      }
+      .station-details {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 4px;
+      }
+      .station-operators {
+        font-size: 0.75em;
+        color: #7b1fa2;
+      }
+      .marker-icon {
+        background: #7b1fa2;
+        color: white;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      @media (max-width: 768px) {
+        .container { flex-direction: column; }
+        #panel { width: 100%; height: 45%; }
+        #map-canvas { height: 55%; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">🚌 Intercity Bus Terminals</h1>
+      <div class="header-right">
+        <select id="region-filter" class="filter-select" onchange="filterTerminals()">
+          <option value="all" id="opt-all">All Regions</option>
+          <option value="north" id="opt-north">Northern</option>
+          <option value="central" id="opt-central">Central</option>
+          <option value="south" id="opt-south">Southern</option>
+          <option value="east" id="opt-east">Eastern</option>
+        </select>
+        <a href="index.html" class="back-link" id="back-link">← Back</a>
+        <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
+      </div>
+    </header>
+    <div class="container">
+      <div id="panel">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search terminals...">
+        </div>
+        <div class="info-box" id="info-box">
+          Major intercity bus terminals across Taiwan
+        </div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
+      <div id="map-canvas"></div>
+    </div>
+
+    <script>
+    'use strict';
+
+    // Taiwan Intercity Bus Terminals (Static Data)
+    const TERMINALS = [
+      // Northern Taiwan
+      { id: 'TPE-MAIN', name: { en: 'Taipei Bus Station', zh: '台北轉運站' }, lat: 25.0478, lng: 121.5172, region: 'north', city: { en: 'Taipei', zh: '台北市' }, address: { en: 'Zhongzheng Dist., near Taipei Main Station', zh: '中正區台北車站旁' }, operators: ['Kuo-Kuang', 'UBus', 'Kamalan'] },
+      { id: 'TPE-WEST-A', name: { en: 'Taipei West Station A', zh: '台北西站A棟' }, lat: 25.0463, lng: 121.5145, region: 'north', city: { en: 'Taipei', zh: '台北市' }, address: { en: 'Zhongzheng Dist.', zh: '中正區' }, operators: ['Various operators'] },
+      { id: 'TPE-CITY-HALL', name: { en: 'Taipei City Hall Bus Station', zh: '市府轉運站' }, lat: 25.0408, lng: 121.5677, region: 'north', city: { en: 'Taipei', zh: '台北市' }, address: { en: 'Xinyi Dist., MRT City Hall Station', zh: '信義區市政府站' }, operators: ['Kuo-Kuang', 'Capital Bus'] },
+      { id: 'TPE-NANGANG', name: { en: 'Nangang Bus Station', zh: '南港轉運站' }, lat: 25.0530, lng: 121.6065, region: 'north', city: { en: 'Taipei', zh: '台北市' }, address: { en: 'Nangang Dist., near Nangang Station', zh: '南港區南港車站旁' }, operators: ['Kuo-Kuang', 'Kamalan'] },
+      { id: 'BQ-STATION', name: { en: 'Banqiao Bus Station', zh: '板橋客運站' }, lat: 25.0145, lng: 121.4636, region: 'north', city: { en: 'New Taipei', zh: '新北市' }, address: { en: 'Banqiao Dist., near Banqiao Station', zh: '板橋區板橋車站旁' }, operators: ['Kuo-Kuang', 'UBus'] },
+      { id: 'TY-STATION', name: { en: 'Taoyuan Bus Station', zh: '桃園客運總站' }, lat: 24.9893, lng: 121.3133, region: 'north', city: { en: 'Taoyuan', zh: '桃園市' }, address: { en: 'Taoyuan Dist., near Taoyuan Station', zh: '桃園區桃園車站旁' }, operators: ['Taoyuan Bus', 'Kuo-Kuang'] },
+      { id: 'TY-HSR', name: { en: 'Taoyuan HSR Bus Station', zh: '高鐵桃園站轉運站' }, lat: 25.0127, lng: 121.2145, region: 'north', city: { en: 'Taoyuan', zh: '桃園市' }, address: { en: 'Zhongli Dist., HSR Taoyuan Station', zh: '中壢區高鐵桃園站' }, operators: ['Various operators'] },
+      { id: 'ZL-STATION', name: { en: 'Zhongli Bus Station', zh: '中壢客運總站' }, lat: 24.9536, lng: 121.2250, region: 'north', city: { en: 'Taoyuan', zh: '桃園市' }, address: { en: 'Zhongli Dist.', zh: '中壢區' }, operators: ['Zhongli Bus', 'Kuo-Kuang'] },
+      { id: 'HSC-STATION', name: { en: 'Hsinchu Bus Station', zh: '新竹客運總站' }, lat: 24.8017, lng: 120.9714, region: 'north', city: { en: 'Hsinchu', zh: '新竹市' }, address: { en: 'East Dist., near Hsinchu Station', zh: '東區新竹車站旁' }, operators: ['Hsinchu Bus', 'Kuo-Kuang'] },
+      // Central Taiwan
+      { id: 'TC-STATION', name: { en: 'Taichung Bus Station', zh: '台中轉運站' }, lat: 24.1378, lng: 120.6869, region: 'central', city: { en: 'Taichung', zh: '台中市' }, address: { en: 'Central Dist., near Taichung Station', zh: '中區台中車站旁' }, operators: ['Kuo-Kuang', 'UBus', 'Taichung Bus'] },
+      { id: 'TC-HSR', name: { en: 'Taichung HSR Bus Station', zh: '高鐵台中站轉運站' }, lat: 24.1127, lng: 120.6153, region: 'central', city: { en: 'Taichung', zh: '台中市' }, address: { en: 'Wuri Dist., HSR Taichung Station', zh: '烏日區高鐵台中站' }, operators: ['Various operators'] },
+      { id: 'TC-CHAOMA', name: { en: 'Chaoma Bus Station', zh: '朝馬轉運站' }, lat: 24.1641, lng: 120.6467, region: 'central', city: { en: 'Taichung', zh: '台中市' }, address: { en: 'Xitun Dist.', zh: '西屯區' }, operators: ['Kuo-Kuang', 'UBus'] },
+      { id: 'CH-STATION', name: { en: 'Changhua Bus Station', zh: '彰化客運總站' }, lat: 24.0812, lng: 120.5389, region: 'central', city: { en: 'Changhua', zh: '彰化縣' }, address: { en: 'Changhua City', zh: '彰化市' }, operators: ['Changhua Bus', 'Yuanlin Bus'] },
+      { id: 'NT-STATION', name: { en: 'Nantou Bus Station', zh: '南投客運總站' }, lat: 23.9158, lng: 120.6839, region: 'central', city: { en: 'Nantou', zh: '南投縣' }, address: { en: 'Nantou City', zh: '南投市' }, operators: ['Nantou Bus', 'Yuanlin Bus'] },
+      // Southern Taiwan
+      { id: 'CY-STATION', name: { en: 'Chiayi Bus Station', zh: '嘉義客運總站' }, lat: 23.4792, lng: 120.4417, region: 'south', city: { en: 'Chiayi', zh: '嘉義市' }, address: { en: 'West Dist., near Chiayi Station', zh: '西區嘉義車站旁' }, operators: ['Chiayi Bus', 'Kuo-Kuang'] },
+      { id: 'CY-HSR', name: { en: 'Chiayi HSR Bus Station', zh: '高鐵嘉義站轉運站' }, lat: 23.4593, lng: 120.3232, region: 'south', city: { en: 'Chiayi County', zh: '嘉義縣' }, address: { en: 'Taibao City, HSR Chiayi Station', zh: '太保市高鐵嘉義站' }, operators: ['BRT', 'Chiayi Bus'] },
+      { id: 'TN-STATION', name: { en: 'Tainan Bus Station', zh: '台南轉運站' }, lat: 22.9971, lng: 120.2125, region: 'south', city: { en: 'Tainan', zh: '台南市' }, address: { en: 'North Dist., near Tainan Station', zh: '北區台南車站旁' }, operators: ['Kuo-Kuang', 'UBus', 'Tainan Bus'] },
+      { id: 'TN-HSR', name: { en: 'Tainan HSR Bus Station', zh: '高鐵台南站轉運站' }, lat: 22.9251, lng: 120.2861, region: 'south', city: { en: 'Tainan', zh: '台南市' }, address: { en: 'Guiren Dist., HSR Tainan Station', zh: '歸仁區高鐵台南站' }, operators: ['H31 Shuttle', 'Various'] },
+      { id: 'KH-STATION', name: { en: 'Kaohsiung Bus Station', zh: '高雄客運總站' }, lat: 22.6397, lng: 120.3025, region: 'south', city: { en: 'Kaohsiung', zh: '高雄市' }, address: { en: 'Sanmin Dist., near Kaohsiung Station', zh: '三民區高雄車站旁' }, operators: ['Kuo-Kuang', 'UBus', 'Kaohsiung Bus'] },
+      { id: 'KH-HSR', name: { en: 'Zuoying HSR Bus Station', zh: '高鐵左營站轉運站' }, lat: 22.6875, lng: 120.3080, region: 'south', city: { en: 'Kaohsiung', zh: '高雄市' }, address: { en: 'Zuoying Dist., HSR Zuoying Station', zh: '左營區高鐵左營站' }, operators: ['Various operators'] },
+      { id: 'PT-STATION', name: { en: 'Pingtung Bus Station', zh: '屏東客運總站' }, lat: 22.6694, lng: 120.4875, region: 'south', city: { en: 'Pingtung', zh: '屏東縣' }, address: { en: 'Pingtung City', zh: '屏東市' }, operators: ['Pingtung Bus', 'Kuo-Kuang'] },
+      // Eastern Taiwan
+      { id: 'YL-STATION', name: { en: 'Yilan Bus Station', zh: '宜蘭轉運站' }, lat: 24.7517, lng: 121.7583, region: 'east', city: { en: 'Yilan', zh: '宜蘭縣' }, address: { en: 'Yilan City, near Yilan Station', zh: '宜蘭市宜蘭車站旁' }, operators: ['Kamalan', 'Capital Bus'] },
+      { id: 'LDG-STATION', name: { en: 'Luodong Bus Station', zh: '羅東轉運站' }, lat: 24.6772, lng: 121.7667, region: 'east', city: { en: 'Yilan', zh: '宜蘭縣' }, address: { en: 'Luodong Township', zh: '羅東鎮' }, operators: ['Kamalan', 'Capital Bus'] },
+      { id: 'HL-STATION', name: { en: 'Hualien Bus Station', zh: '花蓮客運總站' }, lat: 23.9917, lng: 121.6011, region: 'east', city: { en: 'Hualien', zh: '花蓮縣' }, address: { en: 'Hualien City, near Hualien Station', zh: '花蓮市花蓮車站旁' }, operators: ['Hualien Bus', 'Tairoko Bus'] },
+      { id: 'TT-STATION', name: { en: 'Taitung Bus Station', zh: '台東客運總站' }, lat: 22.7492, lng: 121.1497, region: 'east', city: { en: 'Taitung', zh: '台東縣' }, address: { en: 'Taitung City', zh: '台東市' }, operators: ['Taitung Bus', 'Dingdong Bus'] }
+    ];
+
+    let map = null;
+    let markers = {};
+    let selectedTerminal = null;
+    let currentRegion = 'all';
+    let searchQuery = '';
+    let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+
+    function toggleLang() {
+      isZh = !isZh;
+      localStorage.setItem('tdx-lang', isZh ? 'zh' : 'en');
+      updateUI();
+    }
+
+    function getFilteredTerminals() {
+      let filtered = TERMINALS;
+      if (currentRegion !== 'all') {
+        filtered = filtered.filter(t => t.region === currentRegion);
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(t =>
+          t.name.en.toLowerCase().includes(q) ||
+          t.name.zh.includes(q) ||
+          t.city.en.toLowerCase().includes(q) ||
+          t.city.zh.includes(q)
+        );
+      }
+      return filtered;
+    }
+
+    function filterTerminals() {
+      currentRegion = document.getElementById('region-filter').value;
+      renderList();
+      updateMarkers();
+    }
+
+    function handleSearch(e) {
+      searchQuery = e.target.value.trim();
+      renderList();
+      updateMarkers();
+    }
+
+    function updateUI() {
+      document.getElementById('page-title').textContent = isZh ? '🚌 客運轉運站' : '🚌 Intercity Bus Terminals';
+      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
+      document.getElementById('info-box').textContent = isZh
+        ? '台灣主要國道客運轉運站'
+        : 'Major intercity bus terminals across Taiwan';
+      document.getElementById('search-input').placeholder = isZh ? '搜尋轉運站...' : 'Search terminals...';
+      document.getElementById('opt-all').textContent = isZh ? '全部地區' : 'All Regions';
+      document.getElementById('opt-north').textContent = isZh ? '北部' : 'Northern';
+      document.getElementById('opt-central').textContent = isZh ? '中部' : 'Central';
+      document.getElementById('opt-south').textContent = isZh ? '南部' : 'Southern';
+      document.getElementById('opt-east').textContent = isZh ? '東部' : 'Eastern';
+      renderList();
+      updatePopups();
+    }
+
+    function getName(terminal) {
+      return isZh ? terminal.name.zh : terminal.name.en;
+    }
+
+    function getCity(terminal) {
+      return isZh ? terminal.city.zh : terminal.city.en;
+    }
+
+    function getAddress(terminal) {
+      return isZh ? terminal.address.zh : terminal.address.en;
+    }
+
+    function getRegionName(region) {
+      const names = {
+        north: { en: 'Northern Taiwan', zh: '北部' },
+        central: { en: 'Central Taiwan', zh: '中部' },
+        south: { en: 'Southern Taiwan', zh: '南部' },
+        east: { en: 'Eastern Taiwan', zh: '東部' }
+      };
+      return isZh ? names[region].zh : names[region].en;
+    }
+
+    function renderList() {
+      const terminals = getFilteredTerminals();
+      const listEl = document.getElementById('station-list');
+
+      listEl.innerHTML = terminals.map(terminal => `
+        <li class="station-item${selectedTerminal === terminal.id ? ' selected' : ''}" data-id="${terminal.id}">
+          <div class="station-header">
+            <span class="station-type-badge ${terminal.region}">${getRegionName(terminal.region)}</span>
+            <span class="station-name">${getName(terminal)}</span>
+          </div>
+          <div class="station-details">${getCity(terminal)} - ${getAddress(terminal)}</div>
+          <div class="station-operators">${terminal.operators.join(', ')}</div>
+        </li>
+      `).join('');
+
+      listEl.querySelectorAll('.station-item').forEach(item => {
+        item.addEventListener('click', () => selectTerminal(item.dataset.id));
+      });
+    }
+
+    function selectTerminal(id) {
+      selectedTerminal = id;
+      const terminal = TERMINALS.find(t => t.id === id);
+      if (terminal && markers[id]) {
+        map.setView([terminal.lat, terminal.lng], 15);
+        markers[id].openPopup();
+      }
+      renderList();
+    }
+
+    function getPopupContent(terminal) {
+      return `<div style="text-align:center;">
+        <strong>${getName(terminal)}</strong><br>
+        <small>${getCity(terminal)}</small><br>
+        ${getAddress(terminal)}<br>
+        <em style="font-size:0.85em;color:#7b1fa2;">${terminal.operators.join(', ')}</em>
+      </div>`;
+    }
+
+    function updatePopups() {
+      TERMINALS.forEach(terminal => {
+        if (markers[terminal.id]) {
+          markers[terminal.id].setPopupContent(getPopupContent(terminal));
+        }
+      });
+    }
+
+    function updateMarkers() {
+      const filtered = getFilteredTerminals();
+      TERMINALS.forEach(terminal => {
+        if (markers[terminal.id]) {
+          const isVisible = filtered.some(t => t.id === terminal.id);
+          if (isVisible) {
+            markers[terminal.id].addTo(map);
+          } else {
+            map.removeLayer(markers[terminal.id]);
+          }
+        }
+      });
+    }
+
+    function createMarkerIcon() {
+      return L.divIcon({
+        className: '',
+        html: `<div class="marker-icon" style="width:28px;height:28px;">🚌</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
+      });
+    }
+
+    function initMap() {
+      map = L.map('map-canvas').setView([23.8, 121.0], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(map);
+
+      TERMINALS.forEach(terminal => {
+        const marker = L.marker([terminal.lat, terminal.lng], {
+          icon: createMarkerIcon()
+        });
+        marker.bindPopup(getPopupContent(terminal));
+        marker.on('click', () => {
+          selectedTerminal = terminal.id;
+          renderList();
+          document.querySelector(`.station-item[data-id="${terminal.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        marker.addTo(map);
+        markers[terminal.id] = marker;
+      });
+    }
+
+    function init() {
+      const savedLang = localStorage.getItem('tdx-lang');
+      if (savedLang) {
+        isZh = savedLang === 'zh';
+      }
+      initMap();
+      updateUI();
+
+      document.getElementById('search-input').addEventListener('input', handleSearch);
+      console.log('[Bus] Initialized with', TERMINALS.length, 'terminals');
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
+</html>

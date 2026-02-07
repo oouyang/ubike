@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Taiwan Transport PWA that displays YouBike bike-sharing stations, MRT metro stations, and Taiwan Rail (TRA) stations on interactive maps using Leaflet/OpenStreetMap. It supports all Taiwan cities with YouBike (13 cities/counties), all MRT systems (Taipei, Kaohsiung, Taoyuan, Taichung), and all TRA lines (13 lines with 200+ stations).
+Taiwan Transport PWA that displays YouBike bike-sharing stations, MRT metro stations, Taiwan Rail (TRA) stations, and other transport data on interactive maps using Leaflet/OpenStreetMap. It supports all Taiwan cities with YouBike (13 cities/counties), all MRT systems (Taipei, Kaohsiung, Taoyuan, Taichung), TRA lines (13 lines with 200+ stations), THSR (12 stations), airports (17), and intercity bus terminals (26+).
 
 **Hosted on:** GitHub Pages (gh-pages branch)
 **Live URL:** https://oouyang.github.io/ubike/
@@ -26,6 +26,10 @@ There are no npm dependencies, build commands, or test frameworks.
 - **ubike.html** - YouBike map with search panel, station list, and city selector
 - **mrt.html** - MRT metro stations map with system/line filters and search
 - **rail.html** - Taiwan Rail (TRA) stations map with line/class filters and search
+- **tdx/index.html** - TDX Static Data Hub (links to all transport types)
+- **tdx/thsr.html** - Taiwan High Speed Rail stations (12 stations)
+- **tdx/air.html** - Taiwan airports (international and domestic)
+- **tdx/bus.html** - Intercity bus terminals with region filters
 
 ### Multi-City Support
 City selector dropdown allows switching between all Taiwan cities with YouBike:
@@ -86,6 +90,28 @@ Station classes indicate importance:
 - **Simple** - Minimal staffing stations
 
 Station data is embedded as static JSON (rail stations rarely change). Line preference is saved in localStorage (`rail-line`).
+
+### TDX Static Data Hub
+The `tdx/` folder contains static transport data pages that don't require API authentication:
+
+| Page | Transport Type | Data Points |
+|------|---------------|-------------|
+| `tdx/index.html` | Hub | Links to all transport types |
+| `tdx/thsr.html` | High Speed Rail | 12 stations, Nangang to Zuoying |
+| `tdx/air.html` | Airports | 4 international + 13 domestic airports |
+| `tdx/bus.html` | Intercity Bus | 26+ major terminals by region |
+
+**Design Philosophy:**
+- Uses static embedded JSON for data that rarely changes (stations, terminals, routes)
+- Minimizes API calls - no TDX authentication required for static data
+- Real-time data (train arrivals, flight status) would require TDX API access
+- Language preference shared across all TDX pages via `localStorage('tdx-lang')`
+
+**TDX API Integration (Optional):**
+For real-time data, register at [tdx.transportdata.tw](https://tdx.transportdata.tw/):
+- Free tier: 50 requests/day
+- OAuth 2.0 Client Credentials flow
+- Endpoints: `/v2/Rail/THSR/`, `/v2/Air/`, `/v2/Bus/InterCity/`
 
 ### Data Flow
 Station data fetched from official YouBike API:

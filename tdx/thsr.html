@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Taiwan High Speed Rail Stations</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #f57c00, #e65100);
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h1 { margin: 0; font-size: 1.4em; }
+      .header-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .back-link {
+        color: white;
+        text-decoration: none;
+        opacity: 0.9;
+      }
+      .back-link:hover { opacity: 1; }
+      .lang-toggle {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .container {
+        display: flex;
+        height: calc(100vh - 52px);
+      }
+      #panel {
+        width: 380px;
+        height: 100%;
+        overflow-y: auto;
+        border-right: 1px solid #ccc;
+        background: #f9f9f9;
+      }
+      #map-canvas {
+        flex: 1;
+        height: 100%;
+      }
+      .info-box {
+        padding: 12px 15px;
+        background: #fff3e0;
+        border-bottom: 1px solid #ffcc80;
+        font-size: 0.85em;
+        color: #e65100;
+      }
+      .station-list {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .station-item {
+        padding: 14px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .station-item:hover {
+        background: #fff3e0;
+      }
+      .station-item.selected {
+        background: #ffe0b2;
+      }
+      .station-number {
+        width: 32px;
+        height: 32px;
+        background: #f57c00;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9em;
+        flex-shrink: 0;
+      }
+      .station-info { flex: 1; }
+      .station-name {
+        font-weight: bold;
+        margin-bottom: 2px;
+      }
+      .station-details {
+        font-size: 0.85em;
+        color: #666;
+      }
+      .station-km {
+        font-size: 0.8em;
+        color: #f57c00;
+        font-weight: 500;
+      }
+      .marker-icon {
+        background: #f57c00;
+        color: white;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 11px;
+      }
+      @media (max-width: 768px) {
+        .container { flex-direction: column; }
+        #panel { width: 100%; height: 45%; }
+        #map-canvas { height: 55%; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">🚄 Taiwan High Speed Rail</h1>
+      <div class="header-right">
+        <a href="index.html" class="back-link" id="back-link">← Back</a>
+        <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
+      </div>
+    </header>
+    <div class="container">
+      <div id="panel">
+        <div class="info-box" id="info-box">
+          12 stations • Nangang to Zuoying • 350 km in ~90 min
+        </div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
+      <div id="map-canvas"></div>
+    </div>
+
+    <script>
+    'use strict';
+
+    // Taiwan High Speed Rail Stations (Static Data)
+    const STATIONS = [
+      { id: 'THSR-01', code: '0990', name: { en: 'Nangang', zh: '南港' }, lat: 25.0530, lng: 121.6070, km: 0, address: { en: 'Nangang District, Taipei', zh: '台北市南港區' } },
+      { id: 'THSR-02', code: '1000', name: { en: 'Taipei', zh: '台北' }, lat: 25.0478, lng: 121.5170, km: 6.4, address: { en: 'Zhongzheng District, Taipei', zh: '台北市中正區' } },
+      { id: 'THSR-03', code: '1010', name: { en: 'Banqiao', zh: '板橋' }, lat: 25.0145, lng: 121.4636, km: 12.7, address: { en: 'Banqiao District, New Taipei', zh: '新北市板橋區' } },
+      { id: 'THSR-04', code: '1020', name: { en: 'Taoyuan', zh: '桃園' }, lat: 25.0127, lng: 121.2145, km: 42.1, address: { en: 'Zhongli District, Taoyuan', zh: '桃園市中壢區' } },
+      { id: 'THSR-05', code: '1030', name: { en: 'Hsinchu', zh: '新竹' }, lat: 24.8086, lng: 121.0404, km: 78.2, address: { en: 'Zhubei City, Hsinchu County', zh: '新竹縣竹北市' } },
+      { id: 'THSR-06', code: '1035', name: { en: 'Miaoli', zh: '苗栗' }, lat: 24.6053, lng: 120.8254, km: 110.9, address: { en: 'Houlong Township, Miaoli', zh: '苗栗縣後龍鎮' } },
+      { id: 'THSR-07', code: '1040', name: { en: 'Taichung', zh: '台中' }, lat: 24.1127, lng: 120.6153, km: 165.7, address: { en: 'Wuri District, Taichung', zh: '台中市烏日區' } },
+      { id: 'THSR-08', code: '1043', name: { en: 'Changhua', zh: '彰化' }, lat: 24.0520, lng: 120.5407, km: 177.5, address: { en: 'Tianzhong Township, Changhua', zh: '彰化縣田中鎮' } },
+      { id: 'THSR-09', code: '1047', name: { en: 'Yunlin', zh: '雲林' }, lat: 23.7361, lng: 120.4165, km: 213.9, address: { en: 'Huwei Township, Yunlin', zh: '雲林縣虎尾鎮' } },
+      { id: 'THSR-10', code: '1050', name: { en: 'Chiayi', zh: '嘉義' }, lat: 23.4593, lng: 120.3232, km: 251.2, address: { en: 'Taibao City, Chiayi County', zh: '嘉義縣太保市' } },
+      { id: 'THSR-11', code: '1060', name: { en: 'Tainan', zh: '台南' }, lat: 22.9251, lng: 120.2861, km: 312.4, address: { en: 'Guiren District, Tainan', zh: '台南市歸仁區' } },
+      { id: 'THSR-12', code: '1070', name: { en: 'Zuoying', zh: '左營' }, lat: 22.6875, lng: 120.3080, km: 345.2, address: { en: 'Zuoying District, Kaohsiung', zh: '高雄市左營區' } }
+    ];
+
+    let map = null;
+    let markers = {};
+    let selectedStation = null;
+    let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+
+    function toggleLang() {
+      isZh = !isZh;
+      localStorage.setItem('tdx-lang', isZh ? 'zh' : 'en');
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('page-title').textContent = isZh ? '🚄 台灣高鐵' : '🚄 Taiwan High Speed Rail';
+      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
+      document.getElementById('info-box').textContent = isZh
+        ? '12站 • 南港至左營 • 350公里約90分鐘'
+        : '12 stations • Nangang to Zuoying • 350 km in ~90 min';
+      renderStationList();
+      updatePopups();
+    }
+
+    function getStationName(station) {
+      return isZh ? station.name.zh : station.name.en;
+    }
+
+    function getAddress(station) {
+      return isZh ? station.address.zh : station.address.en;
+    }
+
+    function renderStationList() {
+      const listEl = document.getElementById('station-list');
+      listEl.innerHTML = STATIONS.map((station, index) => `
+        <li class="station-item${selectedStation === station.id ? ' selected' : ''}" data-id="${station.id}">
+          <div class="station-number">${index + 1}</div>
+          <div class="station-info">
+            <div class="station-name">${getStationName(station)}</div>
+            <div class="station-details">${getAddress(station)}</div>
+          </div>
+          <div class="station-km">${station.km} km</div>
+        </li>
+      `).join('');
+
+      listEl.querySelectorAll('.station-item').forEach(item => {
+        item.addEventListener('click', () => selectStation(item.dataset.id));
+      });
+    }
+
+    function selectStation(id) {
+      selectedStation = id;
+      const station = STATIONS.find(s => s.id === id);
+      if (station && markers[id]) {
+        map.setView([station.lat, station.lng], 15);
+        markers[id].openPopup();
+      }
+      renderStationList();
+    }
+
+    function getPopupContent(station, index) {
+      return `<div style="text-align:center;">
+        <strong>${getStationName(station)}</strong><br>
+        <small>${getAddress(station)}</small><br>
+        ${isZh ? '里程' : 'Distance'}: ${station.km} km
+      </div>`;
+    }
+
+    function updatePopups() {
+      STATIONS.forEach((station, index) => {
+        if (markers[station.id]) {
+          markers[station.id].setPopupContent(getPopupContent(station, index));
+        }
+      });
+    }
+
+    function createMarkerIcon(index) {
+      return L.divIcon({
+        className: '',
+        html: `<div class="marker-icon" style="width:28px;height:28px;">${index + 1}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
+      });
+    }
+
+    function initMap() {
+      // Center on Taiwan
+      map = L.map('map-canvas').setView([24.0, 120.8], 8);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add markers
+      STATIONS.forEach((station, index) => {
+        const marker = L.marker([station.lat, station.lng], {
+          icon: createMarkerIcon(index)
+        });
+        marker.bindPopup(getPopupContent(station, index));
+        marker.on('click', () => {
+          selectedStation = station.id;
+          renderStationList();
+          document.querySelector(`.station-item[data-id="${station.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        marker.addTo(map);
+        markers[station.id] = marker;
+      });
+
+      // Draw line connecting stations
+      const lineCoords = STATIONS.map(s => [s.lat, s.lng]);
+      L.polyline(lineCoords, { color: '#f57c00', weight: 4, opacity: 0.7 }).addTo(map);
+    }
+
+    function init() {
+      const savedLang = localStorage.getItem('tdx-lang');
+      if (savedLang) {
+        isZh = savedLang === 'zh';
+      }
+      initMap();
+      updateUI();
+      console.log('[THSR] Initialized with', STATIONS.length, 'stations');
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
+</html>

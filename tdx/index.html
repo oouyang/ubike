@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Taiwan Transport Data</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f5f5f5;
+      }
+      header {
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      h1 { margin: 0 0 8px 0; }
+      .subtitle { opacity: 0.9; font-size: 0.9em; }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-decoration: none;
+        color: inherit;
+      }
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      }
+      .card-header {
+        padding: 20px;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .card-icon {
+        font-size: 2em;
+      }
+      .card-title {
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+      .card-subtitle {
+        font-size: 0.85em;
+        opacity: 0.9;
+      }
+      .card-body {
+        padding: 16px 20px;
+      }
+      .card-desc {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 12px;
+      }
+      .card-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 0.85em;
+        color: #888;
+      }
+      .bg-thsr { background: linear-gradient(135deg, #f57c00, #e65100); }
+      .bg-tra { background: linear-gradient(135deg, #1976d2, #0d47a1); }
+      .bg-mrt { background: linear-gradient(135deg, #388e3c, #1b5e20); }
+      .bg-bus { background: linear-gradient(135deg, #7b1fa2, #4a148c); }
+      .bg-air { background: linear-gradient(135deg, #00838f, #006064); }
+      .bg-bike { background: linear-gradient(135deg, #c0ca33, #9e9d24); }
+      .section-title {
+        font-size: 1.1em;
+        color: #666;
+        margin: 30px 0 15px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #ddd;
+      }
+      .lang-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .lang-toggle:hover {
+        background: rgba(255,255,255,0.3);
+      }
+      header { position: relative; }
+      .note {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        font-size: 0.9em;
+      }
+      .note-title {
+        font-weight: bold;
+        color: #856404;
+        margin-bottom: 4px;
+      }
+      .note-text { color: #856404; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
+      <h1 id="page-title">Taiwan Transport Data</h1>
+      <div class="subtitle" id="page-subtitle">TDX Static Data Hub</div>
+    </header>
+    <div class="container">
+      <div class="note">
+        <div class="note-title" id="note-title">About TDX</div>
+        <div class="note-text" id="note-text">
+          This hub uses static data for stations and routes that rarely change.
+          For real-time data (arrivals, availability), you can apply for a free TDX API key at
+          <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a>.
+        </div>
+      </div>
+
+      <div class="section-title" id="section-rail">Rail Transport</div>
+      <div class="grid">
+        <a href="thsr.html" class="card">
+          <div class="card-header bg-thsr">
+            <span class="card-icon">🚄</span>
+            <div>
+              <div class="card-title" data-en="High Speed Rail" data-zh="高鐵">High Speed Rail</div>
+              <div class="card-subtitle" data-en="Taiwan HSR" data-zh="台灣高鐵">Taiwan HSR</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="12 stations from Nangang to Zuoying" data-zh="南港至左營共12站">12 stations from Nangang to Zuoying</div>
+            <div class="card-stats">
+              <span>12 stations</span>
+              <span>350 km</span>
+            </div>
+          </div>
+        </a>
+        <a href="../rail.html" class="card">
+          <div class="card-header bg-tra">
+            <span class="card-icon">🚃</span>
+            <div>
+              <div class="card-title" data-en="Taiwan Rail" data-zh="台鐵">Taiwan Rail</div>
+              <div class="card-subtitle" data-en="TRA" data-zh="臺灣鐵路">TRA</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="13 lines with 200+ stations island-wide" data-zh="環島13條線、200+站">13 lines with 200+ stations island-wide</div>
+            <div class="card-stats">
+              <span>13 lines</span>
+              <span>200+ stations</span>
+            </div>
+          </div>
+        </a>
+        <a href="../mrt.html" class="card">
+          <div class="card-header bg-mrt">
+            <span class="card-icon">🚇</span>
+            <div>
+              <div class="card-title" data-en="Metro (MRT)" data-zh="捷運">Metro (MRT)</div>
+              <div class="card-subtitle" data-en="4 Systems" data-zh="4大系統">4 Systems</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="Taipei, Kaohsiung, Taoyuan, Taichung metro" data-zh="台北、高雄、桃園、台中捷運">Taipei, Kaohsiung, Taoyuan, Taichung metro</div>
+            <div class="card-stats">
+              <span>4 systems</span>
+              <span>200+ stations</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-title" id="section-other">Other Transport</div>
+      <div class="grid">
+        <a href="air.html" class="card">
+          <div class="card-header bg-air">
+            <span class="card-icon">✈️</span>
+            <div>
+              <div class="card-title" data-en="Airports" data-zh="機場">Airports</div>
+              <div class="card-subtitle" data-en="Civil Aviation" data-zh="民用航空">Civil Aviation</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="International and domestic airports" data-zh="國際及國內機場">International and domestic airports</div>
+            <div class="card-stats">
+              <span>4 international</span>
+              <span>13 domestic</span>
+            </div>
+          </div>
+        </a>
+        <a href="bus.html" class="card">
+          <div class="card-header bg-bus">
+            <span class="card-icon">🚌</span>
+            <div>
+              <div class="card-title" data-en="Intercity Bus" data-zh="客運">Intercity Bus</div>
+              <div class="card-subtitle" data-en="Highway Bus" data-zh="國道客運">Highway Bus</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="Major intercity bus terminals" data-zh="主要客運轉運站">Major intercity bus terminals</div>
+            <div class="card-stats">
+              <span>30+ terminals</span>
+              <span>Island-wide</span>
+            </div>
+          </div>
+        </a>
+        <a href="../ubike.html" class="card">
+          <div class="card-header bg-bike">
+            <span class="card-icon">🚲</span>
+            <div>
+              <div class="card-title" data-en="YouBike" data-zh="公共自行車">YouBike</div>
+              <div class="card-subtitle" data-en="Bike Sharing" data-zh="自行車租借">Bike Sharing</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-desc" data-en="Real-time bike availability across 13 cities" data-zh="13縣市即時車輛資訊">Real-time bike availability across 13 cities</div>
+            <div class="card-stats">
+              <span>13 cities</span>
+              <span>2000+ stations</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <script>
+    'use strict';
+
+    let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+
+    function toggleLang() {
+      isZh = !isZh;
+      updateLang();
+      localStorage.setItem('tdx-lang', isZh ? 'zh' : 'en');
+    }
+
+    function updateLang() {
+      // Update page title
+      document.getElementById('page-title').textContent = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
+      document.getElementById('page-subtitle').textContent = isZh ? 'TDX 靜態資料中心' : 'TDX Static Data Hub';
+      document.getElementById('note-title').textContent = isZh ? '關於 TDX' : 'About TDX';
+      document.getElementById('note-text').innerHTML = isZh
+        ? '本站使用靜態資料顯示較少變動的站點與路線資訊。如需即時資料（到站時間、可用數量），可至 <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a> 申請免費 API 金鑰。'
+        : 'This hub uses static data for stations and routes that rarely change. For real-time data (arrivals, availability), you can apply for a free TDX API key at <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a>.';
+      document.getElementById('section-rail').textContent = isZh ? '軌道運輸' : 'Rail Transport';
+      document.getElementById('section-other').textContent = isZh ? '其他運輸' : 'Other Transport';
+
+      // Update all elements with data-en/data-zh
+      document.querySelectorAll('[data-en]').forEach(el => {
+        el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+      });
+    }
+
+    // Initialize
+    const savedLang = localStorage.getItem('tdx-lang');
+    if (savedLang) {
+      isZh = savedLang === 'zh';
+    }
+    updateLang();
+    </script>
+  </body>
+</html>

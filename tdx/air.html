@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Taiwan Airports</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #00838f, #006064);
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h1 { margin: 0; font-size: 1.4em; }
+      .header-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .back-link {
+        color: white;
+        text-decoration: none;
+        opacity: 0.9;
+      }
+      .lang-toggle, .filter-select {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .filter-select option { color: #333; }
+      .container {
+        display: flex;
+        height: calc(100vh - 52px);
+      }
+      #panel {
+        width: 380px;
+        height: 100%;
+        overflow-y: auto;
+        border-right: 1px solid #ccc;
+        background: #f9f9f9;
+      }
+      #map-canvas {
+        flex: 1;
+        height: 100%;
+      }
+      .info-box {
+        padding: 12px 15px;
+        background: #e0f7fa;
+        border-bottom: 1px solid #80deea;
+        font-size: 0.85em;
+        color: #006064;
+      }
+      .station-list {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .station-item {
+        padding: 14px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .station-item:hover {
+        background: #e0f7fa;
+      }
+      .station-item.selected {
+        background: #b2ebf2;
+      }
+      .station-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .station-code {
+        background: #00838f;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 0.85em;
+      }
+      .station-code.domestic {
+        background: #26a69a;
+      }
+      .station-name {
+        font-weight: bold;
+        flex: 1;
+      }
+      .station-details {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 4px;
+      }
+      .station-type {
+        font-size: 0.75em;
+        color: #00838f;
+        font-weight: 500;
+      }
+      .marker-icon {
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      .marker-intl { background: #00838f; }
+      .marker-domestic { background: #26a69a; }
+      @media (max-width: 768px) {
+        .container { flex-direction: column; }
+        #panel { width: 100%; height: 45%; }
+        #map-canvas { height: 55%; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">✈️ Taiwan Airports</h1>
+      <div class="header-right">
+        <select id="type-filter" class="filter-select" onchange="filterAirports()">
+          <option value="all" id="opt-all">All</option>
+          <option value="international" id="opt-intl">International</option>
+          <option value="domestic" id="opt-domestic">Domestic</option>
+        </select>
+        <a href="index.html" class="back-link" id="back-link">← Back</a>
+        <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
+      </div>
+    </header>
+    <div class="container">
+      <div id="panel">
+        <div class="info-box" id="info-box">
+          4 international airports • 13 domestic airports
+        </div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
+      <div id="map-canvas"></div>
+    </div>
+
+    <script>
+    'use strict';
+
+    // Taiwan Airports (Static Data)
+    const AIRPORTS = [
+      // International Airports
+      { id: 'TPE', iata: 'TPE', icao: 'RCTP', name: { en: 'Taiwan Taoyuan International Airport', zh: '臺灣桃園國際機場' }, lat: 25.0797, lng: 121.2342, type: 'international', city: { en: 'Taoyuan', zh: '桃園市' } },
+      { id: 'TSA', iata: 'TSA', icao: 'RCSS', name: { en: 'Taipei Songshan Airport', zh: '臺北松山機場' }, lat: 25.0694, lng: 121.5525, type: 'international', city: { en: 'Taipei', zh: '台北市' } },
+      { id: 'KHH', iata: 'KHH', icao: 'RCKH', name: { en: 'Kaohsiung International Airport', zh: '高雄國際機場' }, lat: 22.5771, lng: 120.3500, type: 'international', city: { en: 'Kaohsiung', zh: '高雄市' } },
+      { id: 'RMQ', iata: 'RMQ', icao: 'RCMQ', name: { en: 'Taichung International Airport', zh: '臺中國際機場' }, lat: 24.2647, lng: 120.6208, type: 'international', city: { en: 'Taichung', zh: '台中市' } },
+      // Domestic Airports - Main Island
+      { id: 'TNN', iata: 'TNN', icao: 'RCNN', name: { en: 'Tainan Airport', zh: '臺南機場' }, lat: 22.9504, lng: 120.2058, type: 'domestic', city: { en: 'Tainan', zh: '台南市' } },
+      { id: 'CYI', iata: 'CYI', icao: 'RCKU', name: { en: 'Chiayi Airport', zh: '嘉義機場' }, lat: 23.4618, lng: 120.3928, type: 'domestic', city: { en: 'Chiayi', zh: '嘉義市' } },
+      { id: 'HUN', iata: 'HUN', icao: 'RCYU', name: { en: 'Hualien Airport', zh: '花蓮機場' }, lat: 24.0231, lng: 121.6178, type: 'domestic', city: { en: 'Hualien', zh: '花蓮縣' } },
+      { id: 'TTT', iata: 'TTT', icao: 'RCFN', name: { en: 'Taitung Airport', zh: '臺東機場' }, lat: 22.7550, lng: 121.1018, type: 'domestic', city: { en: 'Taitung', zh: '台東縣' } },
+      { id: 'PIF', iata: 'PIF', icao: 'RCSQ', name: { en: 'Pingtung Airport', zh: '屏東機場' }, lat: 22.6722, lng: 120.4619, type: 'domestic', city: { en: 'Pingtung', zh: '屏東縣' } },
+      // Offshore Islands - Penghu
+      { id: 'MZG', iata: 'MZG', icao: 'RCQC', name: { en: 'Magong Airport', zh: '馬公機場' }, lat: 23.5687, lng: 119.6283, type: 'domestic', city: { en: 'Penghu', zh: '澎湖縣' } },
+      { id: 'CMJ', iata: 'CMJ', icao: 'RCCM', name: { en: 'Qimei Airport', zh: '七美機場' }, lat: 23.2131, lng: 119.4189, type: 'domestic', city: { en: 'Qimei, Penghu', zh: '澎湖縣七美' } },
+      { id: 'WOT', iata: 'WOT', icao: 'RCWA', name: { en: "Wang'an Airport", zh: '望安機場' }, lat: 23.3674, lng: 119.5028, type: 'domestic', city: { en: "Wang'an, Penghu", zh: '澎湖縣望安' } },
+      // Offshore Islands - Kinmen & Matsu
+      { id: 'KNH', iata: 'KNH', icao: 'RCBS', name: { en: 'Kinmen Airport', zh: '金門機場' }, lat: 24.4279, lng: 118.3593, type: 'domestic', city: { en: 'Kinmen', zh: '金門縣' } },
+      { id: 'LZN', iata: 'LZN', icao: 'RCFG', name: { en: 'Nangan Airport', zh: '南竿機場' }, lat: 26.1598, lng: 119.9588, type: 'domestic', city: { en: 'Nangan, Matsu', zh: '連江縣南竿' } },
+      { id: 'MFK', iata: 'MFK', icao: 'RCMT', name: { en: 'Beigan Airport', zh: '北竿機場' }, lat: 26.2242, lng: 120.0028, type: 'domestic', city: { en: 'Beigan, Matsu', zh: '連江縣北竿' } },
+      // Offshore Islands - Green Island & Orchid Island
+      { id: 'GNI', iata: 'GNI', icao: 'RCGI', name: { en: 'Lyudao Airport', zh: '綠島機場' }, lat: 22.6739, lng: 121.4664, type: 'domestic', city: { en: 'Green Island', zh: '台東縣綠島' } },
+      { id: 'KYD', iata: 'KYD', icao: 'RCLY', name: { en: 'Lanyu Airport', zh: '蘭嶼機場' }, lat: 22.0270, lng: 121.5353, type: 'domestic', city: { en: 'Orchid Island', zh: '台東縣蘭嶼' } }
+    ];
+
+    let map = null;
+    let markers = {};
+    let selectedAirport = null;
+    let currentFilter = 'all';
+    let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+
+    function toggleLang() {
+      isZh = !isZh;
+      localStorage.setItem('tdx-lang', isZh ? 'zh' : 'en');
+      updateUI();
+    }
+
+    function getFilteredAirports() {
+      if (currentFilter === 'all') return AIRPORTS;
+      return AIRPORTS.filter(a => a.type === currentFilter);
+    }
+
+    function filterAirports() {
+      currentFilter = document.getElementById('type-filter').value;
+      renderList();
+      updateMarkers();
+    }
+
+    function updateUI() {
+      document.getElementById('page-title').textContent = isZh ? '✈️ 台灣機場' : '✈️ Taiwan Airports';
+      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
+      document.getElementById('info-box').textContent = isZh
+        ? '4座國際機場 • 13座國內機場'
+        : '4 international airports • 13 domestic airports';
+      document.getElementById('opt-all').textContent = isZh ? '全部' : 'All';
+      document.getElementById('opt-intl').textContent = isZh ? '國際機場' : 'International';
+      document.getElementById('opt-domestic').textContent = isZh ? '國內機場' : 'Domestic';
+      renderList();
+      updatePopups();
+    }
+
+    function getName(airport) {
+      return isZh ? airport.name.zh : airport.name.en;
+    }
+
+    function getCity(airport) {
+      return isZh ? airport.city.zh : airport.city.en;
+    }
+
+    function getTypeName(type) {
+      if (isZh) {
+        return type === 'international' ? '國際機場' : '國內機場';
+      }
+      return type === 'international' ? 'International' : 'Domestic';
+    }
+
+    function renderList() {
+      const airports = getFilteredAirports();
+      const listEl = document.getElementById('station-list');
+
+      listEl.innerHTML = airports.map(airport => `
+        <li class="station-item${selectedAirport === airport.id ? ' selected' : ''}" data-id="${airport.id}">
+          <div class="station-header">
+            <span class="station-code ${airport.type === 'domestic' ? 'domestic' : ''}">${airport.iata}</span>
+            <span class="station-name">${getName(airport)}</span>
+          </div>
+          <div class="station-details">${getCity(airport)}</div>
+          <div class="station-type">${getTypeName(airport.type)} • ICAO: ${airport.icao}</div>
+        </li>
+      `).join('');
+
+      listEl.querySelectorAll('.station-item').forEach(item => {
+        item.addEventListener('click', () => selectAirport(item.dataset.id));
+      });
+    }
+
+    function selectAirport(id) {
+      selectedAirport = id;
+      const airport = AIRPORTS.find(a => a.id === id);
+      if (airport && markers[id]) {
+        map.setView([airport.lat, airport.lng], 13);
+        markers[id].openPopup();
+      }
+      renderList();
+    }
+
+    function getPopupContent(airport) {
+      return `<div style="text-align:center;">
+        <strong>${getName(airport)}</strong><br>
+        <small>${getCity(airport)}</small><br>
+        IATA: ${airport.iata} | ICAO: ${airport.icao}<br>
+        <em>${getTypeName(airport.type)}</em>
+      </div>`;
+    }
+
+    function updatePopups() {
+      AIRPORTS.forEach(airport => {
+        if (markers[airport.id]) {
+          markers[airport.id].setPopupContent(getPopupContent(airport));
+        }
+      });
+    }
+
+    function updateMarkers() {
+      const filtered = getFilteredAirports();
+      AIRPORTS.forEach(airport => {
+        if (markers[airport.id]) {
+          const isVisible = filtered.some(a => a.id === airport.id);
+          if (isVisible) {
+            markers[airport.id].addTo(map);
+          } else {
+            map.removeLayer(markers[airport.id]);
+          }
+        }
+      });
+    }
+
+    function createMarkerIcon(type) {
+      const colorClass = type === 'international' ? 'marker-intl' : 'marker-domestic';
+      return L.divIcon({
+        className: '',
+        html: `<div class="marker-icon ${colorClass}" style="width:28px;height:28px;">✈</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
+      });
+    }
+
+    function initMap() {
+      map = L.map('map-canvas').setView([23.7, 121.0], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(map);
+
+      AIRPORTS.forEach(airport => {
+        const marker = L.marker([airport.lat, airport.lng], {
+          icon: createMarkerIcon(airport.type)
+        });
+        marker.bindPopup(getPopupContent(airport));
+        marker.on('click', () => {
+          selectedAirport = airport.id;
+          renderList();
+          document.querySelector(`.station-item[data-id="${airport.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        marker.addTo(map);
+        markers[airport.id] = marker;
+      });
+    }
+
+    function init() {
+      const savedLang = localStorage.getItem('tdx-lang');
+      if (savedLang) {
+        isZh = savedLang === 'zh';
+      }
+      initMap();
+      updateUI();
+      console.log('[Air] Initialized with', AIRPORTS.length, 'airports');
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
+</html>
