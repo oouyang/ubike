@@ -18,6 +18,7 @@ const STATIC_ASSETS = [
     '/list.html',
     '/mrt.html',
     '/rail.html',
+    '/thsr.html',
     '/bus.html',
     '/js/common.js',
     '/js/bus.js',

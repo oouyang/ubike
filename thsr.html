@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#f57c00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Taiwan High Speed Rail</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: linear-gradient(135deg, #f57c00, #e65100);
+      color: white;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 12px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+    .nav-btn.home:hover { background: #F57C00; }
+    #lang-btn {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #lang-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .container {
+      display: flex;
+      height: calc(100vh - 52px);
+    }
+    #panel {
+      width: 380px;
+      height: 100%;
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+    #map-canvas {
+      flex: 1;
+      height: 100%;
+    }
+    .search-box {
+      padding: 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .search-box input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .info-box {
+      padding: 10px 15px;
+      background: #fff3e0;
+      border-bottom: 1px solid #ffcc80;
+      font-size: 0.85em;
+      color: #e65100;
+    }
+    .station-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .station-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .station-item:hover {
+      background: #fff3e0;
+    }
+    .station-item.selected {
+      background: #ffe0b2;
+    }
+    .station-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .station-number {
+      font-size: 0.8em;
+      background: #f57c00;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      min-width: 24px;
+      text-align: center;
+    }
+    .station-info {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .station-distance {
+      font-size: 0.75em;
+      color: #666;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
+    }
+    .station-km {
+      font-size: 0.8em;
+      color: #f57c00;
+      font-weight: 500;
+    }
+    .result-count {
+      padding: 8px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.85em;
+      color: #666;
+    }
+    .marker-icon {
+      background: #f57c00;
+      color: white;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 11px;
+    }
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      #panel { width: 100%; height: 40%; }
+      #map-canvas { height: 60%; }
+      .header-controls { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title">Taiwan High Speed Rail</h1>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="UBike">UBike</a>
+      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="thsr.html" class="nav-btn active" data-en="THSR" data-zh="高鐵">THSR</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    </div>
+  </header>
+  <div class="container">
+    <div id="panel">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search stations...">
+      </div>
+      <div class="info-box" id="info-box">
+        12 stations • Nangang to Zuoying • 350 km in ~90 min
+      </div>
+      <div id="result-count" class="result-count"></div>
+      <ul id="station-list" class="station-list"></ul>
+    </div>
+    <div id="map-canvas"></div>
+  </div>
+  <script>
+'use strict';
+
+// Taiwan High Speed Rail Stations (Static Data)
+const STATIONS = [
+  { id: 'THSR-01', code: '0990', name: { en: 'Nangang', zh: '南港' }, lat: 25.0530, lng: 121.6070, km: 0, address: { en: 'Nangang District, Taipei', zh: '台北市南港區' } },
+  { id: 'THSR-02', code: '1000', name: { en: 'Taipei', zh: '台北' }, lat: 25.0478, lng: 121.5170, km: 6.4, address: { en: 'Zhongzheng District, Taipei', zh: '台北市中正區' } },
+  { id: 'THSR-03', code: '1010', name: { en: 'Banqiao', zh: '板橋' }, lat: 25.0145, lng: 121.4636, km: 12.7, address: { en: 'Banqiao District, New Taipei', zh: '新北市板橋區' } },
+  { id: 'THSR-04', code: '1020', name: { en: 'Taoyuan', zh: '桃園' }, lat: 25.0127, lng: 121.2145, km: 42.1, address: { en: 'Zhongli District, Taoyuan', zh: '桃園市中壢區' } },
+  { id: 'THSR-05', code: '1030', name: { en: 'Hsinchu', zh: '新竹' }, lat: 24.8086, lng: 121.0404, km: 78.2, address: { en: 'Zhubei City, Hsinchu County', zh: '新竹縣竹北市' } },
+  { id: 'THSR-06', code: '1035', name: { en: 'Miaoli', zh: '苗栗' }, lat: 24.6053, lng: 120.8254, km: 110.9, address: { en: 'Houlong Township, Miaoli', zh: '苗栗縣後龍鎮' } },
+  { id: 'THSR-07', code: '1040', name: { en: 'Taichung', zh: '台中' }, lat: 24.1127, lng: 120.6153, km: 165.7, address: { en: 'Wuri District, Taichung', zh: '台中市烏日區' } },
+  { id: 'THSR-08', code: '1043', name: { en: 'Changhua', zh: '彰化' }, lat: 24.0520, lng: 120.5407, km: 177.5, address: { en: 'Tianzhong Township, Changhua', zh: '彰化縣田中鎮' } },
+  { id: 'THSR-09', code: '1047', name: { en: 'Yunlin', zh: '雲林' }, lat: 23.7361, lng: 120.4165, km: 213.9, address: { en: 'Huwei Township, Yunlin', zh: '雲林縣虎尾鎮' } },
+  { id: 'THSR-10', code: '1050', name: { en: 'Chiayi', zh: '嘉義' }, lat: 23.4593, lng: 120.3232, km: 251.2, address: { en: 'Taibao City, Chiayi County', zh: '嘉義縣太保市' } },
+  { id: 'THSR-11', code: '1060', name: { en: 'Tainan', zh: '台南' }, lat: 22.9251, lng: 120.2861, km: 312.4, address: { en: 'Guiren District, Tainan', zh: '台南市歸仁區' } },
+  { id: 'THSR-12', code: '1070', name: { en: 'Zuoying', zh: '左營' }, lat: 22.6875, lng: 120.3080, km: 345.2, address: { en: 'Zuoying District, Kaohsiung', zh: '高雄市左營區' } }
+];
+
+const CONFIG = {
+  DEFAULT_CENTER: [24.0, 120.8],
+  DEFAULT_ZOOM: 8
+};
+
+// State
+let map = null;
+let markers = {};
+let routeLine = null;
+let filteredStations = [...STATIONS];
+let selectedStation = null;
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let userLocation = null;
+
+// Distance calculation utilities
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function isChineseLocale() {
+  return isZh;
+}
+
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  updateUI();
+}
+
+function updateUI() {
+  // Update page title
+  document.getElementById('page-title').textContent = isZh ? '台灣高鐵' : 'Taiwan High Speed Rail';
+
+  // Update search placeholder
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
+  }
+
+  // Update info box
+  document.getElementById('info-box').textContent = isZh
+    ? '12站 • 南港至左營 • 350公里約90分鐘'
+    : '12 stations • Nangang to Zuoying • 350 km in ~90 min';
+
+  // Update navigation buttons
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const text = isZh ? btn.dataset.zh : btn.dataset.en;
+    if (text) btn.textContent = text;
+  });
+
+  // Re-render station list and update popups
+  updateDisplay();
+
+  // Update all marker popups
+  Object.keys(markers).forEach(id => {
+    const station = STATIONS.find(s => s.id === id);
+    if (station && markers[id]) {
+      markers[id].setPopupContent(getPopupContent(station));
+    }
+  });
+}
+
+function getStationName(station) {
+  return isChineseLocale() ? station.name.zh : station.name.en;
+}
+
+function getAddress(station) {
+  return isChineseLocale() ? station.address.zh : station.address.en;
+}
+
+function getStationIndex(station) {
+  return STATIONS.findIndex(s => s.id === station.id) + 1;
+}
+
+function createMarkerIcon(index) {
+  return L.divIcon({
+    className: '',
+    html: `<div class="marker-icon" style="width:28px;height:28px;">${index}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+}
+
+function getPopupContent(station) {
+  const isZh = isChineseLocale();
+  const index = getStationIndex(station);
+
+  let distanceHtml = '';
+  if (userLocation && station.lat && station.lng) {
+    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(distance)}`;
+  }
+
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
+  const appleMapsUrl = `http://maps.apple.com/?daddr=${station.lat},${station.lng}`;
+  const btnStyle = 'display:inline-block;padding:4px 8px;margin:2px;background:#f57c00;color:white;text-decoration:none;border-radius:4px;font-size:11px;';
+
+  return `<div style="text-align:center;">
+    <strong>${getStationName(station)}</strong><br>
+    <small>${getAddress(station)}</small><br>
+    ${isZh ? '里程' : 'KM'}: ${station.km} km${distanceHtml}
+    <div style="margin-top:8px;">
+      <a href="${googleMapsUrl}" target="_blank" style="${btnStyle}">${isZh ? 'Google導航' : 'Google Maps'}</a>
+      <a href="${appleMapsUrl}" target="_blank" style="${btnStyle}">${isZh ? 'Apple導航' : 'Apple Maps'}</a>
+    </div>
+  </div>`;
+}
+
+function createStationListItem(station) {
+  const index = getStationIndex(station);
+  let distanceHtml = '';
+  if (userLocation && station.lat && station.lng) {
+    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+    distanceHtml = `<span class="station-distance">${formatDistance(distance)}</span>`;
+  }
+
+  return `
+    <li class="station-item" data-id="${station.id}">
+      <div class="station-name">
+        <span class="station-number">${index}</span>
+        ${getStationName(station)}
+        ${distanceHtml}
+      </div>
+      <div class="station-info">
+        ${getAddress(station)}
+        <span class="station-km" style="margin-left:8px;">${station.km} km</span>
+      </div>
+    </li>
+  `;
+}
+
+function addMarkers(stationList) {
+  Object.values(markers).forEach(marker => map.removeLayer(marker));
+  markers = {};
+
+  stationList.forEach(station => {
+    if (!station.lat || !station.lng) return;
+    const index = getStationIndex(station);
+    const marker = L.marker([station.lat, station.lng], {
+      icon: createMarkerIcon(index)
+    });
+
+    marker.bindPopup(getPopupContent(station));
+    marker.on('click', () => selectStation(station.id));
+    marker.addTo(map);
+    markers[station.id] = marker;
+  });
+
+  // Draw route line
+  if (routeLine) {
+    map.removeLayer(routeLine);
+  }
+  const lineCoords = STATIONS.map(s => [s.lat, s.lng]);
+  routeLine = L.polyline(lineCoords, { color: '#f57c00', weight: 4, opacity: 0.7 }).addTo(map);
+
+  console.log(`[THSR] Added ${Object.keys(markers).length} markers`);
+}
+
+function renderStationList(stationList) {
+  const listEl = document.getElementById('station-list');
+  const countEl = document.getElementById('result-count');
+  const isZh = isChineseLocale();
+
+  listEl.innerHTML = stationList.map(createStationListItem).join('');
+  countEl.textContent = isZh
+    ? `顯示 ${stationList.length} 個車站`
+    : `Showing ${stationList.length} stations`;
+
+  listEl.querySelectorAll('.station-item').forEach(item => {
+    item.addEventListener('click', () => {
+      selectStation(item.dataset.id);
+    });
+  });
+}
+
+function selectStation(id) {
+  document.querySelectorAll('.station-item.selected').forEach(el => {
+    el.classList.remove('selected');
+  });
+
+  const listItem = document.querySelector(`.station-item[data-id="${id}"]`);
+  if (listItem) {
+    listItem.classList.add('selected');
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const marker = markers[id];
+  if (marker) {
+    map.setView(marker.getLatLng(), 14);
+    marker.openPopup();
+  }
+
+  selectedStation = id;
+  console.log(`[THSR] Selected station: ${id}`);
+}
+
+function filterStations() {
+  let filtered = [...STATIONS];
+
+  // Filter by search query
+  const query = document.getElementById('search-input').value.toLowerCase().trim();
+  if (query) {
+    filtered = filtered.filter(station => {
+      const nameZh = station.name.zh.toLowerCase();
+      const nameEn = station.name.en.toLowerCase();
+      const addressZh = station.address.zh.toLowerCase();
+      const addressEn = station.address.en.toLowerCase();
+      return nameZh.includes(query) || nameEn.includes(query) ||
+             addressZh.includes(query) || addressEn.includes(query);
+    });
+  }
+
+  return filtered;
+}
+
+function updateDisplay() {
+  const filtered = filterStations();
+  filteredStations = filtered;
+  renderStationList(filtered);
+  addMarkers(filtered);
+}
+
+function handleSearch(e) {
+  updateDisplay();
+  console.log(`[THSR] Search: "${e.target.value}" - ${filteredStations.length} results`);
+}
+
+async function initialize() {
+  console.log('[THSR] Initializing Taiwan High Speed Rail map...');
+
+  // Restore language preference
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) {
+    isZh = savedLang === 'zh';
+  }
+
+  // Get user location
+  if ('geolocation' in navigator) {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+      console.log('[THSR] User location:', userLocation);
+    } catch (error) {
+      console.warn('[THSR] Could not get location:', error.message);
+    }
+  }
+
+  // Create map
+  map = L.map('map-canvas').setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Update UI with language
+  updateUI();
+
+  // Setup search
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', handleSearch);
+
+  // Initial load
+  updateDisplay();
+
+  console.log('[THSR] Taiwan High Speed Rail map initialized successfully');
+}
+
+document.addEventListener('DOMContentLoaded', initialize);
+  </script>
+</body>
+</html>
