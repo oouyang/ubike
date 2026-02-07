@@ -320,6 +320,70 @@
       text-align: center;
       color: #999;
     }
+    /* Enhanced schedule styles */
+    .train-item.next-train {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      border-left: 4px solid #0d47a1;
+    }
+    .train-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+    }
+    .train-time-block {
+      text-align: center;
+      min-width: 60px;
+    }
+    .train-platform {
+      font-size: 0.75em;
+      color: #666;
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+    }
+    .train-number-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .next-badge {
+      background: #0d47a1;
+      color: white;
+      font-size: 0.7em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .train-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 4px;
+    }
+    .train-arr, .train-duration, .train-fare {
+      white-space: nowrap;
+    }
+    .train-fare {
+      color: #0d47a1;
+      font-weight: 500;
+    }
+    .train-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      min-width: 80px;
+    }
     /* Markers */
     .marker-icon {
       border-radius: 50%;
@@ -837,6 +901,30 @@ const TRAIN_SCHEDULE = {
   }
 };
 
+// TRA Fare calculation (simplified - per km rates)
+// Express (自強): NT$2.27/km, Limited (莒光): NT$1.75/km, Local (區間): NT$1.46/km
+const TRA_FARE_RATES = {
+  express: 2.27,
+  limited: 1.75,
+  fastLocal: 1.75,
+  local: 1.46
+};
+
+// Approximate distances between schedule stations (in km)
+const SCHEDULE_DISTANCES = {
+  WL: [0, 5, 8, 25, 30, 35, 50, 75, 85, 130, 150],  // Keelung to Zhunan
+  ML: [0, 28, 52, 68, 78, 96, 126, 134],            // Zhunan to Changhua (Mountain)
+  CL: [0, 25, 52, 81, 90, 105],                     // Zhunan to Changhua (Coast)
+  SL: [0, 25, 48, 100, 160, 200, 240, 290, 340, 380, 420],  // Changhua to Kaohsiung
+  YL: [0, 30, 65, 90, 105, 120]                     // Badu to Suao
+};
+
+function calculateFare(trainType, distanceKm) {
+  const rate = TRA_FARE_RATES[trainType] || TRA_FARE_RATES.local;
+  const fare = Math.ceil(distanceKm * rate);
+  return Math.max(fare, 15); // Minimum fare NT$15
+}
+
 // State
 let map = null;
 let markers = {};
@@ -1265,30 +1353,55 @@ function getTrainsForStation(stationId, lineCode, direction) {
 
   const schedule = direction === 'south' ? lineSchedule.southbound : lineSchedule.northbound;
   const now = getCurrentMinutes();
+  const distances = SCHEDULE_DISTANCES[lineCode] || [];
 
-  // Get destination (first or last station in line)
-  let destId;
+  // Get destination index (first or last station in line)
+  let destIndex;
   if (direction === 'south') {
-    destId = stationIds[stationIds.length - 1];
+    destIndex = stationIds.length - 1;
   } else {
-    destId = stationIds[0];
+    destIndex = 0;
   }
-  const destStation = STATIONS.find(s => s.id === destId);
+  const destStation = STATIONS.find(s => s.id === stationIds[destIndex]);
+
+  // Calculate distance to destination
+  const startDist = distances[stationIndex] || 0;
+  const endDist = distances[destIndex] || 0;
+  const distanceKm = Math.abs(endDist - startDist);
 
   const trains = schedule.map(train => {
     const depTime = train.times[stationIndex];
-    if (depTime === undefined) return null;
+    const arrTime = train.times[destIndex];
+    if (depTime === undefined || arrTime === undefined) return null;
 
     const diff = depTime - now;
     const isDeparted = diff < -5;
     const isArriving = diff >= 0 && diff <= 5;
+
+    // Calculate duration
+    const duration = direction === 'south'
+      ? arrTime - depTime
+      : depTime - arrTime;
+
+    // Calculate fare based on train type and distance
+    const fare = calculateFare(train.type, distanceKm);
+
+    // Demo platform (based on direction and train number)
+    const platform = direction === 'south'
+      ? (parseInt(train.trainNo) % 2 === 0 ? 1 : 2)
+      : (parseInt(train.trainNo) % 2 === 0 ? 2 : 1);
 
     return {
       trainNo: train.trainNo,
       type: train.type,
       depTime: depTime,
       depTimeStr: formatTime(depTime),
+      arrTime: arrTime,
+      arrTimeStr: formatTime(arrTime),
+      duration: duration,
       destination: destStation,
+      fare: fare,
+      platform: platform,
       isDeparted: isDeparted,
       isArriving: isArriving,
       countdown: getCountdown(depTime)
@@ -1336,7 +1449,7 @@ function renderTrainSchedule() {
     return;
   }
 
-  listEl.innerHTML = trains.map(train => {
+  listEl.innerHTML = trains.map((train, index) => {
     const destName = train.destination ? (isZh ? train.destination.name.zh : train.destination.name.en) : '';
     const typeName = getTrainTypeName(train.type);
     const typeClass = getTrainTypeClass(train.type);
@@ -1349,18 +1462,41 @@ function renderTrainSchedule() {
       statusText = isZh ? '即將到站' : 'Arriving';
     }
 
+    // Format duration
+    const durationH = Math.floor(train.duration / 60);
+    const durationM = train.duration % 60;
+    const durationStr = durationH > 0
+      ? `${durationH}${isZh ? '時' : 'h'}${durationM}${isZh ? '分' : 'm'}`
+      : `${durationM}${isZh ? '分鐘' : ' min'}`;
+
+    // First train gets "next" highlight
+    const isFirstUpcoming = index === 0 && !train.isDeparted;
+
     return `
-      <li class="train-item${train.isDeparted ? ' departed' : ''}">
-        <div class="train-time">${train.depTimeStr}</div>
-        <div class="train-info">
-          <div class="train-number">
-            ${train.trainNo}
-            <span class="train-type ${typeClass}">${typeName}</span>
+      <li class="train-item${train.isDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}">
+        <div class="train-main">
+          <div class="train-time-block">
+            <div class="train-time">${train.depTimeStr}</div>
+            <div class="train-platform">${isZh ? '月台' : 'Plat.'} ${train.platform}</div>
           </div>
-          <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+          <div class="train-info">
+            <div class="train-number-row">
+              <span class="train-number">${train.trainNo}</span>
+              <span class="train-type ${typeClass}">${typeName}</span>
+              ${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}
+            </div>
+            <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+            <div class="train-details">
+              <span class="train-arr">${isZh ? '抵達' : 'Arr.'} ${train.arrTimeStr}</span>
+              <span class="train-duration">⏱ ${durationStr}</span>
+              <span class="train-fare">💰 NT$${train.fare}</span>
+            </div>
+          </div>
         </div>
-        <div class="train-status ${statusClass}">${statusText}</div>
-        <div class="train-countdown">${train.countdown}</div>
+        <div class="train-right">
+          <div class="train-status ${statusClass}">${statusText}</div>
+          <div class="train-countdown">${train.countdown}</div>
+        </div>
       </li>
     `;
   }).join('');

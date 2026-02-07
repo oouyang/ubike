@@ -140,7 +140,7 @@
       border-bottom: 1px solid #eee;
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
       background: white;
       transition: background 0.2s;
     }
@@ -149,31 +149,84 @@
       opacity: 0.5;
       background: #f5f5f5;
     }
+    .train-item.next-train {
+      background: linear-gradient(90deg, #fff8e1 0%, #ffffff 100%);
+      border-left: 4px solid #f57c00;
+    }
+    .train-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+    .train-time-block {
+      text-align: center;
+      min-width: 70px;
+    }
     .train-time {
       font-size: 1.2em;
       font-weight: bold;
       color: #333;
-      min-width: 60px;
+    }
+    .train-platform {
+      font-size: 0.7em;
+      color: #999;
+      margin-top: 2px;
     }
     .train-info { flex: 1; }
+    .train-number-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
     .train-number {
       font-weight: bold;
       color: #f57c00;
-      margin-bottom: 2px;
+    }
+    .next-badge {
+      font-size: 0.7em;
+      background: #f57c00;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
     }
     .train-dest {
       font-size: 0.85em;
       color: #666;
+      margin-bottom: 4px;
+    }
+    .train-details {
+      display: flex;
+      gap: 12px;
+      font-size: 0.75em;
+      color: #888;
+    }
+    .train-arr, .train-duration, .train-fare {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .train-fare {
+      color: #2e7d32;
+      font-weight: 500;
+    }
+    .train-right {
+      text-align: right;
+      min-width: 80px;
     }
     .train-status {
-      font-size: 0.8em;
-      padding: 4px 8px;
+      font-size: 0.75em;
+      padding: 3px 6px;
       border-radius: 4px;
       font-weight: 500;
+      margin-bottom: 4px;
     }
     .train-status.arriving {
       background: #ffeb3b;
       color: #f57c00;
+      animation: pulse 1s infinite;
     }
     .train-status.ontime {
       background: #e8f5e9;
@@ -183,11 +236,14 @@
       background: #ffebee;
       color: #c62828;
     }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
     .train-countdown {
-      font-size: 0.85em;
-      color: #999;
-      min-width: 70px;
-      text-align: right;
+      font-size: 0.9em;
+      color: #f57c00;
+      font-weight: 500;
     }
     .station-list {
       padding: 0;
@@ -401,6 +457,29 @@ const TRAIN_SCHEDULE_BASE = {
   ]
 };
 
+// THSR Fare Table (Standard Car, in NTD)
+// Index matches station order: Nangang(0) to Zuoying(11)
+const THSR_FARES = [
+  [0, 40, 70, 130, 200, 250, 330, 380, 450, 540, 670, 790],     // From Nangang
+  [40, 0, 40, 100, 160, 200, 290, 330, 410, 490, 620, 750],     // From Taipei
+  [70, 40, 0, 65, 130, 170, 250, 300, 370, 460, 590, 710],      // From Banqiao
+  [130, 100, 65, 0, 70, 110, 190, 240, 310, 400, 530, 650],     // From Taoyuan
+  [200, 160, 130, 70, 0, 50, 130, 180, 250, 330, 470, 590],     // From Hsinchu
+  [250, 200, 170, 110, 50, 0, 90, 140, 200, 290, 420, 540],     // From Miaoli
+  [330, 290, 250, 190, 130, 90, 0, 50, 130, 210, 350, 460],     // From Taichung
+  [380, 330, 300, 240, 180, 140, 50, 0, 80, 160, 300, 410],     // From Changhua
+  [450, 410, 370, 310, 250, 200, 130, 80, 0, 90, 220, 340],     // From Yunlin
+  [540, 490, 460, 400, 330, 290, 210, 160, 90, 0, 140, 250],    // From Chiayi
+  [670, 620, 590, 530, 470, 420, 350, 300, 220, 140, 0, 120],   // From Tainan
+  [790, 750, 710, 650, 590, 540, 460, 410, 340, 250, 120, 0]    // From Zuoying
+];
+
+// Train car assignments (demo - would come from API)
+const TRAIN_CARS = {
+  standard: { en: 'Standard Car', zh: '標準車廂' },
+  business: { en: 'Business Car', zh: '商務車廂' }
+};
+
 const CONFIG = {
   DEFAULT_CENTER: [24.0, 120.8],
   DEFAULT_ZOOM: 8
@@ -538,25 +617,46 @@ function getTrainsForStation(stationId, direction) {
     const depTime = train.times[stationIndex];
     if (depTime === undefined) return null;
 
-    // Determine destination
-    let destStation;
+    // Determine destination index
+    let destIndex;
     if (direction === 'south') {
-      destStation = STATIONS[STATIONS.length - 1]; // Zuoying
+      destIndex = STATIONS.length - 1; // Zuoying
     } else {
-      destStation = STATIONS[0]; // Nangang
+      destIndex = 0; // Nangang
     }
+    const destStation = STATIONS[destIndex];
 
-    const isDeparted = depTime < now && (now - depTime) < 120; // within 2 hours ago
+    // Get arrival time at destination
+    const arrTime = train.times[destIndex];
+    const duration = direction === 'south'
+      ? arrTime - depTime
+      : depTime - arrTime;
+
+    // Get fare
+    const fare = THSR_FARES[stationIndex][destIndex];
+
+    // Demo platform assignment (1 or 2 based on train number)
+    const platform = parseInt(train.trainNo) % 2 === 0 ? 1 : 2;
+
+    const isDeparted = depTime < now && (now - depTime) < 120;
     const diff = depTime - now;
     const isArriving = diff >= 0 && diff <= 5;
+    const isNext = diff > 0 && diff <= 30; // Next train within 30 min
 
     return {
       trainNo: train.trainNo,
       depTime: depTime,
       depTimeStr: formatTime(depTime),
+      arrTime: arrTime,
+      arrTimeStr: formatTime(arrTime),
+      duration: duration,
       destination: destStation,
+      destIndex: destIndex,
+      fare: fare,
+      platform: platform,
       isDeparted: depTime < now && diff < -5,
       isArriving: isArriving,
+      isNext: isNext,
       countdown: getCountdown(depTime)
     };
   }).filter(t => t !== null);
@@ -603,7 +703,7 @@ function renderTrainSchedule() {
     return;
   }
 
-  listEl.innerHTML = trains.map(train => {
+  listEl.innerHTML = trains.map((train, index) => {
     const destName = isZh ? train.destination.name.zh : train.destination.name.en;
     let statusClass = 'ontime';
     let statusText = isZh ? '準點' : 'On time';
@@ -613,15 +713,40 @@ function renderTrainSchedule() {
       statusText = isZh ? '即將到站' : 'Arriving';
     }
 
+    // Format duration
+    const durationH = Math.floor(train.duration / 60);
+    const durationM = train.duration % 60;
+    const durationStr = durationH > 0
+      ? `${durationH}${isZh ? '時' : 'h'}${durationM}${isZh ? '分' : 'm'}`
+      : `${durationM}${isZh ? '分鐘' : ' min'}`;
+
+    // First train gets "next" highlight
+    const isFirstUpcoming = index === 0 && !train.isDeparted;
+
     return `
-      <li class="train-item${train.isDeparted ? ' departed' : ''}">
-        <div class="train-time">${train.depTimeStr}</div>
-        <div class="train-info">
-          <div class="train-number">${train.trainNo}</div>
-          <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+      <li class="train-item${train.isDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}">
+        <div class="train-main">
+          <div class="train-time-block">
+            <div class="train-time">${train.depTimeStr}</div>
+            <div class="train-platform">${isZh ? '月台' : 'Platform'} ${train.platform}</div>
+          </div>
+          <div class="train-info">
+            <div class="train-number-row">
+              <span class="train-number">${train.trainNo}</span>
+              ${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}
+            </div>
+            <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
+            <div class="train-details">
+              <span class="train-arr">${isZh ? '抵達' : 'Arr.'} ${train.arrTimeStr}</span>
+              <span class="train-duration">⏱ ${durationStr}</span>
+              <span class="train-fare">💰 NT$${train.fare}</span>
+            </div>
+          </div>
         </div>
-        <div class="train-status ${statusClass}">${statusText}</div>
-        <div class="train-countdown">${train.countdown}</div>
+        <div class="train-right">
+          <div class="train-status ${statusClass}">${statusText}</div>
+          <div class="train-countdown">${train.countdown}</div>
+        </div>
       </li>
     `;
   }).join('');

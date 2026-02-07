@@ -157,6 +157,30 @@ const ROUTE_SCHEDULE = {
     _default: { firstBus: '06:00', lastBus: '22:00', peakInterval: 15, offPeakInterval: 20 }
 };
 
+// Route fares (section-based fares in NTD)
+const ROUTE_FARES = {
+    '307': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '299': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '信義幹線': { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true },
+    '藍27': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '紅5': { baseFare: 15, sections: 3, totalFare: 45, transferDiscount: false },
+    '綠1': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '275': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '橘12': { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true },
+    '藍38': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '206': { baseFare: 15, sections: 3, totalFare: 45, transferDiscount: true },
+    '501': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
+    '300': { baseFare: 20, sections: 2, totalFare: 40, transferDiscount: true },
+    '301': { baseFare: 20, sections: 1, totalFare: 20, transferDiscount: true },
+    '藍1': { baseFare: 20, sections: 2, totalFare: 40, transferDiscount: true },
+    '2': { baseFare: 18, sections: 1, totalFare: 18, transferDiscount: true },
+    '紅幹線': { baseFare: 18, sections: 2, totalFare: 36, transferDiscount: true },
+    '紅27': { baseFare: 12, sections: 2, totalFare: 24, transferDiscount: true },
+    '橘8': { baseFare: 12, sections: 1, totalFare: 12, transferDiscount: true },
+    '205': { baseFare: 12, sections: 1, totalFare: 12, transferDiscount: true },
+    _default: { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true }
+};
+
 // City configurations
 const BUS_CITIES = {
     Taipei: { name: { en: 'Taipei', zh: '台北市' }, center: [25.0330, 121.5654] },
@@ -339,6 +363,19 @@ function getRouteScheduleInfo(routeId) {
     return ROUTE_SCHEDULE[routeId] || ROUTE_SCHEDULE._default;
 }
 
+function getRouteFareInfo(routeId) {
+    return ROUTE_FARES[routeId] || ROUTE_FARES._default;
+}
+
+function calculateTotalJourneyTime(stops) {
+    if (!stops || stops.length < 2) return 0;
+    const firstTime = stops[0].time.split(':').map(Number);
+    const lastTime = stops[stops.length - 1].time.split(':').map(Number);
+    const firstMinutes = firstTime[0] * 60 + firstTime[1];
+    const lastMinutes = lastTime[0] * 60 + lastTime[1];
+    return lastMinutes - firstMinutes;
+}
+
 function getNextBusTime(scheduleInfo) {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -402,46 +439,90 @@ function renderRouteSchedule() {
 
     const stops = getRouteStops(currentRoute, routeDirection);
     const scheduleInfo = getRouteScheduleInfo(currentRoute);
+    const fareInfo = getRouteFareInfo(currentRoute);
     const nextBus = getNextBusTime(scheduleInfo);
+    const totalJourneyTime = calculateTotalJourneyTime(stops);
 
-    // Route info header
+    // Route summary card (fare, total time, etc.)
+    const routeData = (BUS_ROUTES[currentRouteCity] || []).find(r => r.id === currentRoute);
+    const routeTerminals = routeData ? (isZh ? routeData.terminals.zh : routeData.terminals.en) : '';
+
+    let summaryHtml = `<li class="route-summary-card">
+        <div class="summary-row">
+            <div class="summary-item">
+                <span class="summary-label">${isZh ? '票價' : 'Fare'}</span>
+                <span class="summary-value fare-value">NT$${fareInfo.totalFare}</span>
+                ${fareInfo.sections > 1 ? `<span class="summary-note">${fareInfo.sections} ${isZh ? '段票' : 'sections'}</span>` : ''}
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">${isZh ? '全程' : 'Duration'}</span>
+                <span class="summary-value">${totalJourneyTime} ${isZh ? '分鐘' : 'min'}</span>
+                <span class="summary-note">${stops.length} ${isZh ? '站' : 'stops'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">${isZh ? '班距' : 'Interval'}</span>
+                <span class="summary-value">${scheduleInfo.peakInterval}-${scheduleInfo.offPeakInterval}</span>
+                <span class="summary-note">${isZh ? '分鐘' : 'min'}</span>
+            </div>
+        </div>
+        ${fareInfo.transferDiscount ? `<div class="transfer-note">🎫 ${isZh ? '可享捷運/公車轉乘優惠' : 'MRT/Bus transfer discount available'}</div>` : ''}
+    </li>`;
+
+    // Next bus info header
     let headerHtml = '';
     if (nextBus.ended) {
-        headerHtml = `<li class="route-stop-item" style="background:#FFF3E0;">
+        headerHtml = `<li class="route-stop-item service-ended">
+            <div class="stop-sequence" style="background:#E65100;">!</div>
             <div class="route-stop-info">
                 <div class="route-stop-name" style="color:#E65100;">${isZh ? '今日營運已結束' : 'Service ended for today'}</div>
-                <div class="route-stop-time">${isZh ? '首班車' : 'First bus'}: ${scheduleInfo.firstBus}</div>
+                <div class="route-stop-time">${isZh ? '首班車' : 'First bus'}: ${scheduleInfo.firstBus} | ${isZh ? '末班車' : 'Last bus'}: ${scheduleInfo.lastBus}</div>
             </div>
         </li>`;
     } else if (nextBus.waitMinutes !== null) {
         const waitText = nextBus.waitMinutes <= 1
-            ? (isZh ? '即將到站' : 'Arriving')
+            ? (isZh ? '即將發車' : 'Departing')
             : `${nextBus.waitMinutes} ${isZh ? '分鐘' : 'min'}`;
-        headerHtml = `<li class="route-stop-item" style="background:#E8F5E9;">
+        const isArriving = nextBus.waitMinutes <= 5;
+        headerHtml = `<li class="route-stop-item next-bus-item ${isArriving ? 'arriving-soon' : ''}">
+            <div class="stop-sequence" style="background:${isArriving ? '#E65100' : '#2E7D32'};">🚌</div>
             <div class="route-stop-info">
-                <div class="route-stop-name" style="color:#2E7D32;">${isZh ? '下一班車' : 'Next bus'}: ${nextBus.time}</div>
-                <div class="route-stop-time">${isZh ? '班距' : 'Interval'}: ${scheduleInfo.peakInterval}-${scheduleInfo.offPeakInterval} ${isZh ? '分鐘' : 'min'}</div>
+                <div class="next-bus-header">
+                    <span class="next-bus-label">${isZh ? '下一班車' : 'Next Bus'}</span>
+                    ${isArriving ? `<span class="next-badge">${isZh ? '即將到站' : 'NEXT'}</span>` : ''}
+                </div>
+                <div class="next-bus-time">${nextBus.time}</div>
+                <div class="route-stop-time">${isZh ? '營運時間' : 'Service'}: ${scheduleInfo.firstBus} - ${scheduleInfo.lastBus}</div>
             </div>
-            <div class="bus-eta ${nextBus.waitMinutes <= 5 ? 'arriving' : 'scheduled'}">${waitText}</div>
+            <div class="bus-eta ${isArriving ? 'arriving' : 'scheduled'}">${waitText}</div>
         </li>`;
     }
 
     const stopsHtml = stops.map((stop, index) => {
-        const isTerminal = index === 0 || index === stops.length - 1;
+        const isFirst = index === 0;
+        const isLast = index === stops.length - 1;
         const stopName = isZh ? stop.name.zh : stop.name.en;
 
+        // Calculate elapsed time from first stop
+        const firstTime = stops[0].time.split(':').map(Number);
+        const stopTime = stop.time.split(':').map(Number);
+        const elapsedMinutes = (stopTime[0] * 60 + stopTime[1]) - (firstTime[0] * 60 + firstTime[1]);
+
         return `
-            <li class="route-stop-item">
-                <div class="stop-sequence ${isTerminal ? 'terminal' : ''}">${index + 1}</div>
+            <li class="route-stop-item ${isFirst ? 'first-stop' : ''} ${isLast ? 'last-stop' : ''}">
+                <div class="stop-sequence ${isFirst || isLast ? 'terminal' : ''}">${index + 1}</div>
                 <div class="route-stop-info">
                     <div class="route-stop-name">${stopName}</div>
-                    <div class="route-stop-time">${isZh ? '預計' : 'Est.'} ${stop.time}</div>
+                    <div class="route-stop-details">
+                        <span class="stop-time-value">${stop.time}</span>
+                        ${!isFirst ? `<span class="elapsed-time">+${elapsedMinutes} ${isZh ? '分' : 'min'}</span>` : `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>`}
+                        ${isLast ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
+                    </div>
                 </div>
             </li>
         `;
     }).join('');
 
-    listEl.innerHTML = headerHtml + stopsHtml;
+    listEl.innerHTML = summaryHtml + headerHtml + stopsHtml;
 }
 
 // Check if proxy is configured
