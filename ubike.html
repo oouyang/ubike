@@ -66,6 +66,20 @@
     .nav-btn.home:hover {
       background: #F57C00;
     }
+    .nav-group {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .nav-group .nav-btn {
+      border-radius: 3px;
+    }
+    .nav-group .view-toggle {
+      margin-left: 0;
+    }
     #city-select {
       padding: 6px 10px;
       border-radius: 4px;
@@ -371,7 +385,13 @@
     <h1 id="page-title">YouBike</h1>
     <div class="header-controls">
       <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
-      <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
+      <div class="nav-group">
+        <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
+        <div class="view-toggle">
+          <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
+          <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
+        </div>
+      </div>
       <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
       <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
       <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
@@ -392,10 +412,6 @@
         <option value="pingtung">Pingtung</option>
         <option value="taitung">Taitung</option>
       </select>
-      <div class="view-toggle">
-        <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
-        <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
-      </div>
       <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
     </div>
   </header>
