@@ -5,7 +5,6 @@
 	<meta charset='UTF-8'>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>YouBike Station List</title>
-	<script src="sorttable.js"></script>
 	<link rel="stylesheet" href="css/sortable-theme-finder.css">
 	<script>
 		'use strict';
@@ -15,6 +14,8 @@
 		// State
 		let stations = [];
 		let currentLang = null;
+		let sortState = { column: null, direction: null }; // null, 'asc', 'desc'
+		let originalOrder = []; // Store original order for reset
 
 		const LABELS = {
 			en: {
@@ -95,6 +96,9 @@
 		}
 
 		function buildTableRow(station, index) {
+			const distanceCell = station.distance !== undefined
+				? `<td>${station.distance.toFixed(2)}</td>`
+				: '';
 			return `<tr>
 				<td>${index + 1}</td>
 				<td>${getStationName(station)}</td>
@@ -103,18 +107,93 @@
 				<td>${station.longitude}</td>
 				<td>${station.available_rent_bikes}</td>
 				<td>${station.available_return_bikes}</td>
+				${distanceCell}
 			</tr>`;
+		}
+
+		function getSortIcon(colIndex) {
+			if (sortState.column !== colIndex) return '⇅';
+			return sortState.direction === 'asc' ? '▲' : '▼';
+		}
+
+		function sortByColumn(colIndex) {
+			// Toggle sort state: null -> desc -> asc -> null
+			if (sortState.column !== colIndex) {
+				sortState = { column: colIndex, direction: 'desc' };
+			} else if (sortState.direction === 'desc') {
+				sortState.direction = 'asc';
+			} else if (sortState.direction === 'asc') {
+				sortState = { column: null, direction: null };
+			}
+
+			let sortedStations;
+			if (sortState.column === null) {
+				// Reset to original order
+				sortedStations = [...originalOrder];
+				console.log('[UBike] Sort reset to original order');
+			} else {
+				sortedStations = [...stations].sort((a, b) => {
+					let valA, valB;
+					switch (colIndex) {
+						case 1: // Station name
+							valA = getStationName(a) || '';
+							valB = getStationName(b) || '';
+							return sortState.direction === 'asc'
+								? valA.localeCompare(valB)
+								: valB.localeCompare(valA);
+						case 2: // Location
+							valA = getStationLocation(a) || '';
+							valB = getStationLocation(b) || '';
+							return sortState.direction === 'asc'
+								? valA.localeCompare(valB)
+								: valB.localeCompare(valA);
+						case 3: // Lat
+							valA = parseFloat(a.latitude) || 0;
+							valB = parseFloat(b.latitude) || 0;
+							break;
+						case 4: // Lng
+							valA = parseFloat(a.longitude) || 0;
+							valB = parseFloat(b.longitude) || 0;
+							break;
+						case 5: // Bikes
+							valA = parseInt(a.available_rent_bikes) || 0;
+							valB = parseInt(b.available_rent_bikes) || 0;
+							break;
+						case 6: // Slots
+							valA = parseInt(a.available_return_bikes) || 0;
+							valB = parseInt(b.available_return_bikes) || 0;
+							break;
+						case 7: // Distance
+							valA = a.distance || 0;
+							valB = b.distance || 0;
+							break;
+						default:
+							return 0;
+					}
+					return sortState.direction === 'asc' ? valA - valB : valB - valA;
+				});
+				console.log(`[UBike] Sorted by column ${colIndex} (${sortState.direction})`);
+			}
+
+			stations = sortedStations;
+			renderTable(stations);
 		}
 
 		function renderTable(stationList) {
 			const L = LABELS[currentLang];
 			console.log(`[UBike] Rendering table (${currentLang})`);
 
-			const headers = L.headers.slice(0, 7); // Exclude distance initially
+			// Include distance header if distance data exists
+			const hasDistance = stationList.length > 0 && stationList[0].distance !== undefined;
+			const headers = hasDistance ? L.headers : L.headers.slice(0, 7);
 
-			let html = `<table class="sortable sortable-theme-finder" id="tbl" border="1">
+			let html = `<table class="sortable-theme-finder" id="tbl" border="1">
 				<thead>
-					<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+					<tr>${headers.map((h, i) => {
+						if (i === 0) return `<th>${h}</th>`;
+						const icon = getSortIcon(i);
+						return `<th class="sortable-header" onclick="sortByColumn(${i})">${h} <span class="sort-icon">${icon}</span></th>`;
+					}).join('')}</tr>
 				</thead>
 				<tbody>`;
 
@@ -127,8 +206,10 @@
 			document.getElementById('table-container').innerHTML = html;
 			document.getElementById('status').textContent = `${L.showing} ${stationList.length} ${L.stations}`;
 
-			// Try to add distance column
-			tryAddDistanceColumn();
+			// Try to add distance column (only if not already added)
+			if (!hasDistance) {
+				tryAddDistanceColumn();
+			}
 		}
 
 		function tryAddDistanceColumn() {
@@ -141,11 +222,16 @@
 			);
 		}
 
+		let userLocation = null; // Store user location for distance sorting
+
 		function addDistanceColumn(userLat, userLng) {
 			const table = document.getElementById('tbl');
 			if (!table) return;
 
 			console.log(`[UBike] Adding distance column (user: ${userLat.toFixed(5)}, ${userLng.toFixed(5)})`);
+
+			// Store user location for distance sorting
+			userLocation = { lat: userLat, lng: userLng };
 
 			const L = LABELS[currentLang];
 			const headerRow = table.querySelector('thead tr');
@@ -153,29 +239,39 @@
 			// Check if distance column already exists
 			if (headerRow.cells.length > 7) return;
 
+			// Add distance to station data
+			stations.forEach(station => {
+				station.distance = getDistanceFromLatLonInM(
+					userLat, userLng,
+					parseFloat(station.latitude),
+					parseFloat(station.longitude)
+				);
+			});
+			originalOrder.forEach(station => {
+				station.distance = getDistanceFromLatLonInM(
+					userLat, userLng,
+					parseFloat(station.latitude),
+					parseFloat(station.longitude)
+				);
+			});
+
 			const distanceHeader = document.createElement('th');
-			distanceHeader.textContent = L.headers[7];
+			distanceHeader.className = 'sortable-header';
+			distanceHeader.onclick = () => sortByColumn(7);
+			distanceHeader.innerHTML = `${L.headers[7]} <span class="sort-icon">${getSortIcon(7)}</span>`;
 			headerRow.appendChild(distanceHeader);
 
 			const rows = table.querySelectorAll('tbody tr');
-			rows.forEach(row => {
-				const cells = row.getElementsByTagName('td');
-				const lat = parseFloat(cells[3].textContent);
-				const lng = parseFloat(cells[4].textContent);
-				const distance = getDistanceFromLatLonInM(userLat, userLng, lat, lng);
-
+			rows.forEach((row, i) => {
 				const distanceCell = document.createElement('td');
-				distanceCell.textContent = distance.toFixed(2);
-				distanceCell.setAttribute('data-value', distance);
+				distanceCell.textContent = stations[i].distance.toFixed(2);
 				row.appendChild(distanceCell);
 			});
 
-			// Re-initialize sortable and sort by distance
-			if (typeof sorttable !== 'undefined') {
-				sorttable.makeSortable(table);
-				distanceHeader.click();
-				console.log('[UBike] Sorted by distance');
-			}
+			// Auto-sort by distance (descending first, then asc)
+			sortByColumn(7); // desc
+			sortByColumn(7); // asc (closest first)
+			console.log('[UBike] Sorted by distance (ascending)');
 		}
 
 		async function init() {
@@ -188,6 +284,7 @@
 			try {
 				container.innerHTML = `<p>${L.loading}</p>`;
 				stations = await fetchStations();
+				originalOrder = [...stations]; // Store original order for reset
 				renderTable(stations);
 				console.log('[UBike] Table rendered successfully');
 			} catch (error) {
@@ -230,6 +327,21 @@
 			color: #666;
 			font-size: 0.9em;
 			margin-bottom: 10px;
+		}
+		.sortable-header {
+			cursor: pointer;
+			user-select: none;
+		}
+		.sortable-header:hover {
+			background: #e8f5e9;
+		}
+		.sort-icon {
+			font-size: 0.8em;
+			margin-left: 4px;
+			color: #888;
+		}
+		.sortable-header:hover .sort-icon {
+			color: #4CAF50;
 		}
 	</style>
 </head>
