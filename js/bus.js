@@ -256,6 +256,20 @@ function updateUI() {
         if (text) btn.textContent = text;
     });
 
+    // Update tab buttons (Schedule/Nearby)
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        const text = isZh ? btn.dataset.zh : btn.dataset.en;
+        if (text) btn.textContent = text;
+    });
+
+    // Update all elements with data-en/data-zh (direction tabs, labels, etc.)
+    document.querySelectorAll('[data-en][data-zh]').forEach(el => {
+        // Skip elements already handled above
+        if (el.classList.contains('nav-btn') || el.classList.contains('tab-btn')) return;
+        const text = isZh ? el.dataset.zh : el.dataset.en;
+        if (text) el.textContent = text;
+    });
+
     // Update city selector
     const select = document.getElementById('city-select');
     Array.from(select.options).forEach(opt => {
