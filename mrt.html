@@ -659,10 +659,12 @@ function updateUI() {
   renderStationList(filtered);
 
   // Update all marker popups
-  Object.keys(markers).forEach(id => {
-    const station = STATIONS.find(s => s.id === id);
-    if (station && markers[id]) {
-      markers[id].setPopupContent(getPopupContent(station));
+  Object.keys(markers).forEach(key => {
+    const [system, ...idParts] = key.split('-');
+    const id = idParts.join('-');
+    const station = STATIONS.find(s => s.id === id && s.system === system);
+    if (station && markers[key]) {
+      markers[key].setPopupContent(getPopupContent(station));
     }
   });
 
