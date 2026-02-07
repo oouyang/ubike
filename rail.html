@@ -278,14 +278,73 @@
       padding: 12px 15px;
       border-bottom: 1px solid #eee;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
       background: white;
       transition: background 0.2s;
     }
     .train-item:hover { background: #e3f2fd; }
-    .train-item.departed { opacity: 0.5; background: #f5f5f5; }
+    .train-item.departed {
+      opacity: 0.5;
+      background: #f5f5f5;
+    }
+    .train-time {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #333;
+      min-width: 60px;
+    }
+    .train-info { flex: 1; }
+    .train-number {
+      font-weight: bold;
+      color: #0d47a1;
+      margin-bottom: 2px;
+    }
+    .train-type {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75em;
+      margin-left: 6px;
+    }
+    .train-type.express { background: #c62828; color: white; }
+    .train-type.limited { background: #f57c00; color: white; }
+    .train-type.local { background: #2e7d32; color: white; }
+    .train-type.fast-local { background: #1565c0; color: white; }
+    .train-dest {
+      font-size: 0.85em;
+      color: #666;
+    }
+    .train-status {
+      font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .train-status.arriving {
+      background: #ffeb3b;
+      color: #e65100;
+    }
+    .train-status.ontime {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .train-status.departed {
+      background: #f5f5f5;
+      color: #999;
+    }
+    .train-countdown {
+      font-size: 0.85em;
+      color: #999;
+      min-width: 70px;
+      text-align: right;
+    }
+    .no-trains {
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
+    }
+    /* Enhanced schedule styles */
     .train-item.next-train {
       background: linear-gradient(135deg, #e3f2fd, #bbdefb);
       border-left: 4px solid #0d47a1;
@@ -295,16 +354,10 @@
       align-items: flex-start;
       gap: 12px;
       flex: 1;
-      min-width: 0;
     }
     .train-time-block {
       text-align: center;
       min-width: 60px;
-    }
-    .train-time {
-      font-size: 1.2em;
-      font-weight: bold;
-      color: #333;
     }
     .train-platform {
       font-size: 0.75em;
@@ -314,40 +367,24 @@
       border-radius: 3px;
       margin-top: 4px;
     }
-    .train-info { flex: 1; min-width: 0; }
     .train-number-row {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
     }
-    .train-number {
-      font-weight: bold;
-      color: #0d47a1;
-    }
-    .train-type {
-      display: inline-block;
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-size: 0.75em;
-    }
-    .train-type.express { background: #c62828; color: white; }
-    .train-type.limited { background: #f57c00; color: white; }
-    .train-type.local { background: #2e7d32; color: white; }
-    .train-type.fast-local { background: #1565c0; color: white; }
     .next-badge {
-      font-size: 0.7em;
       background: #0d47a1;
       color: white;
+      font-size: 0.7em;
       padding: 2px 6px;
       border-radius: 3px;
       font-weight: bold;
       animation: pulse 2s infinite;
     }
-    .train-dest {
-      font-size: 0.85em;
-      color: #666;
-      margin: 2px 0 4px;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
     .train-details {
       display: flex;
@@ -355,43 +392,21 @@
       gap: 10px;
       font-size: 0.8em;
       color: #666;
+      margin-top: 4px;
     }
-    .train-arr, .train-duration, .train-fare { white-space: nowrap; }
-    .train-fare { color: #0d47a1; font-weight: 500; }
+    .train-arr, .train-duration, .train-fare {
+      white-space: nowrap;
+    }
+    .train-fare {
+      color: #0d47a1;
+      font-weight: 500;
+    }
     .train-right {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       gap: 4px;
-      min-width: 70px;
-    }
-    .train-status {
-      font-size: 0.75em;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-weight: 500;
-    }
-    .train-status.arriving {
-      background: #ffeb3b;
-      color: #e65100;
-      animation: pulse 1s infinite;
-    }
-    .train-status.ontime { background: #e8f5e9; color: #2e7d32; }
-    .train-status.delayed { background: #ffebee; color: #c62828; }
-    .train-status.departed { background: #f5f5f5; color: #999; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    .train-countdown {
-      font-size: 0.85em;
-      color: #0d47a1;
-      font-weight: 500;
-    }
-    .no-trains {
-      padding: 40px 20px;
-      text-align: center;
-      color: #999;
+      min-width: 80px;
     }
     .timetable-btn {
       padding: 4px 8px;
@@ -1614,7 +1629,7 @@ function renderTrainSchedule() {
     const isFirstUpcoming = !train.isRecentlyDeparted && trains.filter(t => !t.isRecentlyDeparted).indexOf(train) === 0;
 
     return `
-      <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}">
+      <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}" style="flex-wrap:wrap;">
         <div class="train-main">
           <div class="train-time-block">
             <div class="train-time">${train.depTimeStr}</div>

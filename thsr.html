@@ -160,16 +160,18 @@
       padding: 12px 15px;
       border-bottom: 1px solid #eee;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
       background: white;
       transition: background 0.2s;
     }
     .train-item:hover { background: #fff3e0; }
-    .train-item.departed { opacity: 0.5; background: #f5f5f5; }
+    .train-item.departed {
+      opacity: 0.5;
+      background: #f5f5f5;
+    }
     .train-item.next-train {
-      background: linear-gradient(135deg, #fff8e1, #fffde7);
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
       border-left: 4px solid #f57c00;
     }
     .train-main {
@@ -177,7 +179,6 @@
       align-items: flex-start;
       gap: 12px;
       flex: 1;
-      min-width: 0;
     }
     .train-time-block {
       text-align: center;
@@ -196,7 +197,7 @@
       border-radius: 3px;
       margin-top: 4px;
     }
-    .train-info { flex: 1; min-width: 0; }
+    .train-info { flex: 1; }
     .train-number-row {
       display: flex;
       align-items: center;
@@ -207,25 +208,22 @@
       font-weight: bold;
       color: #f57c00;
     }
-    .train-type {
-      display: inline-block;
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-size: 0.75em;
-    }
     .next-badge {
-      font-size: 0.7em;
       background: #f57c00;
       color: white;
+      font-size: 0.7em;
       padding: 2px 6px;
       border-radius: 3px;
       font-weight: bold;
       animation: pulse 2s infinite;
     }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
     .train-dest {
       font-size: 0.85em;
       color: #666;
-      margin: 2px 0 4px;
     }
     .train-details {
       display: flex;
@@ -233,38 +231,53 @@
       gap: 10px;
       font-size: 0.8em;
       color: #666;
+      margin-top: 4px;
     }
-    .train-arr, .train-duration, .train-fare { white-space: nowrap; }
-    .train-fare { color: #e65100; font-weight: 500; }
+    .train-arr, .train-duration, .train-fare {
+      white-space: nowrap;
+    }
+    .train-fare {
+      color: #e65100;
+      font-weight: 500;
+    }
     .train-right {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       gap: 4px;
-      min-width: 70px;
+      min-width: 80px;
     }
     .train-status {
-      font-size: 0.75em;
-      padding: 3px 8px;
+      font-size: 0.8em;
+      padding: 4px 8px;
       border-radius: 4px;
       font-weight: 500;
     }
     .train-status.arriving {
       background: #ffeb3b;
       color: #e65100;
-      animation: pulse 1s infinite;
     }
-    .train-status.ontime { background: #e8f5e9; color: #2e7d32; }
-    .train-status.delayed { background: #ffebee; color: #c62828; }
-    .train-status.departed { background: #f5f5f5; color: #999; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+    .train-status.ontime {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .train-status.delayed {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .train-status.departed {
+      background: #f5f5f5;
+      color: #999;
     }
     .train-countdown {
       font-size: 0.85em;
       color: #f57c00;
       font-weight: 500;
+    }
+    .no-trains {
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
     }
     .timetable-btn {
       padding: 4px 8px;
