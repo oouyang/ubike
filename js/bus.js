@@ -543,6 +543,7 @@ function renderRouteSchedule() {
     let tripDuration = totalJourneyTime;
     let tripStops = stops.length;
     let tripFare = fareInfo.totalFare;
+    let arrivalAtDest = null;
 
     if (selectedOriginStop !== null && selectedDestStop !== null) {
         const originIdx = parseInt(selectedOriginStop);
@@ -556,12 +557,26 @@ function renderRouteSchedule() {
         const stopsPerSection = totalStops / fareInfo.sections;
         const sectionsTraveled = Math.max(1, Math.ceil(tripStops / stopsPerSection));
         tripFare = fareInfo.baseFare * sectionsTraveled;
+
+        // Calculate arrival time at destination based on next bus
+        if (nextBus.time && !nextBus.ended) {
+            const [busH, busM] = nextBus.time.split(':').map(Number);
+            const busDepartMinutes = busH * 60 + busM;
+            const firstStopTime = stops[0].time.split(':').map(Number);
+            const firstStopMinutes = firstStopTime[0] * 60 + firstStopTime[1];
+            const destStopMinutes = destTime[0] * 60 + destTime[1];
+            const elapsedToDest = destStopMinutes - firstStopMinutes;
+            const arrivalMinutes = busDepartMinutes + elapsedToDest;
+            const arrH = Math.floor(arrivalMinutes / 60) % 24;
+            const arrM = arrivalMinutes % 60;
+            arrivalAtDest = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+        }
     }
 
     const hasTripSelection = selectedOriginStop !== null && selectedDestStop !== null;
 
     let summaryHtml = `<li class="route-summary-card">
-        ${hasTripSelection ? `<div style="text-align:center;font-size:0.85em;color:#1565C0;margin-bottom:8px;font-weight:500;">📍 ${isZh ? '您的行程' : 'Your Trip'}</div>` : ''}
+        ${hasTripSelection ? `<div style="text-align:center;font-size:0.85em;color:#1565C0;margin-bottom:8px;font-weight:500;">📍 ${isZh ? '您的行程' : 'Your Trip'}${arrivalAtDest ? ` → ${isZh ? '預計' : 'Arrive'} <strong>${arrivalAtDest}</strong>` : ''}</div>` : ''}
         <div class="summary-row">
             <div class="summary-item">
                 <span class="summary-label">${isZh ? '票價' : 'Fare'}</span>
@@ -574,9 +589,9 @@ function renderRouteSchedule() {
                 <span class="summary-note">${tripStops} ${isZh ? '站' : 'stops'}</span>
             </div>
             <div class="summary-item">
-                <span class="summary-label">${isZh ? '班距' : 'Interval'}</span>
-                <span class="summary-value">${scheduleInfo.peakInterval}-${scheduleInfo.offPeakInterval}</span>
-                <span class="summary-note">${isZh ? '分鐘' : 'min'}</span>
+                <span class="summary-label">${hasTripSelection && arrivalAtDest ? (isZh ? '抵達' : 'Arrive') : (isZh ? '班距' : 'Interval')}</span>
+                <span class="summary-value">${hasTripSelection && arrivalAtDest ? arrivalAtDest : `${scheduleInfo.peakInterval}-${scheduleInfo.offPeakInterval}`}</span>
+                <span class="summary-note">${hasTripSelection && arrivalAtDest ? (isZh ? '預計時間' : 'ETA') : (isZh ? '分鐘' : 'min')}</span>
             </div>
         </div>
         ${fareInfo.transferDiscount ? `<div class="transfer-note">🎫 ${isZh ? '可享捷運/公車轉乘優惠' : 'MRT/Bus transfer discount available'}</div>` : ''}
@@ -614,6 +629,17 @@ function renderRouteSchedule() {
     const originIdx = selectedOriginStop !== null ? parseInt(selectedOriginStop) : -1;
     const destIdx = selectedDestStop !== null ? parseInt(selectedDestStop) : -1;
 
+    // Calculate next bus departure time in minutes for arrival time calculation
+    let nextBusDepartureMinutes = null;
+    if (nextBus.time && !nextBus.ended) {
+        const [h, m] = nextBus.time.split(':').map(Number);
+        nextBusDepartureMinutes = h * 60 + m;
+    }
+
+    // Get first stop base time for elapsed calculation
+    const firstStopTime = stops[0].time.split(':').map(Number);
+    const firstStopMinutes = firstStopTime[0] * 60 + firstStopTime[1];
+
     const stopsHtml = stops.map((stop, index) => {
         const isFirst = index === 0;
         const isLast = index === stops.length - 1;
@@ -624,11 +650,25 @@ function renderRouteSchedule() {
         const isDestination = index === destIdx;
         const isInTrip = originIdx >= 0 && destIdx >= 0 && index >= originIdx && index <= destIdx;
 
-        // Calculate elapsed time from origin (or first stop if no selection)
+        // Calculate elapsed time from first stop
+        const stopTime = stop.time.split(':').map(Number);
+        const stopMinutes = stopTime[0] * 60 + stopTime[1];
+        const elapsedFromFirst = stopMinutes - firstStopMinutes;
+
+        // Calculate elapsed time from origin (for display)
         const baseIdx = originIdx >= 0 ? originIdx : 0;
         const baseTime = stops[baseIdx].time.split(':').map(Number);
-        const stopTime = stop.time.split(':').map(Number);
-        const elapsedMinutes = (stopTime[0] * 60 + stopTime[1]) - (baseTime[0] * 60 + baseTime[1]);
+        const baseMinutes = baseTime[0] * 60 + baseTime[1];
+        const elapsedFromOrigin = stopMinutes - baseMinutes;
+
+        // Calculate estimated arrival time at this stop based on next bus
+        let arrivalTimeStr = '';
+        if (nextBusDepartureMinutes !== null) {
+            const arrivalMinutes = nextBusDepartureMinutes + elapsedFromFirst;
+            const arrH = Math.floor(arrivalMinutes / 60) % 24;
+            const arrM = arrivalMinutes % 60;
+            arrivalTimeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+        }
 
         // Build class list
         let classList = ['route-stop-item'];
@@ -644,8 +684,8 @@ function renderRouteSchedule() {
                 <div class="route-stop-info">
                     <div class="route-stop-name">${stopName}${isOrigin ? ` <span style="color:#2E7D32;font-size:0.8em;">(${isZh ? '上車' : 'Board'})</span>` : ''}${isDestination ? ` <span style="color:#c62828;font-size:0.8em;">(${isZh ? '下車' : 'Alight'})</span>` : ''}</div>
                     <div class="route-stop-details">
-                        <span class="stop-time-value">${stop.time}</span>
-                        ${index > baseIdx ? `<span class="elapsed-time">+${elapsedMinutes} ${isZh ? '分' : 'min'}</span>` : ''}
+                        ${arrivalTimeStr ? `<span class="arrival-time-est">${isZh ? '預計' : 'ETA'} ${arrivalTimeStr}</span>` : ''}
+                        ${index > baseIdx ? `<span class="elapsed-time">+${elapsedFromOrigin} ${isZh ? '分' : 'min'}</span>` : ''}
                         ${isFirst && !isOrigin ? `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>` : ''}
                         ${isLast && !isDestination ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
                     </div>
