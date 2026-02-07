@@ -10,7 +10,6 @@
 	<title>YouBike Station List</title>
 	<link rel="manifest" href="manifest.webapp">
 	<link rel="apple-touch-icon" href="img/icon-180.png">
-	<link rel="stylesheet" href="css/sortable-theme-finder.css">
 	<script>
 		'use strict';
 
@@ -209,16 +208,31 @@
 
 		function buildTableRow(station, index) {
 			const distanceCell = station.distance !== undefined
-				? `<td>${station.distance.toFixed(2)}</td>`
+				? `<td>${station.distance.toFixed(0)}</td>`
 				: '';
+
+			// Color code bikes availability
+			const bikes = station.available_rent_bikes;
+			let bikesClass = '';
+			if (bikes === 0) bikesClass = 'bikes-empty';
+			else if (bikes <= 3) bikesClass = 'bikes-low';
+			else bikesClass = 'bikes-high';
+
+			// Color code slots availability
+			const slots = station.available_return_bikes;
+			let slotsClass = '';
+			if (slots === 0) slotsClass = 'bikes-empty';
+			else if (slots <= 3) slotsClass = 'bikes-low';
+			else slotsClass = 'bikes-high';
+
 			return `<tr>
 				<td>${index + 1}</td>
 				<td>${getStationName(station)}</td>
 				<td>${getStationLocation(station)}</td>
-				<td>${station.latitude}</td>
-				<td>${station.longitude}</td>
-				<td>${station.available_rent_bikes}</td>
-				<td>${station.available_return_bikes}</td>
+				<td>${station.latitude.toFixed(4)}</td>
+				<td>${station.longitude.toFixed(4)}</td>
+				<td class="${bikesClass}">${bikes}</td>
+				<td class="${slotsClass}">${slots}</td>
 				${distanceCell}
 			</tr>`;
 		}
@@ -299,12 +313,12 @@
 			const hasDistance = stationList.length > 0 && stationList[0].distance !== undefined;
 			const headers = hasDistance ? L.headers : L.headers.slice(0, 7);
 
-			let html = `<table class="sortable-theme-finder" id="tbl" border="1">
+			let html = `<table id="tbl">
 				<thead>
 					<tr>${headers.map((h, i) => {
 						if (i === 0) return `<th>${h}</th>`;
 						const icon = getSortIcon(i);
-						return `<th class="sortable-header" onclick="sortByColumn(${i})">${h} <span class="sort-icon">${icon}</span></th>`;
+						return `<th class="sortable-header" onclick="sortByColumn(${i})">${h}<span class="sort-icon">${icon}</span></th>`;
 					}).join('')}</tr>
 				</thead>
 				<tbody>`;
@@ -415,32 +429,44 @@
 		document.addEventListener('DOMContentLoaded', init);
 	</script>
 	<style>
+		* { box-sizing: border-box; }
 		body {
-			font-family: sans-serif;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 			margin: 0;
-			padding: 10px;
+			padding: 15px;
+			background: #f5f5f5;
 		}
 		.header {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			margin-bottom: 10px;
+			margin-bottom: 15px;
+			flex-wrap: wrap;
+			gap: 10px;
 		}
 		.header h1 {
 			margin: 0;
 			font-size: 1.5em;
+			color: #2e7d32;
 		}
 		.header-controls {
 			display: flex;
-			gap: 10px;
+			gap: 8px;
 			align-items: center;
+			flex-wrap: wrap;
 		}
 		#city-select {
 			padding: 8px 12px;
 			font-size: 14px;
-			border: 1px solid #ccc;
-			border-radius: 4px;
+			border: 1px solid #ddd;
+			border-radius: 6px;
 			cursor: pointer;
+			background: white;
+		}
+		#city-select:focus {
+			outline: none;
+			border-color: #4CAF50;
+			box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 		}
 		#lang-btn {
 			padding: 8px 16px;
@@ -449,23 +475,27 @@
 			background: #4CAF50;
 			color: white;
 			border: none;
-			border-radius: 4px;
+			border-radius: 6px;
+			font-weight: 500;
+			transition: background 0.2s;
 		}
 		#lang-btn:hover {
-			background: #45a049;
+			background: #43a047;
 		}
 		.nav-btn {
 			padding: 8px 12px;
 			background: #fff;
-			border: 1px solid #ccc;
-			border-radius: 4px;
+			border: 1px solid #ddd;
+			border-radius: 6px;
 			cursor: pointer;
 			text-decoration: none;
 			color: #333;
-			font-size: 14px;
+			font-size: 13px;
+			transition: all 0.2s;
 		}
 		.nav-btn:hover {
-			background: #f0f0f0;
+			background: #e8f5e9;
+			border-color: #4CAF50;
 		}
 		.nav-btn.active {
 			background: #4CAF50;
@@ -483,22 +513,135 @@
 		#status {
 			color: #666;
 			font-size: 0.9em;
-			margin-bottom: 10px;
+			margin-bottom: 12px;
+			padding: 8px 12px;
+			background: white;
+			border-radius: 6px;
+			display: inline-block;
 		}
+		#table-container {
+			background: white;
+			border-radius: 10px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			overflow: hidden;
+		}
+		/* Modern Table Styling */
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 14px;
+		}
+		table thead {
+			background: linear-gradient(135deg, #4CAF50, #43a047);
+			color: white;
+		}
+		table thead th {
+			padding: 14px 12px;
+			text-align: left;
+			font-weight: 600;
+			border: none;
+			white-space: nowrap;
+		}
+		table thead th:first-child {
+			border-radius: 10px 0 0 0;
+		}
+		table thead th:last-child {
+			border-radius: 0 10px 0 0;
+		}
+		table tbody tr {
+			border-bottom: 1px solid #eee;
+			transition: background 0.15s;
+		}
+		table tbody tr:hover {
+			background: #e8f5e9;
+		}
+		table tbody tr:nth-child(even) {
+			background: #fafafa;
+		}
+		table tbody tr:nth-child(even):hover {
+			background: #e8f5e9;
+		}
+		table tbody td {
+			padding: 12px;
+			color: #333;
+			border: none;
+		}
+		table tbody td:first-child {
+			font-weight: 500;
+			color: #666;
+			text-align: center;
+			width: 50px;
+		}
+		/* Station name column */
+		table tbody td:nth-child(2) {
+			font-weight: 500;
+			color: #2e7d32;
+		}
+		/* Bikes available - highlight */
+		table tbody td:nth-child(6) {
+			font-weight: bold;
+			text-align: center;
+		}
+		/* Slots available */
+		table tbody td:nth-child(7) {
+			text-align: center;
+		}
+		/* Distance column */
+		table tbody td:nth-child(8) {
+			color: #1976d2;
+			font-weight: 500;
+			text-align: right;
+		}
+		/* Bike availability indicators */
+		.bikes-high { color: #2e7d32; }
+		.bikes-low { color: #f57c00; }
+		.bikes-empty { color: #c62828; }
 		.sortable-header {
 			cursor: pointer;
 			user-select: none;
+			transition: background 0.2s;
 		}
 		.sortable-header:hover {
-			background: #e8f5e9;
+			background: rgba(255,255,255,0.2);
 		}
 		.sort-icon {
-			font-size: 0.8em;
-			margin-left: 4px;
-			color: #888;
+			font-size: 0.75em;
+			margin-left: 6px;
+			opacity: 0.7;
 		}
 		.sortable-header:hover .sort-icon {
-			color: #4CAF50;
+			opacity: 1;
+		}
+		/* Responsive */
+		@media (max-width: 900px) {
+			table {
+				font-size: 12px;
+			}
+			table thead th, table tbody td {
+				padding: 10px 8px;
+			}
+			/* Hide lat/lng on mobile */
+			table th:nth-child(4),
+			table td:nth-child(4),
+			table th:nth-child(5),
+			table td:nth-child(5) {
+				display: none;
+			}
+		}
+		@media (max-width: 600px) {
+			.header {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+			.header-controls {
+				width: 100%;
+				justify-content: flex-start;
+			}
+			/* Hide location on very small screens */
+			table th:nth-child(3),
+			table td:nth-child(3) {
+				display: none;
+			}
 		}
 	</style>
 </head>
