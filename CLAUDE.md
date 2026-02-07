@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-UBike is a Progressive Web App (PWA) that displays Taipei YouBike bike-sharing stations on an interactive Google Map. It shows real-time availability of bikes and parking slots at each station with color-coded markers.
+UBike is a Progressive Web App (PWA) that displays Taipei YouBike bike-sharing stations on an interactive map using Leaflet/OpenStreetMap. It shows real-time availability of bikes and parking slots at each station with color-coded markers.
 
 **Hosted on:** GitHub Pages (gh-pages branch)
 **Live URL:** https://oouyang.github.io/ubike/
@@ -21,9 +21,10 @@ There are no npm dependencies, build commands, or test frameworks.
 ## Architecture
 
 ### Entry Points
-- **map.html** - Main map view with real-time station markers and auto-refresh (primary entry point per manifest)
-- **list.html** - Tabular list view of all stations
-- **ubike.html** - Alternative map view using store-locator library with side panel
+- **map.html** - Main map view with real-time station markers and auto-refresh (primary)
+- **list.html** - Sortable table view with distance column (requires geolocation)
+- **ubike.html** - Map with search panel and station list
+- **cht/list.html** - Chinese version of list view with distance sorting
 
 ### Data Flow
 1. Station data fetched from Taipei Open Data API: `https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json`
@@ -57,14 +58,13 @@ There are no npm dependencies, build commands, or test frameworks.
 ### Key Files
 - `js/util.js` - Utility functions:
   - `fetchJSON(url)` - Async fetch with Promise
-  - `httpGet(url)` - Synchronous XHR (legacy)
   - `getDistanceFromLatLonInM()` - Haversine distance calculation
-- `ubike.js` - Store locator integration:
-  - `UBikeDataFeed` class for async data loading
-  - `initStoreLocator()` - Initializes map with panel view
+- `ubike.js` - Station locator with Leaflet:
+  - `fetchStations()` - Load data from API
+  - `filterStations(query)` - Search by name/address
+  - `selectStation(sno)` - Highlight and zoom to station
 - `sorttable.js` - Table sorting (add `class="sortable"` to tables)
 - `js/sortable.min.js` - HubSpot Sortable v0.8.0 (use `data-sortable` attribute)
-- `js/store-locator.min.js` - Google Maps store locator library
 - `manifest.webapp` - Firefox OS / PWA manifest with i18n support
 
 ### Localization
@@ -81,7 +81,5 @@ Automatic language detection via `navigator.language`:
 
 ## External Dependencies
 
-- Google Maps JavaScript API v3
-- jQuery 1.6 (only in ubike.html)
-- Flurry Analytics
-- Google Analytics
+- Leaflet 1.9.4 (via unpkg CDN)
+- OpenStreetMap tiles (free, no API key required)
