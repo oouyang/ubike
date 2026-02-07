@@ -148,9 +148,13 @@ function updateUI() {
 function updateCitySelector() {
   const select = document.getElementById('city-select');
   Array.from(select.options).forEach(option => {
-    const city = CITIES[option.value];
-    if (city) {
-      option.textContent = isZh ? city.name.zh : city.name.en;
+    if (option.value === 'all') {
+      option.textContent = isZh ? '所有城市' : 'All Cities';
+    } else {
+      const city = CITIES[option.value];
+      if (city) {
+        option.textContent = isZh ? city.name.zh : city.name.en;
+      }
     }
   });
 }
