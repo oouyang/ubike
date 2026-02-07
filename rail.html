@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <title>Taiwan Rail Stations</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin: 0;
+      padding: 10px 15px;
+      background: #0d47a1;
+      color: white;
+      font-size: 1.5em;
+    }
+    .container {
+      display: flex;
+      height: calc(100vh - 52px);
+    }
+    #panel {
+      width: 380px;
+      height: 100%;
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+    #map-canvas {
+      flex: 1;
+      height: 100%;
+    }
+    .search-box {
+      padding: 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .search-box input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .search-box select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .station-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .station-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .station-item:hover {
+      background: #e3f2fd;
+    }
+    .station-item.selected {
+      background: #bbdefb;
+    }
+    .station-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .station-id {
+      font-size: 0.75em;
+      background: #0d47a1;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .station-info {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .line-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 0.75em;
+      color: white;
+      font-weight: bold;
+      margin-right: 4px;
+    }
+    .class-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.7em;
+      background: #666;
+      color: white;
+    }
+    .result-count {
+      padding: 8px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.85em;
+      color: #666;
+    }
+    /* Line colors */
+    .line-WL { background-color: #1976d2; }
+    .line-ML { background-color: #388e3c; }
+    .line-CL { background-color: #f57c00; }
+    .line-SL { background-color: #7b1fa2; }
+    .line-YL { background-color: #00897b; }
+    .line-NL { background-color: #c62828; }
+    .line-TL { background-color: #5d4037; }
+    .line-SLL { background-color: #ff6f00; }
+    .line-PX { background-color: #9e9d24; }
+    .line-NW { background-color: #6a1b9a; }
+    .line-JJ { background-color: #2e7d32; }
+    .line-SH { background-color: #00838f; }
+    .line-LJ { background-color: #ad1457; }
+    /* Station class colors */
+    .class-1 { background-color: #c62828; }
+    .class-2 { background-color: #1565c0; }
+    .class-3 { background-color: #2e7d32; }
+    .class-S { background-color: #6a1b9a; }
+    /* Markers */
+    .marker-icon {
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: bold;
+      color: white;
+    }
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      #panel { width: 100%; height: 40%; }
+      #map-canvas { height: 60%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Taiwan Rail (TRA)</h1>
+  <div class="container">
+    <div id="panel">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search stations...">
+        <select id="line-select" onchange="changeLine()">
+          <option value="all">All Lines</option>
+        </select>
+        <select id="class-select" onchange="changeClass()">
+          <option value="all">All Classes</option>
+        </select>
+      </div>
+      <div id="result-count" class="result-count"></div>
+      <ul id="station-list" class="station-list"></ul>
+    </div>
+    <div id="map-canvas"></div>
+  </div>
+  <script>
+'use strict';
+
+// Taiwan Rail Lines configuration
+const RAIL_LINES = {
+  WL: { name: { en: 'Western Line (North)', zh: '西部幹線(北段)' }, color: '#1976d2' },
+  ML: { name: { en: 'Mountain Line', zh: '山線' }, color: '#388e3c' },
+  CL: { name: { en: 'Coast Line', zh: '海線' }, color: '#f57c00' },
+  SL: { name: { en: 'Western Line (South)', zh: '西部幹線(南段)' }, color: '#7b1fa2' },
+  YL: { name: { en: 'Yilan Line', zh: '宜蘭線' }, color: '#00897b' },
+  NL: { name: { en: 'North-Link Line', zh: '北迴線' }, color: '#c62828' },
+  TL: { name: { en: 'Taitung Line', zh: '臺東線' }, color: '#5d4037' },
+  SLL: { name: { en: 'South-Link Line', zh: '南迴線' }, color: '#ff6f00' },
+  PX: { name: { en: 'Pingxi Line', zh: '平溪線' }, color: '#9e9d24' },
+  NW: { name: { en: 'Neiwan Line', zh: '內灣線' }, color: '#6a1b9a' },
+  JJ: { name: { en: 'Jiji Line', zh: '集集線' }, color: '#2e7d32' },
+  SH: { name: { en: 'Shalun Line', zh: '沙崙線' }, color: '#00838f' },
+  LJ: { name: { en: 'Liujia Line', zh: '六家線' }, color: '#ad1457' }
+};
+
+// Station classes
+const STATION_CLASSES = {
+  '1': { name: { en: 'First Class', zh: '一等站' }, color: '#c62828' },
+  '2': { name: { en: 'Second Class', zh: '二等站' }, color: '#1565c0' },
+  '3': { name: { en: 'Third Class', zh: '三等站' }, color: '#2e7d32' },
+  'S': { name: { en: 'Simple Station', zh: '簡易站' }, color: '#6a1b9a' }
+};
+
+// Taiwan Rail Station Data
+const STATIONS = [
+  // ===== Western Line North (WL) - Keelung to Zhunan =====
+  { id: '0900', name: { en: 'Keelung', zh: '基隆' }, line: 'WL', class: '1', lat: 25.1315, lng: 121.7391, km: 0 },
+  { id: '0910', name: { en: 'Sanjiaokeng', zh: '三坑' }, line: 'WL', class: 'S', lat: 25.1231, lng: 121.7333, km: 1.5 },
+  { id: '0920', name: { en: 'Badu', zh: '八堵' }, line: 'WL', class: '2', lat: 25.1094, lng: 121.7283, km: 4.1 },
+  { id: '0930', name: { en: 'Qidu', zh: '七堵' }, line: 'WL', class: '1', lat: 25.0958, lng: 121.7133, km: 6.4 },
+  { id: '0940', name: { en: 'Baifu', zh: '百福' }, line: 'WL', class: 'S', lat: 25.0878, lng: 121.6978, km: 8.3 },
+  { id: '0950', name: { en: 'Wudu', zh: '五堵' }, line: 'WL', class: '3', lat: 25.0756, lng: 121.6786, km: 10.5 },
+  { id: '0960', name: { en: 'Xizhi', zh: '汐止' }, line: 'WL', class: '2', lat: 25.0656, lng: 121.6639, km: 12.6 },
+  { id: '0970', name: { en: 'Xike', zh: '汐科' }, line: 'WL', class: 'S', lat: 25.0594, lng: 121.6517, km: 14.2 },
+  { id: '0980', name: { en: 'Nangang', zh: '南港' }, line: 'WL', class: '1', lat: 25.0531, lng: 121.6072, km: 18.1 },
+  { id: '0990', name: { en: 'Songshan', zh: '松山' }, line: 'WL', class: '2', lat: 25.0494, lng: 121.5778, km: 21.1 },
+  { id: '1000', name: { en: 'Taipei', zh: '臺北' }, line: 'WL', class: '1', lat: 25.0478, lng: 121.5172, km: 28.3 },
+  { id: '1010', name: { en: 'Wanhua', zh: '萬華' }, line: 'WL', class: '2', lat: 25.0333, lng: 121.5000, km: 31.1 },
+  { id: '1020', name: { en: 'Banqiao', zh: '板橋' }, line: 'WL', class: '1', lat: 25.0144, lng: 121.4633, km: 35.5 },
+  { id: '1030', name: { en: 'Fuzhou', zh: '浮洲' }, line: 'WL', class: 'S', lat: 25.0111, lng: 121.4497, km: 37.1 },
+  { id: '1040', name: { en: 'Shulin', zh: '樹林' }, line: 'WL', class: '2', lat: 24.9939, lng: 121.4261, km: 40.3 },
+  { id: '1050', name: { en: 'Nanshijiao', zh: '南樹林' }, line: 'WL', class: 'S', lat: 24.9819, lng: 121.4156, km: 42.0 },
+  { id: '1060', name: { en: 'Shanjiajiao', zh: '山佳' }, line: 'WL', class: '3', lat: 24.9736, lng: 121.3956, km: 44.2 },
+  { id: '1070', name: { en: 'Yingge', zh: '鶯歌' }, line: 'WL', class: '2', lat: 24.9558, lng: 121.3547, km: 49.0 },
+  { id: '1080', name: { en: 'Taoyuan', zh: '桃園' }, line: 'WL', class: '1', lat: 24.9892, lng: 121.3142, km: 55.1 },
+  { id: '1090', name: { en: 'Neili', zh: '內壢' }, line: 'WL', class: '3', lat: 24.9583, lng: 121.2383, km: 60.4 },
+  { id: '1100', name: { en: 'Zhongli', zh: '中壢' }, line: 'WL', class: '1', lat: 24.9536, lng: 121.2256, km: 62.7 },
+  { id: '1110', name: { en: 'Pusin', zh: '埔心' }, line: 'WL', class: '3', lat: 24.9139, lng: 121.1667, km: 70.1 },
+  { id: '1120', name: { en: 'Yangmei', zh: '楊梅' }, line: 'WL', class: '2', lat: 24.9117, lng: 121.1461, km: 72.1 },
+  { id: '1130', name: { en: 'Fugang', zh: '富岡' }, line: 'WL', class: '3', lat: 24.9333, lng: 121.1019, km: 76.8 },
+  { id: '1140', name: { en: 'Xinfu', zh: '新富' }, line: 'WL', class: 'S', lat: 24.9136, lng: 121.0622, km: 81.0 },
+  { id: '1150', name: { en: 'Beihu', zh: '北湖' }, line: 'WL', class: 'S', lat: 24.8983, lng: 121.0333, km: 85.0 },
+  { id: '1160', name: { en: 'Hukou', zh: '湖口' }, line: 'WL', class: '3', lat: 24.9017, lng: 121.0444, km: 83.5 },
+  { id: '1170', name: { en: 'Xinxing', zh: '新豐' }, line: 'WL', class: '3', lat: 24.9028, lng: 120.9981, km: 88.1 },
+  { id: '1180', name: { en: 'Zhubei', zh: '竹北' }, line: 'WL', class: '2', lat: 24.8394, lng: 120.9919, km: 94.9 },
+  { id: '1190', name: { en: 'North Hsinchu', zh: '北新竹' }, line: 'WL', class: 'S', lat: 24.8139, lng: 120.9758, km: 98.5 },
+  { id: '1200', name: { en: 'Hsinchu', zh: '新竹' }, line: 'WL', class: '1', lat: 24.8017, lng: 120.9714, km: 100.7 },
+  { id: '1210', name: { en: 'Sanxingqiao', zh: '三姓橋' }, line: 'WL', class: 'S', lat: 24.7753, lng: 120.9558, km: 104.4 },
+  { id: '1220', name: { en: 'Xiangshan', zh: '香山' }, line: 'WL', class: '3', lat: 24.7536, lng: 120.9183, km: 110.0 },
+  { id: '1230', name: { en: 'Qiding', zh: '崎頂' }, line: 'WL', class: 'S', lat: 24.7175, lng: 120.8867, km: 116.2 },
+  { id: '1240', name: { en: 'Zhunan', zh: '竹南' }, line: 'WL', class: '1', lat: 24.6858, lng: 120.8783, km: 119.4 },
+
+  // ===== Mountain Line (ML) - Zhunan to Changhua via mountains =====
+  { id: '2100', name: { en: 'Zaoqiao', zh: '造橋' }, line: 'ML', class: '3', lat: 24.6408, lng: 120.8667, km: 6.8 },
+  { id: '2110', name: { en: 'Fengfu', zh: '豐富' }, line: 'ML', class: 'S', lat: 24.6131, lng: 120.8267, km: 12.1 },
+  { id: '2120', name: { en: 'Miaoli', zh: '苗栗' }, line: 'ML', class: '1', lat: 24.5700, lng: 120.8217, km: 17.0 },
+  { id: '2130', name: { en: 'Nanshi', zh: '南勢' }, line: 'ML', class: 'S', lat: 24.5389, lng: 120.8178, km: 20.3 },
+  { id: '2140', name: { en: 'Tongxiao', zh: '銅鑼' }, line: 'ML', class: '3', lat: 24.4856, lng: 120.7858, km: 26.7 },
+  { id: '2150', name: { en: 'Sanyi', zh: '三義' }, line: 'ML', class: '3', lat: 24.4131, lng: 120.7622, km: 35.1 },
+  { id: '2160', name: { en: 'Taianjiu', zh: '泰安(舊)' }, line: 'ML', class: 'S', lat: 24.3753, lng: 120.7469, km: 40.3 },
+  { id: '2170', name: { en: 'Houli', zh: '后里' }, line: 'ML', class: '2', lat: 24.3153, lng: 120.7194, km: 47.3 },
+  { id: '2180', name: { en: 'Fengyuan', zh: '豐原' }, line: 'ML', class: '1', lat: 24.2536, lng: 120.7236, km: 54.2 },
+  { id: '2190', name: { en: 'Tanzi', zh: '潭子' }, line: 'ML', class: '2', lat: 24.2103, lng: 120.7094, km: 59.3 },
+  { id: '2200', name: { en: 'Taizhongjingsai', zh: '頭家厝' }, line: 'ML', class: 'S', lat: 24.1922, lng: 120.6967, km: 61.6 },
+  { id: '2210', name: { en: 'Songzhu', zh: '松竹' }, line: 'ML', class: 'S', lat: 24.1725, lng: 120.6847, km: 64.0 },
+  { id: '2220', name: { en: 'Taiyuan', zh: '太原' }, line: 'ML', class: 'S', lat: 24.1603, lng: 120.6775, km: 65.6 },
+  { id: '2230', name: { en: 'Jingwuzi', zh: '精武' }, line: 'ML', class: 'S', lat: 24.1483, lng: 120.6953, km: 68.2 },
+  { id: '2240', name: { en: 'Taichung', zh: '臺中' }, line: 'ML', class: '1', lat: 24.1369, lng: 120.6869, km: 69.5 },
+  { id: '2250', name: { en: 'Wuri', zh: '五權' }, line: 'ML', class: 'S', lat: 24.1147, lng: 120.6619, km: 73.3 },
+  { id: '2260', name: { en: 'Daqing', zh: '大慶' }, line: 'ML', class: 'S', lat: 24.1192, lng: 120.6478, km: 75.0 },
+  { id: '2270', name: { en: 'Wuri', zh: '烏日' }, line: 'ML', class: '2', lat: 24.1128, lng: 120.6233, km: 77.8 },
+  { id: '2280', name: { en: 'Xinwuri', zh: '新烏日' }, line: 'ML', class: '2', lat: 24.1089, lng: 120.6139, km: 78.8 },
+  { id: '2290', name: { en: 'Chenggong', zh: '成功' }, line: 'ML', class: '3', lat: 24.1033, lng: 120.5836, km: 82.5 },
+
+  // ===== Coast Line (CL) - Zhunan to Changhua via coast =====
+  { id: '2000', name: { en: 'Tanwen', zh: '談文' }, line: 'CL', class: 'S', lat: 24.6522, lng: 120.8233, km: 6.3 },
+  { id: '2010', name: { en: 'Dashan', zh: '大山' }, line: 'CL', class: 'S', lat: 24.6114, lng: 120.7711, km: 13.0 },
+  { id: '2020', name: { en: 'Houlong', zh: '後龍' }, line: 'CL', class: '3', lat: 24.5978, lng: 120.7556, km: 15.0 },
+  { id: '2030', name: { en: 'Longgang', zh: '龍港' }, line: 'CL', class: 'S', lat: 24.5636, lng: 120.7267, km: 19.5 },
+  { id: '2040', name: { en: 'Baishatun', zh: '白沙屯' }, line: 'CL', class: '3', lat: 24.5278, lng: 120.7011, km: 25.0 },
+  { id: '2050', name: { en: 'Xinpu', zh: '新埔' }, line: 'CL', class: 'S', lat: 24.4811, lng: 120.6789, km: 30.5 },
+  { id: '2060', name: { en: 'Tongxiao', zh: '通霄' }, line: 'CL', class: '3', lat: 24.4592, lng: 120.6758, km: 33.0 },
+  { id: '2070', name: { en: 'Yuanli', zh: '苑裡' }, line: 'CL', class: '3', lat: 24.4092, lng: 120.6525, km: 38.9 },
+  { id: '2080', name: { en: 'Rinan', zh: '日南' }, line: 'CL', class: 'S', lat: 24.3778, lng: 120.6408, km: 42.7 },
+  { id: '2090', name: { en: 'Dajia', zh: '大甲' }, line: 'CL', class: '2', lat: 24.3411, lng: 120.6244, km: 47.2 },
+  { id: '2095', name: { en: 'Taijiagang', zh: '台中港' }, line: 'CL', class: '3', lat: 24.3056, lng: 120.6072, km: 51.5 },
+  { id: '2300', name: { en: 'Qingshui', zh: '清水' }, line: 'CL', class: '3', lat: 24.2642, lng: 120.5811, km: 57.0 },
+  { id: '2310', name: { en: 'Shalu', zh: '沙鹿' }, line: 'CL', class: '2', lat: 24.2333, lng: 120.5678, km: 60.5 },
+  { id: '2320', name: { en: 'Longjing', zh: '龍井' }, line: 'CL', class: 'S', lat: 24.1956, lng: 120.5422, km: 65.8 },
+  { id: '2330', name: { en: 'Dadu', zh: '大肚' }, line: 'CL', class: '3', lat: 24.1458, lng: 120.5364, km: 72.2 },
+  { id: '2340', name: { en: 'Zhuifen', zh: '追分' }, line: 'CL', class: '3', lat: 24.1153, lng: 120.5583, km: 76.3 },
+
+  // ===== Western Line South (SL) - Changhua to Kaohsiung =====
+  { id: '3300', name: { en: 'Changhua', zh: '彰化' }, line: 'SL', class: '1', lat: 24.0817, lng: 120.5383, km: 0 },
+  { id: '3310', name: { en: 'Huatan', zh: '花壇' }, line: 'SL', class: '3', lat: 24.0253, lng: 120.5367, km: 6.5 },
+  { id: '3320', name: { en: 'Dacun', zh: '大村' }, line: 'SL', class: 'S', lat: 23.9958, lng: 120.5467, km: 9.8 },
+  { id: '3330', name: { en: 'Yuanlin', zh: '員林' }, line: 'SL', class: '1', lat: 23.9586, lng: 120.5717, km: 14.5 },
+  { id: '3340', name: { en: 'Yongjing', zh: '永靖' }, line: 'SL', class: 'S', lat: 23.9244, lng: 120.5503, km: 18.7 },
+  { id: '3350', name: { en: 'Shetou', zh: '社頭' }, line: 'SL', class: '3', lat: 23.8944, lng: 120.5833, km: 22.3 },
+  { id: '3360', name: { en: 'Tianzhong', zh: '田中' }, line: 'SL', class: '2', lat: 23.8564, lng: 120.5806, km: 26.5 },
+  { id: '3370', name: { en: 'Ershui', zh: '二水' }, line: 'SL', class: '3', lat: 23.8119, lng: 120.6183, km: 33.2 },
+  { id: '3380', name: { en: 'Linnei', zh: '林內' }, line: 'SL', class: '3', lat: 23.7583, lng: 120.6117, km: 39.5 },
+  { id: '3390', name: { en: 'Shilong', zh: '石榴' }, line: 'SL', class: 'S', lat: 23.7328, lng: 120.5956, km: 43.0 },
+  { id: '3400', name: { en: 'Douliu', zh: '斗六' }, line: 'SL', class: '1', lat: 23.7111, lng: 120.5422, km: 47.6 },
+  { id: '3410', name: { en: 'Dounan', zh: '斗南' }, line: 'SL', class: '2', lat: 23.6750, lng: 120.4786, km: 54.7 },
+  { id: '3420', name: { en: 'Shiliu', zh: '石龜' }, line: 'SL', class: 'S', lat: 23.6414, lng: 120.4486, km: 59.3 },
+  { id: '3430', name: { en: 'Dalin', zh: '大林' }, line: 'SL', class: '2', lat: 23.6014, lng: 120.4714, km: 64.5 },
+  { id: '3440', name: { en: 'Minxiong', zh: '民雄' }, line: 'SL', class: '2', lat: 23.5525, lng: 120.4275, km: 72.0 },
+  { id: '3450', name: { en: 'Jiabei', zh: '嘉北' }, line: 'SL', class: 'S', lat: 23.5022, lng: 120.4469, km: 79.0 },
+  { id: '3460', name: { en: 'Chiayi', zh: '嘉義' }, line: 'SL', class: '1', lat: 23.4792, lng: 120.4411, km: 81.8 },
+  { id: '3470', name: { en: 'Shuishang', zh: '水上' }, line: 'SL', class: '3', lat: 23.4311, lng: 120.3981, km: 89.0 },
+  { id: '3480', name: { en: 'Nanjing', zh: '南靖' }, line: 'SL', class: 'S', lat: 23.4042, lng: 120.3836, km: 92.5 },
+  { id: '3490', name: { en: 'Houbi', zh: '後壁' }, line: 'SL', class: '3', lat: 23.3669, lng: 120.3575, km: 98.0 },
+  { id: '3500', name: { en: 'Xinying', zh: '新營' }, line: 'SL', class: '1', lat: 23.3069, lng: 120.3161, km: 106.0 },
+  { id: '3510', name: { en: 'Liuying', zh: '柳營' }, line: 'SL', class: '3', lat: 23.2756, lng: 120.3119, km: 109.8 },
+  { id: '3520', name: { en: 'Linfen', zh: '林鳳營' }, line: 'SL', class: 'S', lat: 23.2397, lng: 120.3319, km: 115.2 },
+  { id: '3530', name: { en: 'Longtian', zh: '隆田' }, line: 'SL', class: '3', lat: 23.1931, lng: 120.3536, km: 121.0 },
+  { id: '3540', name: { en: 'Baying', zh: '拔林' }, line: 'SL', class: 'S', lat: 23.1689, lng: 120.3547, km: 123.8 },
+  { id: '3550', name: { en: 'Shanhua', zh: '善化' }, line: 'SL', class: '2', lat: 23.1347, lng: 120.2956, km: 129.0 },
+  { id: '3560', name: { en: 'Nanke', zh: '南科' }, line: 'SL', class: 'S', lat: 23.1067, lng: 120.2753, km: 133.2 },
+  { id: '3570', name: { en: 'Xinshi', zh: '新市' }, line: 'SL', class: '3', lat: 23.0789, lng: 120.2867, km: 136.8 },
+  { id: '3580', name: { en: 'Yongkang', zh: '永康' }, line: 'SL', class: '2', lat: 23.0400, lng: 120.2525, km: 142.5 },
+  { id: '3590', name: { en: 'Daqiao', zh: '大橋' }, line: 'SL', class: 'S', lat: 23.0164, lng: 120.2358, km: 145.8 },
+  { id: '3600', name: { en: 'Tainan', zh: '臺南' }, line: 'SL', class: '1', lat: 22.9972, lng: 120.2128, km: 149.3 },
+  { id: '3610', name: { en: 'Linying', zh: '林森' }, line: 'SL', class: 'S', lat: 22.9714, lng: 120.2036, km: 152.3 },
+  { id: '3620', name: { en: 'Nanying', zh: '南營' }, line: 'SL', class: 'S', lat: 22.9508, lng: 120.1969, km: 154.8 },
+  { id: '3630', name: { en: 'Baoqiang', zh: '保安' }, line: 'SL', class: '3', lat: 22.9300, lng: 120.1867, km: 157.3 },
+  { id: '3640', name: { en: 'Rende', zh: '仁德' }, line: 'SL', class: 'S', lat: 22.9217, lng: 120.2594, km: 160.5 },
+  { id: '3650', name: { en: 'Zhongzhou', zh: '中洲' }, line: 'SL', class: '3', lat: 22.9011, lng: 120.2478, km: 163.0 },
+  { id: '3660', name: { en: 'Dawan', zh: '大灣' }, line: 'SL', class: 'S', lat: 22.9033, lng: 120.2728, km: 165.2 },
+  { id: '3670', name: { en: 'Gangshan', zh: '岡山' }, line: 'SL', class: '2', lat: 22.7958, lng: 120.2964, km: 175.5 },
+  { id: '3680', name: { en: 'Qiaotou', zh: '橋頭' }, line: 'SL', class: '3', lat: 22.7553, lng: 120.3050, km: 180.0 },
+  { id: '3690', name: { en: 'Nanzih', zh: '楠梓' }, line: 'SL', class: '2', lat: 22.7275, lng: 120.3261, km: 184.3 },
+  { id: '3700', name: { en: 'Xinzuoying', zh: '新左營' }, line: 'SL', class: '1', lat: 22.6883, lng: 120.3067, km: 189.0 },
+  { id: '3710', name: { en: 'Zuoying', zh: '左營' }, line: 'SL', class: '2', lat: 22.6844, lng: 120.2956, km: 190.3 },
+  { id: '3720', name: { en: 'Neiwei', zh: '內惟' }, line: 'SL', class: 'S', lat: 22.6683, lng: 120.2914, km: 192.3 },
+  { id: '3730', name: { en: 'Meishuguang', zh: '美術館' }, line: 'SL', class: 'S', lat: 22.6547, lng: 120.2864, km: 194.0 },
+  { id: '3740', name: { en: 'Gushan', zh: '鼓山' }, line: 'SL', class: '3', lat: 22.6389, lng: 120.2806, km: 196.0 },
+  { id: '3750', name: { en: 'Sanblockiu', zh: '三塊厝' }, line: 'SL', class: 'S', lat: 22.6303, lng: 120.2922, km: 198.0 },
+  { id: '3760', name: { en: 'Kaohsiung', zh: '高雄' }, line: 'SL', class: '1', lat: 22.6397, lng: 120.3025, km: 199.5 },
+
+  // ===== Yilan Line (YL) - Badu to Su'ao =====
+  { id: '7000', name: { en: 'Nuannuan', zh: '暖暖' }, line: 'YL', class: 'S', lat: 25.1036, lng: 121.7397, km: 3.0 },
+  { id: '7010', name: { en: 'Sijiaoting', zh: '四腳亭' }, line: 'YL', class: '3', lat: 25.0911, lng: 121.7569, km: 5.5 },
+  { id: '7020', name: { en: 'Ruifang', zh: '瑞芳' }, line: 'YL', class: '2', lat: 25.1086, lng: 121.8064, km: 11.0 },
+  { id: '7030', name: { en: 'Houtong', zh: '猴硐' }, line: 'YL', class: 'S', lat: 25.0867, lng: 121.8275, km: 14.5 },
+  { id: '7040', name: { en: 'Sandiaoling', zh: '三貂嶺' }, line: 'YL', class: 'S', lat: 25.0664, lng: 121.8417, km: 17.0 },
+  { id: '7050', name: { en: 'Mudan', zh: '牡丹' }, line: 'YL', class: 'S', lat: 25.0333, lng: 121.8547, km: 21.5 },
+  { id: '7060', name: { en: 'Shuangxi', zh: '雙溪' }, line: 'YL', class: '3', lat: 25.0339, lng: 121.8661, km: 23.0 },
+  { id: '7070', name: { en: 'Gongliao', zh: '貢寮' }, line: 'YL', class: '3', lat: 25.0200, lng: 121.9089, km: 27.5 },
+  { id: '7080', name: { en: 'Fulong', zh: '福隆' }, line: 'YL', class: '3', lat: 25.0169, lng: 121.9431, km: 31.5 },
+  { id: '7090', name: { en: 'Shicheng', zh: '石城' }, line: 'YL', class: 'S', lat: 24.9811, lng: 121.9531, km: 36.5 },
+  { id: '7100', name: { en: 'Dali', zh: '大里' }, line: 'YL', class: 'S', lat: 24.9644, lng: 121.9383, km: 39.5 },
+  { id: '7110', name: { en: 'Daxi', zh: '大溪' }, line: 'YL', class: 'S', lat: 24.9383, lng: 121.8986, km: 44.0 },
+  { id: '7120', name: { en: 'Guishan', zh: '龜山' }, line: 'YL', class: 'S', lat: 24.9194, lng: 121.8736, km: 47.5 },
+  { id: '7130', name: { en: 'Waiheao', zh: '外澳' }, line: 'YL', class: 'S', lat: 24.8897, lng: 121.8536, km: 51.5 },
+  { id: '7140', name: { en: 'Toucheng', zh: '頭城' }, line: 'YL', class: '3', lat: 24.8589, lng: 121.8233, km: 56.0 },
+  { id: '7150', name: { en: 'Dingpu', zh: '頂埔' }, line: 'YL', class: 'S', lat: 24.8278, lng: 121.7992, km: 60.5 },
+  { id: '7160', name: { en: 'Jiaoxi', zh: '礁溪' }, line: 'YL', class: '3', lat: 24.8228, lng: 121.7731, km: 63.5 },
+  { id: '7170', name: { en: 'Sicheng', zh: '四城' }, line: 'YL', class: 'S', lat: 24.7908, lng: 121.7522, km: 67.5 },
+  { id: '7180', name: { en: 'Yilan', zh: '宜蘭' }, line: 'YL', class: '1', lat: 24.7544, lng: 121.7581, km: 72.0 },
+  { id: '7190', name: { en: 'Erchui', zh: '二結' }, line: 'YL', class: 'S', lat: 24.7131, lng: 121.7736, km: 77.0 },
+  { id: '7200', name: { en: 'Zhongli', zh: '中里' }, line: 'YL', class: 'S', lat: 24.6936, lng: 121.7778, km: 79.5 },
+  { id: '7210', name: { en: 'Luodong', zh: '羅東' }, line: 'YL', class: '2', lat: 24.6772, lng: 121.7722, km: 82.0 },
+  { id: '7220', name: { en: 'Donshan', zh: '冬山' }, line: 'YL', class: '3', lat: 24.6378, lng: 121.7906, km: 87.5 },
+  { id: '7230', name: { en: 'Xinma', zh: '新馬' }, line: 'YL', class: 'S', lat: 24.6078, lng: 121.8042, km: 91.5 },
+  { id: '7240', name: { en: 'Su\'aoxin', zh: '蘇澳新' }, line: 'YL', class: '2', lat: 24.5911, lng: 121.8158, km: 94.0 },
+  { id: '7250', name: { en: 'Su\'ao', zh: '蘇澳' }, line: 'YL', class: '3', lat: 24.5944, lng: 121.8522, km: 97.5 },
+
+  // ===== North-Link Line (NL) - Su'ao to Hualien =====
+  { id: '7300', name: { en: 'Yongle', zh: '永樂' }, line: 'NL', class: 'S', lat: 24.5361, lng: 121.8458, km: 7.0 },
+  { id: '7310', name: { en: 'Dongao', zh: '東澳' }, line: 'NL', class: '3', lat: 24.5147, lng: 121.8297, km: 12.5 },
+  { id: '7320', name: { en: 'Nanao', zh: '南澳' }, line: 'NL', class: '3', lat: 24.4644, lng: 121.8017, km: 21.5 },
+  { id: '7330', name: { en: 'Wuta', zh: '武塔' }, line: 'NL', class: 'S', lat: 24.4278, lng: 121.7694, km: 27.5 },
+  { id: '7340', name: { en: 'Heren', zh: '和仁' }, line: 'NL', class: 'S', lat: 24.2561, lng: 121.7225, km: 48.5 },
+  { id: '7350', name: { en: 'Heping', zh: '和平' }, line: 'NL', class: '3', lat: 24.3033, lng: 121.7531, km: 40.0 },
+  { id: '7360', name: { en: 'Hanben', zh: '漢本' }, line: 'NL', class: 'S', lat: 24.3389, lng: 121.7597, km: 36.0 },
+  { id: '7370', name: { en: 'Chongde', zh: '崇德' }, line: 'NL', class: 'S', lat: 24.1833, lng: 121.6439, km: 59.0 },
+  { id: '7380', name: { en: 'Xincheng', zh: '新城' }, line: 'NL', class: '2', lat: 24.1267, lng: 121.6236, km: 65.5 },
+  { id: '7390', name: { en: 'Jingpu', zh: '景美' }, line: 'NL', class: 'S', lat: 24.0936, lng: 121.6044, km: 70.0 },
+  { id: '7400', name: { en: 'Beipu', zh: '北埔' }, line: 'NL', class: 'S', lat: 24.0522, lng: 121.5978, km: 74.5 },
+  { id: '7410', name: { en: 'Hualien', zh: '花蓮' }, line: 'NL', class: '1', lat: 23.9933, lng: 121.6017, km: 79.0 },
+
+  // ===== Taitung Line (TL) - Hualien to Taitung =====
+  { id: '7500', name: { en: 'Jian', zh: '吉安' }, line: 'TL', class: '3', lat: 23.9625, lng: 121.5756, km: 5.0 },
+  { id: '7510', name: { en: 'Zhixue', zh: '志學' }, line: 'TL', class: 'S', lat: 23.9164, lng: 121.5194, km: 13.0 },
+  { id: '7520', name: { en: 'Pinhe', zh: '平和' }, line: 'TL', class: 'S', lat: 23.8850, lng: 121.4956, km: 17.5 },
+  { id: '7530', name: { en: 'Shoufeng', zh: '壽豐' }, line: 'TL', class: '3', lat: 23.8667, lng: 121.5103, km: 20.0 },
+  { id: '7540', name: { en: 'Fenglin', zh: '豐田' }, line: 'TL', class: 'S', lat: 23.8383, lng: 121.5117, km: 24.0 },
+  { id: '7550', name: { en: 'Nanping', zh: '南平' }, line: 'TL', class: 'S', lat: 23.8003, lng: 121.4831, km: 29.5 },
+  { id: '7560', name: { en: 'Fenglin', zh: '鳳林' }, line: 'TL', class: '3', lat: 23.7464, lng: 121.4517, km: 37.0 },
+  { id: '7570', name: { en: 'Wanrong', zh: '萬榮' }, line: 'TL', class: 'S', lat: 23.7197, lng: 121.4183, km: 42.0 },
+  { id: '7580', name: { en: 'Guangfu', zh: '光復' }, line: 'TL', class: '3', lat: 23.6694, lng: 121.4214, km: 48.5 },
+  { id: '7590', name: { en: 'Daquan', zh: '大全' }, line: 'TL', class: 'S', lat: 23.6367, lng: 121.4117, km: 52.5 },
+  { id: '7600', name: { en: 'Fuyuan', zh: '富源' }, line: 'TL', class: 'S', lat: 23.5853, lng: 121.3806, km: 60.0 },
+  { id: '7610', name: { en: 'Ruisui', zh: '瑞穗' }, line: 'TL', class: '3', lat: 23.4969, lng: 121.3775, km: 70.5 },
+  { id: '7620', name: { en: 'Sanmin', zh: '三民' }, line: 'TL', class: 'S', lat: 23.4483, lng: 121.3608, km: 76.5 },
+  { id: '7630', name: { en: 'Yuli', zh: '玉里' }, line: 'TL', class: '2', lat: 23.3336, lng: 121.3136, km: 91.0 },
+  { id: '7640', name: { en: 'Anfeng', zh: '安凤' }, line: 'TL', class: 'S', lat: 23.2747, lng: 121.3058, km: 98.0 },
+  { id: '7650', name: { en: 'Dongzhu', zh: '東竹' }, line: 'TL', class: 'S', lat: 23.2394, lng: 121.2883, km: 102.5 },
+  { id: '7660', name: { en: 'Fuli', zh: '富里' }, line: 'TL', class: '3', lat: 23.1819, lng: 121.2531, km: 111.0 },
+  { id: '7670', name: { en: 'Chishang', zh: '池上' }, line: 'TL', class: '3', lat: 23.1206, lng: 121.2197, km: 120.5 },
+  { id: '7680', name: { en: 'Haiduan', zh: '海端' }, line: 'TL', class: 'S', lat: 23.0947, lng: 121.1822, km: 125.5 },
+  { id: '7690', name: { en: 'Guanshan', zh: '關山' }, line: 'TL', class: '3', lat: 23.0486, lng: 121.1633, km: 132.5 },
+  { id: '7700', name: { en: 'Ruiyuan', zh: '瑞源' }, line: 'TL', class: 'S', lat: 23.0089, lng: 121.1292, km: 139.0 },
+  { id: '7710', name: { en: 'Ruihe', zh: '瑞和' }, line: 'TL', class: 'S', lat: 22.9722, lng: 121.1219, km: 143.5 },
+  { id: '7720', name: { en: 'Luye', zh: '鹿野' }, line: 'TL', class: '3', lat: 22.9147, lng: 121.1289, km: 151.0 },
+  { id: '7730', name: { en: 'Shanli', zh: '山里' }, line: 'TL', class: 'S', lat: 22.8758, lng: 121.1097, km: 157.0 },
+  { id: '7740', name: { en: 'Taitung', zh: '臺東' }, line: 'TL', class: '1', lat: 22.7931, lng: 121.1231, km: 167.5 },
+
+  // ===== South-Link Line (SLL) - Taitung to Fangliao =====
+  { id: '7800', name: { en: 'Kangle', zh: '康樂' }, line: 'SLL', class: 'S', lat: 22.7656, lng: 121.1028, km: 5.5 },
+  { id: '7810', name: { en: 'Zhiben', zh: '知本' }, line: 'SLL', class: '3', lat: 22.7239, lng: 121.0531, km: 13.0 },
+  { id: '7820', name: { en: 'Taimali', zh: '太麻里' }, line: 'SLL', class: '3', lat: 22.6164, lng: 121.0072, km: 27.5 },
+  { id: '7830', name: { en: 'Jinlun', zh: '金崙' }, line: 'SLL', class: '3', lat: 22.5256, lng: 120.9658, km: 40.5 },
+  { id: '7840', name: { en: 'Dawu', zh: '大武' }, line: 'SLL', class: '3', lat: 22.3547, lng: 120.8903, km: 62.5 },
+  { id: '7850', name: { en: 'Gushan', zh: '古莊' }, line: 'SLL', class: 'S', lat: 22.2908, lng: 120.8664, km: 71.0 },
+  { id: '7860', name: { en: 'Fangye', zh: '枋野' }, line: 'SLL', class: 'S', lat: 22.2494, lng: 120.7556, km: 82.0 },
+  { id: '7870', name: { en: 'Fangliao', zh: '枋寮' }, line: 'SLL', class: '2', lat: 22.3658, lng: 120.5942, km: 98.0 },
+
+  // ===== Pingxi Line (PX) - Branch line =====
+  { id: '7900', name: { en: 'Diahua', zh: '大華' }, line: 'PX', class: 'S', lat: 25.0494, lng: 121.8272, km: 2.5 },
+  { id: '7910', name: { en: 'Shifen', zh: '十分' }, line: 'PX', class: 'S', lat: 25.0428, lng: 121.7756, km: 6.5 },
+  { id: '7920', name: { en: 'Wanggu', zh: '望古' }, line: 'PX', class: 'S', lat: 25.0322, lng: 121.7639, km: 8.0 },
+  { id: '7930', name: { en: 'Lingjiao', zh: '嶺腳' }, line: 'PX', class: 'S', lat: 25.0297, lng: 121.7539, km: 9.0 },
+  { id: '7940', name: { en: 'Pingxi', zh: '平溪' }, line: 'PX', class: 'S', lat: 25.0258, lng: 121.7383, km: 10.5 },
+  { id: '7950', name: { en: 'Jingtong', zh: '菁桐' }, line: 'PX', class: 'S', lat: 25.0247, lng: 121.7233, km: 12.0 },
+
+  // ===== Neiwan Line (NW) - Branch line =====
+  { id: '8000', name: { en: 'Zhuzhong', zh: '竹中' }, line: 'NW', class: 'S', lat: 24.8147, lng: 121.0111, km: 3.0 },
+  { id: '8010', name: { en: 'Shangshan', zh: '上員' }, line: 'NW', class: 'S', lat: 24.8083, lng: 121.0294, km: 5.0 },
+  { id: '8020', name: { en: 'Ronghua', zh: '榮華' }, line: 'NW', class: 'S', lat: 24.7947, lng: 121.0469, km: 7.5 },
+  { id: '8030', name: { en: 'Zhudong', zh: '竹東' }, line: 'NW', class: '3', lat: 24.7336, lng: 121.0867, km: 14.0 },
+  { id: '8040', name: { en: 'Hengshan', zh: '橫山' }, line: 'NW', class: 'S', lat: 24.7194, lng: 121.1156, km: 18.0 },
+  { id: '8050', name: { en: 'Jiuzhantou', zh: '九讚頭' }, line: 'NW', class: 'S', lat: 24.7086, lng: 121.1325, km: 20.5 },
+  { id: '8060', name: { en: 'Hexing', zh: '合興' }, line: 'NW', class: 'S', lat: 24.7017, lng: 121.1522, km: 23.0 },
+  { id: '8070', name: { en: 'Fuguei', zh: '富貴' }, line: 'NW', class: 'S', lat: 24.6947, lng: 121.1789, km: 26.0 },
+  { id: '8080', name: { en: 'Neiwan', zh: '內灣' }, line: 'NW', class: 'S', lat: 24.6961, lng: 121.1925, km: 27.5 },
+
+  // ===== Liujia Line (LJ) - Branch line =====
+  { id: '8100', name: { en: 'Xinlishi', zh: '新莊' }, line: 'LJ', class: 'S', lat: 24.8108, lng: 121.0028, km: 1.5 },
+  { id: '8110', name: { en: 'Liujia', zh: '六家' }, line: 'LJ', class: '2', lat: 24.8039, lng: 121.0361, km: 4.5 },
+
+  // ===== Jiji Line (JJ) - Branch line =====
+  { id: '8200', name: { en: 'Yuanquan', zh: '源泉' }, line: 'JJ', class: 'S', lat: 23.8028, lng: 120.6422, km: 3.0 },
+  { id: '8210', name: { en: 'Zhuoshui', zh: '濁水' }, line: 'JJ', class: 'S', lat: 23.8231, lng: 120.6769, km: 7.0 },
+  { id: '8220', name: { en: 'Longquan', zh: '龍泉' }, line: 'JJ', class: 'S', lat: 23.8258, lng: 120.7033, km: 10.0 },
+  { id: '8230', name: { en: 'Jiji', zh: '集集' }, line: 'JJ', class: '3', lat: 23.8269, lng: 120.7486, km: 14.5 },
+  { id: '8240', name: { en: 'Shuili', zh: '水里' }, line: 'JJ', class: '3', lat: 23.8139, lng: 120.8567, km: 24.5 },
+  { id: '8250', name: { en: 'Checheng', zh: '車埕' }, line: 'JJ', class: 'S', lat: 23.8333, lng: 120.8661, km: 29.5 },
+
+  // ===== Shalun Line (SH) - Branch line =====
+  { id: '8300', name: { en: 'Changrong University', zh: '長榮大學' }, line: 'SH', class: 'S', lat: 22.9289, lng: 120.2658, km: 2.5 },
+  { id: '8310', name: { en: 'Shalun', zh: '沙崙' }, line: 'SH', class: '2', lat: 22.9250, lng: 120.2858, km: 5.0 }
+];
+
+const CONFIG = {
+  DEFAULT_CENTER: [23.9, 121.0],
+  DEFAULT_ZOOM: 8
+};
+
+// State
+let map = null;
+let markers = {};
+let filteredStations = [...STATIONS];
+let currentLine = 'all';
+let currentClass = 'all';
+let selectedStation = null;
+
+function isChineseLocale() {
+  const userLang = navigator.language || navigator.userLanguage;
+  return userLang === 'zh-TW' || userLang === 'zh-CN';
+}
+
+function getLineInfo(lineCode) {
+  return RAIL_LINES[lineCode] || { name: { en: lineCode, zh: lineCode }, color: '#666' };
+}
+
+function getClassInfo(classCode) {
+  return STATION_CLASSES[classCode] || { name: { en: classCode, zh: classCode }, color: '#666' };
+}
+
+function getStationName(station) {
+  return isChineseLocale() ? station.name.zh : station.name.en;
+}
+
+function getLineName(lineCode) {
+  const lineInfo = getLineInfo(lineCode);
+  return isChineseLocale() ? lineInfo.name.zh : lineInfo.name.en;
+}
+
+function getClassName(classCode) {
+  const classInfo = getClassInfo(classCode);
+  return isChineseLocale() ? classInfo.name.zh : classInfo.name.en;
+}
+
+function createMarkerIcon(lineCode, classCode) {
+  const lineInfo = getLineInfo(lineCode);
+  const size = classCode === '1' ? 16 : classCode === '2' ? 14 : 12;
+  return L.divIcon({
+    className: '',
+    html: `<div class="marker-icon" style="width:${size}px;height:${size}px;background-color:${lineInfo.color};"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+    popupAnchor: [0, -size/2]
+  });
+}
+
+function getPopupContent(station) {
+  const isZh = isChineseLocale();
+  const lineName = getLineName(station.line);
+  const className = getClassName(station.class);
+
+  return `<div>
+    <strong>${getStationName(station)}</strong><br>
+    <small>${station.id}</small><br>
+    ${isZh ? '路線' : 'Line'}: ${lineName}<br>
+    ${isZh ? '等級' : 'Class'}: ${className}<br>
+    ${station.km ? (isZh ? '里程' : 'KM') + ': ' + station.km + ' km' : ''}
+  </div>`;
+}
+
+function createStationListItem(station) {
+  const lineInfo = getLineInfo(station.line);
+  const classInfo = getClassInfo(station.class);
+  const lineName = getLineName(station.line);
+  const className = getClassName(station.class);
+
+  return `
+    <li class="station-item" data-id="${station.id}">
+      <div class="station-name">
+        <span class="station-id">${station.id}</span>
+        ${getStationName(station)}
+      </div>
+      <div class="station-info">
+        <span class="line-badge line-${station.line}">${lineName}</span>
+        <span class="class-badge class-${station.class}">${className}</span>
+        ${station.km ? `<span style="margin-left:8px;color:#999;">${station.km} km</span>` : ''}
+      </div>
+    </li>
+  `;
+}
+
+function addMarkers(stationList) {
+  Object.values(markers).forEach(marker => map.removeLayer(marker));
+  markers = {};
+
+  stationList.forEach(station => {
+    if (!station.lat || !station.lng) return;
+    const marker = L.marker([station.lat, station.lng], {
+      icon: createMarkerIcon(station.line, station.class)
+    });
+
+    marker.bindPopup(getPopupContent(station));
+    marker.on('click', () => selectStation(station.id));
+    marker.addTo(map);
+    markers[station.id] = marker;
+  });
+
+  console.log(`[Rail] Added ${Object.keys(markers).length} markers`);
+}
+
+function renderStationList(stationList) {
+  const listEl = document.getElementById('station-list');
+  const countEl = document.getElementById('result-count');
+  const isZh = isChineseLocale();
+
+  listEl.innerHTML = stationList.map(createStationListItem).join('');
+  countEl.textContent = isZh
+    ? `顯示 ${stationList.length} 個車站`
+    : `Showing ${stationList.length} stations`;
+
+  listEl.querySelectorAll('.station-item').forEach(item => {
+    item.addEventListener('click', () => {
+      selectStation(item.dataset.id);
+    });
+  });
+}
+
+function selectStation(id) {
+  document.querySelectorAll('.station-item.selected').forEach(el => {
+    el.classList.remove('selected');
+  });
+
+  const listItem = document.querySelector(`.station-item[data-id="${id}"]`);
+  if (listItem) {
+    listItem.classList.add('selected');
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const marker = markers[id];
+  if (marker) {
+    map.setView(marker.getLatLng(), 14);
+    marker.openPopup();
+  }
+
+  selectedStation = id;
+  console.log(`[Rail] Selected station: ${id}`);
+}
+
+function filterStations() {
+  let filtered = [...STATIONS];
+
+  // Filter by line
+  if (currentLine !== 'all') {
+    filtered = filtered.filter(s => s.line === currentLine);
+  }
+
+  // Filter by class
+  if (currentClass !== 'all') {
+    filtered = filtered.filter(s => s.class === currentClass);
+  }
+
+  // Filter by search query
+  const query = document.getElementById('search-input').value.toLowerCase().trim();
+  if (query) {
+    filtered = filtered.filter(station => {
+      const nameZh = station.name.zh.toLowerCase();
+      const nameEn = station.name.en.toLowerCase();
+      const id = station.id.toLowerCase();
+      return nameZh.includes(query) || nameEn.includes(query) || id.includes(query);
+    });
+  }
+
+  return filtered;
+}
+
+function updateDisplay() {
+  const filtered = filterStations();
+  filteredStations = filtered;
+  renderStationList(filtered);
+  addMarkers(filtered);
+}
+
+function changeLine() {
+  const select = document.getElementById('line-select');
+  currentLine = select.value;
+  localStorage.setItem('rail-line', currentLine);
+  console.log(`[Rail] Line changed to: ${currentLine}`);
+  updateDisplay();
+}
+
+function changeClass() {
+  const select = document.getElementById('class-select');
+  currentClass = select.value;
+  console.log(`[Rail] Class changed to: ${currentClass}`);
+  updateDisplay();
+}
+
+function handleSearch(e) {
+  updateDisplay();
+  console.log(`[Rail] Search: "${e.target.value}" - ${filteredStations.length} results`);
+}
+
+function initLineSelect() {
+  const lineSelect = document.getElementById('line-select');
+  const isZh = isChineseLocale();
+
+  let options = '<option value="all">' + (isZh ? '所有路線' : 'All Lines') + '</option>';
+  Object.entries(RAIL_LINES).forEach(([code, info]) => {
+    const lineName = isZh ? info.name.zh : info.name.en;
+    options += `<option value="${code}">${lineName}</option>`;
+  });
+
+  lineSelect.innerHTML = options;
+}
+
+function initClassSelect() {
+  const classSelect = document.getElementById('class-select');
+  const isZh = isChineseLocale();
+
+  let options = '<option value="all">' + (isZh ? '所有等級' : 'All Classes') + '</option>';
+  Object.entries(STATION_CLASSES).forEach(([code, info]) => {
+    const className = isZh ? info.name.zh : info.name.en;
+    options += `<option value="${code}">${className}</option>`;
+  });
+
+  classSelect.innerHTML = options;
+}
+
+function initialize() {
+  console.log('[Rail] Initializing Taiwan Rail map...');
+
+  // Restore preferences
+  const savedLine = localStorage.getItem('rail-line');
+  if (savedLine && (RAIL_LINES[savedLine] || savedLine === 'all')) {
+    currentLine = savedLine;
+  }
+
+  // Create map
+  map = L.map('map-canvas').setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Setup UI
+  initLineSelect();
+  initClassSelect();
+
+  if (currentLine !== 'all') {
+    document.getElementById('line-select').value = currentLine;
+  }
+
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', handleSearch);
+  searchInput.placeholder = isChineseLocale() ? '搜尋車站...' : 'Search stations...';
+
+  // Initial load
+  updateDisplay();
+
+  console.log('[Rail] Taiwan Rail map initialized successfully');
+}
+
+document.addEventListener('DOMContentLoaded', initialize);
+  </script>
+</body>
+</html>
