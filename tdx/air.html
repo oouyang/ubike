@@ -189,7 +189,7 @@
 
     function toggleLang() {
       isZh = !isZh;
-      localStorage.setItem('tdx-lang', isZh ? 'zh' : 'en');
+      localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
       updateUI();
     }
 
@@ -327,7 +327,7 @@
     }
 
     function init() {
-      const savedLang = localStorage.getItem('tdx-lang');
+      const savedLang = localStorage.getItem('ubike-lang');
       if (savedLang) {
         isZh = savedLang === 'zh';
       }
