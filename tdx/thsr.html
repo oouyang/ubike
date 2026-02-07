@@ -122,20 +122,46 @@
         font-weight: bold;
         font-size: 11px;
       }
+      .header-nav {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+      }
+      .nav-btn:hover { background: rgba(255,255,255,0.3); }
+      .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+      .nav-btn.home:hover { background: #F57C00; }
       @media (max-width: 768px) {
         .container { flex-direction: column; }
         #panel { width: 100%; height: 45%; }
         #map-canvas { height: 55%; }
+        header { flex-wrap: wrap; gap: 8px; }
       }
     </style>
   </head>
   <body>
     <header>
       <h1 id="page-title">🚄 Taiwan High Speed Rail</h1>
-      <div class="header-right">
-        <a href="index.html" class="back-link" id="back-link">← Back</a>
+      <nav class="header-nav">
+        <a href="../index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+        <a href="../ubike.html" class="nav-btn" data-en="UBike" data-zh="UBike">UBike</a>
+        <a href="../map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
+        <a href="../mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+        <a href="../rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+        <a href="../thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+        <a href="../bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
         <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
-      </div>
+      </nav>
     </header>
     <div class="container">
       <div id="panel">
