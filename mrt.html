@@ -625,7 +625,8 @@ function toggleLang() {
 }
 
 function updateUI() {
-  // Update page title
+  // Update browser and page title
+  document.title = isZh ? '台灣捷運' : 'Taiwan MRT';
   document.getElementById('page-title').textContent = isZh ? '台灣捷運' : 'Taiwan MRT';
 
   // Update search placeholder

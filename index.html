@@ -585,6 +585,9 @@
     }
 
     function updateLang() {
+      // Browser title
+      document.title = isZh ? '台灣交通資訊站' : 'Taiwan Transport Hub';
+
       // Page header
       document.getElementById('page-title').textContent = isZh
         ? '🚀 台灣交通資訊站'

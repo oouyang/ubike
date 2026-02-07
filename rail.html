@@ -1097,7 +1097,8 @@ function toggleLang() {
 }
 
 function updateUI() {
-  // Update page title
+  // Update browser and page title
+  document.title = isZh ? '台灣鐵路' : 'Taiwan Rail';
   document.getElementById('page-title').textContent = isZh ? '台灣鐵路 (台鐵)' : 'Taiwan Rail (TRA)';
 
   // Update search placeholder

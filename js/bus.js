@@ -243,6 +243,7 @@ function toggleLang() {
 }
 
 function updateUI() {
+    document.title = isZh ? '台灣公車' : 'Taiwan Bus';
     document.getElementById('page-title').textContent = isZh ? '台灣公車' : 'Taiwan Bus';
     document.getElementById('search-input').placeholder = isZh ? '搜尋站牌或路線...' : 'Search stops or routes...';
     const routeSearchInput = document.getElementById('route-search-input');
