@@ -61,7 +61,7 @@
       height: calc(100vh - 52px);
     }
     #panel {
-      width: 420px;
+      width: 380px;
       height: 100%;
       overflow-y: auto;
       border-right: 1px solid #ccc;
@@ -157,198 +157,117 @@
       list-style: none;
     }
     .train-item {
-      padding: 12px 15px;
+      padding: 8px 12px;
       border-bottom: 1px solid #eee;
       display: flex;
       align-items: center;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 6px 8px;
       background: white;
-      transition: background 0.2s;
+      transition: background 0.15s;
     }
-    .train-item:hover { background: #fff3e0; }
-    .train-item.departed {
-      opacity: 0.5;
-      background: #f5f5f5;
+    .train-item > span,
+    .train-item > button {
+      flex-shrink: 0;
     }
+    .train-item:hover { background: #fff8e1; }
+    .train-item.departed { opacity: 0.5; }
     .train-item.next-train {
-      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-      border-left: 4px solid #f57c00;
-    }
-    .train-main {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      flex: 1;
-    }
-    .train-time-block {
-      text-align: center;
-      min-width: 60px;
+      background: #fff3e0;
+      border-left: 3px solid #f57c00;
     }
     .train-time {
-      font-size: 1.2em;
+      font-size: 1.1em;
       font-weight: bold;
       color: #333;
+      min-width: 50px;
     }
-    .train-platform {
-      font-size: 0.75em;
-      color: #666;
-      background: #f5f5f5;
-      padding: 2px 6px;
-      border-radius: 3px;
-      margin-top: 4px;
+    .train-number {
+      font-weight: 600;
+      color: #f57c00;
+      min-width: 45px;
     }
-    .train-info { flex: 1; }
-    .train-number-row {
+    .train-dest {
+      font-weight: 500;
+      color: #333;
+      white-space: nowrap;
+    }
+    .train-meta {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
-    }
-    .train-number {
-      font-weight: bold;
-      color: #f57c00;
-    }
-    .next-badge {
-      background: #f57c00;
-      color: white;
-      font-size: 0.7em;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: bold;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    .train-dest {
-      font-size: 0.85em;
-      color: #666;
-    }
-    .train-details {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
       font-size: 0.8em;
       color: #666;
-      margin-top: 4px;
     }
-    .train-arr, .train-duration, .train-fare {
-      white-space: nowrap;
+    .train-platform {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75em;
+    }
+    .train-duration {
+      color: #888;
     }
     .train-fare {
       color: #e65100;
       font-weight: 500;
     }
-    .train-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-      min-width: 80px;
-    }
     .train-status {
-      font-size: 0.8em;
-      padding: 4px 8px;
-      border-radius: 4px;
+      font-size: 0.75em;
+      padding: 2px 6px;
+      border-radius: 3px;
       font-weight: 500;
+      min-width: 50px;
+      text-align: center;
     }
-    .train-status.arriving {
-      background: #ffeb3b;
-      color: #e65100;
-    }
-    .train-status.ontime {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    .train-status.delayed {
-      background: #ffebee;
-      color: #c62828;
-    }
-    .train-status.departed {
-      background: #f5f5f5;
-      color: #999;
-    }
-    .train-countdown {
-      font-size: 0.85em;
-      color: #f57c00;
-      font-weight: 500;
+    .train-status.arriving { background: #fff3e0; color: #e65100; }
+    .train-status.ontime { background: #e8f5e9; color: #2e7d32; }
+    .train-status.departed { background: #f5f5f5; color: #999; }
+    .next-badge {
+      background: #f57c00;
+      color: white;
+      font-size: 0.65em;
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-weight: bold;
     }
     .no-trains {
-      padding: 40px 20px;
+      padding: 30px 20px;
       text-align: center;
       color: #999;
     }
     .timetable-btn {
-      padding: 4px 8px;
+      padding: 2px 6px;
       background: #fff3e0;
       border: 1px solid #ffcc80;
-      border-radius: 4px;
+      border-radius: 3px;
       color: #e65100;
-      font-size: 0.75em;
+      font-size: 0.7em;
       cursor: pointer;
-      margin-top: 6px;
-      transition: all 0.2s;
+      flex-shrink: 0;
     }
-    .timetable-btn:hover {
-      background: #ffe0b2;
-    }
-    .timetable-btn.active {
-      background: #f57c00;
-      color: white;
-      border-color: #f57c00;
-    }
+    .timetable-btn:hover { background: #ffe0b2; }
+    .timetable-btn.active { background: #f57c00; color: white; }
     .train-timetable {
       display: none;
-      background: #fafafa;
-      border-top: 1px solid #eee;
-      padding: 10px 15px;
-      margin-top: 10px;
+      width: 100%;
+      padding: 8px 0;
+      font-size: 0.8em;
+      line-height: 1.6;
+      flex-wrap: wrap;
+      gap: 4px 12px;
     }
-    .train-timetable.show {
-      display: block;
+    .train-timetable.show { display: flex; }
+    .train-timetable .stop {
+      color: #666;
+      white-space: nowrap;
     }
-    .timetable-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.85em;
-    }
-    .timetable-stop {
-      display: flex;
-      align-items: center;
-      padding: 6px 8px;
-      background: white;
-      border-radius: 4px;
-      border-left: 3px solid #ddd;
-    }
-    .timetable-stop.current {
-      background: #fff3e0;
-      border-left-color: #f57c00;
+    .train-timetable .stop.current {
+      color: #e65100;
       font-weight: bold;
     }
-    .timetable-stop.passed {
-      opacity: 0.5;
-    }
-    .timetable-stop-num {
-      width: 24px;
-      height: 24px;
-      background: #f57c00;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75em;
-      font-weight: bold;
-      margin-right: 10px;
-    }
-    .timetable-stop-name {
-      flex: 1;
-    }
-    .timetable-stop-time {
-      font-weight: 500;
-      color: #333;
+    .train-timetable .stop.passed {
+      color: #bbb;
     }
     .station-list {
       padding: 0;
@@ -434,8 +353,8 @@
     }
     @media (max-width: 768px) {
       .container { flex-direction: column; }
-      #panel { width: 100%; height: 50%; }
-      #map-canvas { height: 50%; }
+      #panel { width: 100%; height: 40%; }
+      #map-canvas { height: 60%; }
       .header-controls { flex-wrap: wrap; }
     }
   </style>
@@ -852,29 +771,16 @@ function renderTrainSchedule() {
 
     return `
       <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}">
-        <div class="train-main">
-          <div class="train-time-block">
-            <div class="train-time">${train.depTimeStr}</div>
-            <div class="train-platform">${isZh ? '月台' : 'Platform'} ${train.platform}</div>
-          </div>
-          <div class="train-info">
-            <div class="train-number-row">
-              <span class="train-number">${train.trainNo}</span>
-              ${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}
-            </div>
-            <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
-            <div class="train-details">
-              <span class="train-arr">${isZh ? '抵達' : 'Arr.'} ${train.arrTimeStr}</span>
-              <span class="train-duration">⏱ ${durationStr}</span>
-              <span class="train-fare">💰 NT$${train.fare}</span>
-            </div>
-            <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" data-en="Timetable" data-zh="時刻表">${isZh ? '時刻表' : 'Timetable'}</button>
-          </div>
-        </div>
-        <div class="train-right">
-          <div class="train-status ${statusClass}">${statusText}</div>
-          <div class="train-countdown">${train.countdown}</div>
-        </div>
+        <span class="train-time">${train.depTimeStr}</span>
+        <span class="train-number">${train.trainNo}</span>
+        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${isFirstUpcoming ? ` <span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}</span>
+        <span class="train-meta">
+          <span class="train-platform">${train.platform}${isZh ? '月台' : ''}</span>
+          <span class="train-duration">${durationStr}</span>
+          <span class="train-fare">$${train.fare}</span>
+        </span>
+        <span class="train-status ${statusClass}">${statusText}</span>
+        <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" title="${isZh ? '時刻表' : 'Timetable'}">▼</button>
         <div class="train-timetable" id="timetable-${train.trainNo}"></div>
       </li>
     `;
@@ -888,63 +794,54 @@ function toggleTimetable(trainNo) {
   if (timetableEl.classList.contains('show')) {
     timetableEl.classList.remove('show');
     btn.classList.remove('active');
+    btn.textContent = '▼';
     return;
   }
 
   // Close other open timetables
   document.querySelectorAll('.train-timetable.show').forEach(el => el.classList.remove('show'));
-  document.querySelectorAll('.timetable-btn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.timetable-btn.active').forEach(el => {
+    el.classList.remove('active');
+    el.textContent = '▼';
+  });
 
   // Find train data
   const schedule = currentDirection === 'south' ? TRAIN_SCHEDULE_BASE.southbound : TRAIN_SCHEDULE_BASE.northbound;
   const train = schedule.find(t => t.trainNo === trainNo);
-
   if (!train) return;
 
   const selectedStationId = document.getElementById('station-select').value;
   const selectedStationIndex = STATIONS.findIndex(s => s.id === selectedStationId);
-  const now = getCurrentMinutes();
 
-  // Render timetable
+  // Build station list with times
   let stationsToShow = [];
   if (currentDirection === 'south') {
-    // Southbound: show from current station to end
     for (let i = 0; i < STATIONS.length; i++) {
       stationsToShow.push({ station: STATIONS[i], index: i, time: train.times[i] });
     }
   } else {
-    // Northbound: times array is reversed (Zuoying first)
     for (let i = 0; i < STATIONS.length; i++) {
       stationsToShow.push({ station: STATIONS[i], index: i, time: train.times[STATIONS.length - 1 - i] });
     }
     stationsToShow.reverse();
   }
 
-  const html = `
-    <div class="timetable-list">
-      ${stationsToShow.map((item, idx) => {
-        const isCurrent = item.station.id === selectedStationId;
-        const isPassed = currentDirection === 'south'
-          ? item.index < selectedStationIndex
-          : item.index > selectedStationIndex;
-        const stopClass = isCurrent ? 'current' : (isPassed ? 'passed' : '');
-        const stationName = isZh ? item.station.name.zh : item.station.name.en;
-        const timeStr = formatTime(item.time);
+  const html = stationsToShow.map((item, idx) => {
+    const isCurrent = item.station.id === selectedStationId;
+    const isPassed = currentDirection === 'south'
+      ? item.index < selectedStationIndex
+      : item.index > selectedStationIndex;
+    const stopClass = isCurrent ? 'current' : (isPassed ? 'passed' : '');
+    const stationName = isZh ? item.station.name.zh : item.station.name.en;
+    const timeStr = formatTime(item.time);
 
-        return `
-          <div class="timetable-stop ${stopClass}">
-            <span class="timetable-stop-num">${item.index + 1}</span>
-            <span class="timetable-stop-name">${stationName}</span>
-            <span class="timetable-stop-time">${timeStr}</span>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
+    return `<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`;
+  }).join('');
 
   timetableEl.innerHTML = html;
   timetableEl.classList.add('show');
   btn.classList.add('active');
+  btn.textContent = '▲';
 }
 
 // Station List Functions

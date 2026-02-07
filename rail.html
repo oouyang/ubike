@@ -275,211 +275,123 @@
       list-style: none;
     }
     .train-item {
-      padding: 12px 15px;
+      padding: 8px 12px;
       border-bottom: 1px solid #eee;
       display: flex;
       align-items: center;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 6px 8px;
       background: white;
-      transition: background 0.2s;
+      transition: background 0.15s;
+    }
+    .train-item > span,
+    .train-item > button {
+      flex-shrink: 0;
     }
     .train-item:hover { background: #e3f2fd; }
-    .train-item.departed {
-      opacity: 0.5;
-      background: #f5f5f5;
+    .train-item.departed { opacity: 0.5; }
+    .train-item.next-train {
+      background: #e3f2fd;
+      border-left: 3px solid #0d47a1;
     }
     .train-time {
-      font-size: 1.2em;
+      font-size: 1.1em;
       font-weight: bold;
       color: #333;
-      min-width: 60px;
+      min-width: 50px;
     }
-    .train-info { flex: 1; }
     .train-number {
-      font-weight: bold;
+      font-weight: 600;
       color: #0d47a1;
-      margin-bottom: 2px;
+      min-width: 45px;
     }
     .train-type {
       display: inline-block;
-      padding: 1px 6px;
+      padding: 1px 5px;
       border-radius: 3px;
-      font-size: 0.75em;
-      margin-left: 6px;
+      font-size: 0.7em;
+      font-weight: 500;
     }
     .train-type.express { background: #c62828; color: white; }
     .train-type.limited { background: #f57c00; color: white; }
-    .train-type.local { background: #2e7d32; color: white; }
+    .train-type.local { background: #4caf50; color: white; }
     .train-type.fast-local { background: #1565c0; color: white; }
     .train-dest {
-      font-size: 0.85em;
-      color: #666;
-    }
-    .train-status {
-      font-size: 0.8em;
-      padding: 4px 8px;
-      border-radius: 4px;
       font-weight: 500;
+      color: #333;
+      white-space: nowrap;
     }
-    .train-status.arriving {
-      background: #ffeb3b;
-      color: #e65100;
-    }
-    .train-status.ontime {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    .train-status.departed {
-      background: #f5f5f5;
-      color: #999;
-    }
-    .train-countdown {
-      font-size: 0.85em;
-      color: #999;
-      min-width: 70px;
-      text-align: right;
-    }
-    .no-trains {
-      padding: 40px 20px;
-      text-align: center;
-      color: #999;
-    }
-    /* Enhanced schedule styles */
-    .train-item.next-train {
-      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-      border-left: 4px solid #0d47a1;
-    }
-    .train-main {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      flex: 1;
-    }
-    .train-time-block {
-      text-align: center;
-      min-width: 60px;
-    }
-    .train-platform {
-      font-size: 0.75em;
-      color: #666;
-      background: #f5f5f5;
-      padding: 2px 6px;
-      border-radius: 3px;
-      margin-top: 4px;
-    }
-    .train-number-row {
+    .train-meta {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      font-size: 0.8em;
+      color: #666;
     }
+    .train-platform {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75em;
+    }
+    .train-duration { color: #888; }
+    .train-fare { color: #0d47a1; font-weight: 500; }
+    .train-status {
+      font-size: 0.75em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+      min-width: 50px;
+      text-align: center;
+    }
+    .train-status.arriving { background: #e3f2fd; color: #0d47a1; }
+    .train-status.ontime { background: #e8f5e9; color: #2e7d32; }
+    .train-status.departed { background: #f5f5f5; color: #999; }
     .next-badge {
       background: #0d47a1;
       color: white;
-      font-size: 0.7em;
-      padding: 2px 6px;
-      border-radius: 3px;
+      font-size: 0.65em;
+      padding: 1px 4px;
+      border-radius: 2px;
       font-weight: bold;
-      animation: pulse 2s infinite;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    .train-details {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      font-size: 0.8em;
-      color: #666;
-      margin-top: 4px;
-    }
-    .train-arr, .train-duration, .train-fare {
-      white-space: nowrap;
-    }
-    .train-fare {
-      color: #0d47a1;
-      font-weight: 500;
-    }
-    .train-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-      min-width: 80px;
+    .no-trains {
+      padding: 30px 20px;
+      text-align: center;
+      color: #999;
     }
     .timetable-btn {
-      padding: 4px 8px;
+      padding: 2px 6px;
       background: #e3f2fd;
       border: 1px solid #90caf9;
-      border-radius: 4px;
+      border-radius: 3px;
       color: #0d47a1;
-      font-size: 0.75em;
+      font-size: 0.7em;
       cursor: pointer;
-      margin-top: 6px;
-      transition: all 0.2s;
-    }
-    .timetable-btn:hover {
-      background: #bbdefb;
-    }
-    .timetable-btn.active {
-      background: #0d47a1;
-      color: white;
-      border-color: #0d47a1;
-    }
-    .train-timetable {
-      display: none;
-      background: #fafafa;
-      border-top: 1px solid #eee;
-      padding: 10px 15px;
-      margin-top: 10px;
-      width: 100%;
-    }
-    .train-timetable.show {
-      display: block;
-    }
-    .timetable-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.85em;
-    }
-    .timetable-stop {
-      display: flex;
-      align-items: center;
-      padding: 6px 8px;
-      background: white;
-      border-radius: 4px;
-      border-left: 3px solid #ddd;
-    }
-    .timetable-stop.current {
-      background: #e3f2fd;
-      border-left-color: #0d47a1;
-      font-weight: bold;
-    }
-    .timetable-stop.passed {
-      opacity: 0.5;
-    }
-    .timetable-stop-num {
-      width: 24px;
-      height: 24px;
-      background: #0d47a1;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75em;
-      font-weight: bold;
-      margin-right: 10px;
       flex-shrink: 0;
     }
-    .timetable-stop-name {
-      flex: 1;
+    .timetable-btn:hover { background: #bbdefb; }
+    .timetable-btn.active { background: #0d47a1; color: white; }
+    .train-timetable {
+      display: none;
+      width: 100%;
+      padding: 8px 0;
+      font-size: 0.8em;
+      line-height: 1.6;
+      flex-wrap: wrap;
+      gap: 4px 12px;
     }
-    .timetable-stop-time {
-      font-weight: 500;
-      color: #333;
+    .train-timetable.show { display: flex; }
+    .train-timetable .stop {
+      color: #666;
+      white-space: nowrap;
+    }
+    .train-timetable .stop.current {
+      color: #0d47a1;
+      font-weight: bold;
+    }
+    .train-timetable .stop.passed {
+      color: #bbb;
     }
     /* Markers */
     .marker-icon {
@@ -1629,31 +1541,18 @@ function renderTrainSchedule() {
     const isFirstUpcoming = !train.isRecentlyDeparted && trains.filter(t => !t.isRecentlyDeparted).indexOf(train) === 0;
 
     return `
-      <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}" style="flex-wrap:wrap;">
-        <div class="train-main">
-          <div class="train-time-block">
-            <div class="train-time">${train.depTimeStr}</div>
-            <div class="train-platform">${isZh ? '月台' : 'Plat.'} ${train.platform}</div>
-          </div>
-          <div class="train-info">
-            <div class="train-number-row">
-              <span class="train-number">${train.trainNo}</span>
-              <span class="train-type ${typeClass}">${typeName}</span>
-              ${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}
-            </div>
-            <div class="train-dest">${isZh ? '往' : 'To'} ${destName}</div>
-            <div class="train-details">
-              <span class="train-arr">${isZh ? '抵達' : 'Arr.'} ${train.arrTimeStr}</span>
-              <span class="train-duration">⏱ ${durationStr}</span>
-              <span class="train-fare">💰 NT$${train.fare}</span>
-            </div>
-            <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')">${isZh ? '時刻表' : 'Timetable'}</button>
-          </div>
-        </div>
-        <div class="train-right">
-          <div class="train-status ${statusClass}">${statusText}</div>
-          <div class="train-countdown">${train.countdown}</div>
-        </div>
+      <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}">
+        <span class="train-time">${train.depTimeStr}</span>
+        <span class="train-number">${train.trainNo}</span>
+        <span class="train-type ${typeClass}">${typeName}</span>
+        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${isFirstUpcoming ? ` <span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}</span>
+        <span class="train-meta">
+          <span class="train-platform">${train.platform}${isZh ? '月台' : ''}</span>
+          <span class="train-duration">${durationStr}</span>
+          <span class="train-fare">$${train.fare}</span>
+        </span>
+        <span class="train-status ${statusClass}">${statusText}</span>
+        <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" title="${isZh ? '時刻表' : 'Timetable'}">▼</button>
         <div class="train-timetable" id="timetable-${train.trainNo}"></div>
       </li>
     `;
@@ -1667,12 +1566,16 @@ function toggleTimetable(trainNo) {
   if (timetableEl.classList.contains('show')) {
     timetableEl.classList.remove('show');
     btn.classList.remove('active');
+    btn.textContent = '▼';
     return;
   }
 
   // Close other open timetables
   document.querySelectorAll('.train-timetable.show').forEach(el => el.classList.remove('show'));
-  document.querySelectorAll('.timetable-btn.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.timetable-btn.active').forEach(el => {
+    el.classList.remove('active');
+    el.textContent = '▼';
+  });
 
   // Find train data
   const schedule = currentDirection === 'south'
@@ -1698,7 +1601,6 @@ function toggleTimetable(trainNo) {
       }
     }
   } else {
-    // Northbound: times are in reverse order
     for (let i = 0; i < stationIds.length; i++) {
       const station = STATIONS.find(s => s.id === stationIds[i]);
       const timeIndex = stationIds.length - 1 - i;
@@ -1709,31 +1611,22 @@ function toggleTimetable(trainNo) {
     stationsToShow.reverse();
   }
 
-  const html = `
-    <div class="timetable-list">
-      ${stationsToShow.map((item, idx) => {
-        const isCurrent = item.station.id === selectedStationId;
-        const isPassed = currentDirection === 'south'
-          ? item.index < selectedStationIndex
-          : item.index > selectedStationIndex;
-        const stopClass = isCurrent ? 'current' : (isPassed ? 'passed' : '');
-        const stationName = isZh ? item.station.name.zh : item.station.name.en;
-        const timeStr = formatTime(item.time);
+  const html = stationsToShow.map((item, idx) => {
+    const isCurrent = item.station.id === selectedStationId;
+    const isPassed = currentDirection === 'south'
+      ? item.index < selectedStationIndex
+      : item.index > selectedStationIndex;
+    const stopClass = isCurrent ? 'current' : (isPassed ? 'passed' : '');
+    const stationName = isZh ? item.station.name.zh : item.station.name.en;
+    const timeStr = formatTime(item.time);
 
-        return `
-          <div class="timetable-stop ${stopClass}">
-            <span class="timetable-stop-num">${idx + 1}</span>
-            <span class="timetable-stop-name">${stationName}</span>
-            <span class="timetable-stop-time">${timeStr}</span>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `;
+    return `<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`;
+  }).join('');
 
   timetableEl.innerHTML = html;
   timetableEl.classList.add('show');
   btn.classList.add('active');
+  btn.textContent = '▲';
 }
 
 async function centerToUserLocation() {
