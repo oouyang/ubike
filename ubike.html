@@ -1,209 +1,428 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
-    <meta name="theme-color" content="#4CAF50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>YouBike Station Locator</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-    <link rel="manifest" href="manifest.webapp">
-    <link rel="apple-touch-icon" href="img/icon-180.png">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <style>
-      * { box-sizing: border-box; }
-      body {
-        font-family: sans-serif;
-        margin: 0;
-        padding: 0;
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4CAF50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>YouBike Station Locator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: #4CAF50;
+      color: white;
+      flex-shrink: 0;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.4em;
+    }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 13px;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .nav-btn.active {
+      background: rgba(255,255,255,0.4);
+      font-weight: bold;
+    }
+    .nav-btn.home {
+      background: #FF9800;
+      border-color: #FF9800;
+    }
+    .nav-btn.home:hover {
+      background: #F57C00;
+    }
+    #city-select {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #city-select option {
+      background: #4CAF50;
+      color: white;
+    }
+    .view-toggle {
+      display: flex;
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .view-btn {
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .view-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .view-btn.active {
+      background: rgba(255,255,255,0.3);
+      font-weight: bold;
+    }
+    #lang-btn {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #lang-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Main content */
+    .main-content {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .view {
+      display: none;
+      height: 100%;
+    }
+    .view.active {
+      display: flex;
+    }
+
+    /* Map View */
+    #map-view {
+      position: relative;
+    }
+    #map-canvas {
+      flex: 1;
+      height: 100%;
+    }
+    #search-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 320px;
+      max-height: calc(100% - 20px);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #search-panel.collapsed {
+      max-height: 50px;
+    }
+    #search-panel.collapsed .station-list,
+    #search-panel.collapsed .result-count {
+      display: none;
+    }
+    .search-header {
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    #search-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    #search-input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    #toggle-panel-btn {
+      padding: 8px;
+      border: none;
+      background: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .result-count {
+      padding: 8px 12px;
+      background: #f9f9f9;
+      font-size: 0.85em;
+      color: #666;
+      border-bottom: 1px solid #eee;
+    }
+    .station-list {
+      flex: 1;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .station-item {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .station-item:hover {
+      background: #e8f5e9;
+    }
+    .station-item.selected {
+      background: #c8e6c9;
+    }
+    .station-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .station-address {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .station-info {
+      font-size: 0.85em;
+    }
+    .bikes { color: #4CAF50; }
+    .slots { color: #2196F3; }
+    .no-bikes { color: #FF9800; }
+    .no-slots { color: #f44336; }
+    .marker-icon {
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .marker-ok { background-color: #80FF00; }
+    .marker-empty { background-color: #FF9E21; }
+    .marker-full { background-color: #FF4D00; }
+    #loading {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      z-index: 1001;
+      display: none;
+    }
+
+    /* List View */
+    #list-view {
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+    #list-status {
+      padding: 12px 15px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.9em;
+      color: #666;
+    }
+    #table-container {
+      flex: 1;
+      overflow: auto;
+      background: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    table thead {
+      background: linear-gradient(135deg, #4CAF50, #43a047);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    table thead th {
+      padding: 14px 12px;
+      text-align: left;
+      font-weight: 600;
+      border: none;
+      white-space: nowrap;
+    }
+    table tbody tr {
+      border-bottom: 1px solid #eee;
+      transition: background 0.15s;
+    }
+    table tbody tr:hover {
+      background: #e8f5e9;
+    }
+    table tbody tr:nth-child(even) {
+      background: #fafafa;
+    }
+    table tbody tr:nth-child(even):hover {
+      background: #e8f5e9;
+    }
+    table tbody td {
+      padding: 12px;
+      color: #333;
+      border: none;
+    }
+    table tbody td:first-child {
+      font-weight: 500;
+      color: #666;
+      text-align: center;
+      width: 50px;
+    }
+    table tbody td:nth-child(2) {
+      font-weight: 500;
+      color: #2e7d32;
+    }
+    table tbody td:nth-child(6),
+    table tbody td:nth-child(7) {
+      text-align: center;
+      font-weight: bold;
+    }
+    table tbody td:nth-child(8) {
+      color: #1976d2;
+      font-weight: 500;
+      text-align: right;
+    }
+    .bikes-high { color: #2e7d32; }
+    .bikes-low { color: #f57c00; }
+    .bikes-empty { color: #c62828; }
+    .sortable-header {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .sortable-header:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .sort-icon {
+      font-size: 0.75em;
+      margin-left: 6px;
+      opacity: 0.7;
+    }
+    .sortable-header:hover .sort-icon {
+      opacity: 1;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      table th:nth-child(4), table td:nth-child(4),
+      table th:nth-child(5), table td:nth-child(5) {
+        display: none;
       }
+    }
+    @media (max-width: 768px) {
       header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 15px;
-        background: #4CAF50;
-        color: white;
-      }
-      h1 {
-        margin: 0;
-        font-size: 1.5em;
-      }
-      #lang-btn {
-        padding: 6px 12px;
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.3);
-        color: white;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-      }
-      #lang-btn:hover {
-        background: rgba(255,255,255,0.3);
-      }
-      .nav-btn {
-        padding: 6px 10px;
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: none;
-        color: white;
-        font-size: 13px;
-      }
-      .nav-btn:hover {
-        background: rgba(255,255,255,0.3);
-      }
-      .nav-btn.active {
-        background: rgba(255,255,255,0.4);
-        font-weight: bold;
-      }
-      .nav-btn.home {
-        background: #FF9800;
-        border-color: #FF9800;
-      }
-      .nav-btn.home:hover {
-        background: #F57C00;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
       }
       .header-controls {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .container {
-        display: flex;
-        height: calc(100vh - 52px);
-      }
-      #panel {
-        width: 350px;
-        height: 100%;
-        overflow-y: auto;
-        border-right: 1px solid #ccc;
-        background: #f9f9f9;
-      }
-      #map-canvas {
-        flex: 1;
-        height: 100%;
-      }
-      .search-box {
-        padding: 10px;
-        background: #fff;
-        border-bottom: 1px solid #ddd;
-        position: sticky;
-        top: 0;
-      }
-      .search-box input {
         width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-        margin-bottom: 8px;
+        justify-content: center;
       }
-      .search-box select {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
+      #search-panel {
+        width: calc(100% - 20px);
+        max-height: 40%;
       }
-      .station-list {
-        padding: 0;
-        margin: 0;
-        list-style: none;
+      table th:nth-child(3), table td:nth-child(3) {
+        display: none;
       }
-      .station-item {
-        padding: 12px 15px;
-        border-bottom: 1px solid #eee;
-        cursor: pointer;
-        transition: background 0.2s;
-      }
-      .station-item:hover {
-        background: #e8f5e9;
-      }
-      .station-item.selected {
-        background: #c8e6c9;
-      }
-      .station-name {
-        font-weight: bold;
-        margin-bottom: 4px;
-      }
-      .station-address {
-        font-size: 0.85em;
-        color: #666;
-        margin-bottom: 4px;
-      }
-      .station-info {
-        font-size: 0.85em;
-      }
-      .bikes { color: #4CAF50; }
-      .slots { color: #2196F3; }
-      .no-bikes { color: #FF9800; }
-      .no-slots { color: #f44336; }
-      .result-count {
-        padding: 8px 15px;
-        background: #fff;
-        border-bottom: 1px solid #ddd;
-        font-size: 0.85em;
-        color: #666;
-      }
-      .marker-icon {
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      }
-      .marker-ok { background-color: #80FF00; }
-      .marker-empty { background-color: #FF9E21; }
-      .marker-full { background-color: #FF4D00; }
-      @media (max-width: 768px) {
-        .container { flex-direction: column; }
-        #panel { width: 100%; height: 40%; }
-        #map-canvas { height: 60%; }
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1>YouBike</h1>
-      <div class="header-controls">
-        <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
-        <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
-        <a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
-        <a href="list.html" class="nav-btn" data-en="List" data-zh="列表">List</a>
-        <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
-        <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
-        <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
-        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-        <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title">YouBike</h1>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
+      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <select id="city-select" onchange="changeCity()">
+        <option value="all">All Cities</option>
+        <option value="taipei" selected>Taipei</option>
+        <option value="newtaipei">New Taipei</option>
+        <option value="taoyuan">Taoyuan</option>
+        <option value="hsinchu">Hsinchu City</option>
+        <option value="hsinchuCounty">Hsinchu County</option>
+        <option value="miaoli">Miaoli</option>
+        <option value="taichung">Taichung</option>
+        <option value="chiayi">Chiayi City</option>
+        <option value="chiayiCounty">Chiayi County</option>
+        <option value="tainan">Tainan</option>
+        <option value="kaohsiung">Kaohsiung</option>
+        <option value="pingtung">Pingtung</option>
+        <option value="taitung">Taitung</option>
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
+        <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
       </div>
-    </header>
-    <div class="container">
-      <div id="panel">
-        <div class="search-box">
+      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- Map View -->
+    <div id="map-view" class="view active">
+      <div id="loading">Loading...</div>
+      <div id="search-panel">
+        <div class="search-header">
           <input type="text" id="search-input" placeholder="Search stations...">
-          <select id="city-select" onchange="changeCity()">
-            <option value="all">全部 All Cities</option>
-            <option value="taipei" selected>台北市 Taipei</option>
-            <option value="newtaipei">新北市 New Taipei</option>
-            <option value="taoyuan">桃園市 Taoyuan</option>
-            <option value="hsinchu">新竹市 Hsinchu City</option>
-            <option value="hsinchuCounty">新竹縣 Hsinchu County</option>
-            <option value="miaoli">苗栗縣 Miaoli</option>
-            <option value="taichung">台中市 Taichung</option>
-            <option value="chiayi">嘉義市 Chiayi City</option>
-            <option value="chiayiCounty">嘉義縣 Chiayi County</option>
-            <option value="tainan">台南市 Tainan</option>
-            <option value="kaohsiung">高雄市 Kaohsiung</option>
-            <option value="pingtung">屏東縣 Pingtung</option>
-            <option value="taitung">台東縣 Taitung</option>
-          </select>
+          <button id="toggle-panel-btn" onclick="toggleSearchPanel()">−</button>
         </div>
         <div id="result-count" class="result-count"></div>
         <ul id="station-list" class="station-list"></ul>
       </div>
       <div id="map-canvas"></div>
     </div>
-    <script src="ubike.js"></script>
-  </body>
+
+    <!-- List View -->
+    <div id="list-view" class="view">
+      <div id="list-status"></div>
+      <div id="table-container"></div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/ubike.js"></script>
+</body>
 </html>

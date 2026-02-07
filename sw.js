@@ -5,25 +5,23 @@
  * Provides offline capabilities and caching strategies
  */
 
-const CACHE_NAME = 'taiwan-transport-v1';
-const STATIC_CACHE = 'taiwan-transport-static-v1';
-const API_CACHE = 'taiwan-transport-api-v1';
+const CACHE_NAME = 'taiwan-transport-v2';
+const STATIC_CACHE = 'taiwan-transport-static-v2';
+const API_CACHE = 'taiwan-transport-api-v2';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/ubike.html',
-    '/map.html',
-    '/list.html',
     '/mrt.html',
     '/rail.html',
     '/thsr.html',
     '/bus.html',
     '/js/common.js',
+    '/js/ubike.js',
     '/js/bus.js',
     '/js/util.js',
-    '/ubike.js',
     '/sorttable.js',
     '/manifest.webapp'
 ];
