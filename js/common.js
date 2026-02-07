@@ -261,10 +261,29 @@ function createMap(elementId, center, zoom = 14) {
 }
 
 // ============================================================
-// EXPORT FOR MODULE USE (if needed)
+// EXPORT FOR BROWSER USE
 // ============================================================
 
-// For environments that support modules
+// Export to window for browser use
+window.YOUBIKE_API = YOUBIKE_API;
+window.CITIES = CITIES;
+window.STORAGE_KEYS = STORAGE_KEYS;
+window.detectLanguage = detectLanguage;
+window.isChineseLocale = isChineseLocale;
+window.saveLanguage = saveLanguage;
+window.deg2rad = deg2rad;
+window.getDistanceInMeters = getDistanceInMeters;
+window.formatDistance = formatDistance;
+window.normalizeStation = normalizeStation;
+window.getMarkerType = getMarkerType;
+window.getGoogleMapsUrl = getGoogleMapsUrl;
+window.getAppleMapsUrl = getAppleMapsUrl;
+window.getNavigationHtml = getNavigationHtml;
+window.getUserLocation = getUserLocation;
+window.updateNavButtons = updateNavButtons;
+window.createMap = createMap;
+
+// For environments that support modules (Node.js)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         YOUBIKE_API,
