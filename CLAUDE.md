@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Taiwan Transport PWA that displays YouBike bike-sharing stations, MRT metro stations, Taiwan Rail (TRA) stations, and other transport data on interactive maps using Leaflet/OpenStreetMap. It supports all Taiwan cities with YouBike (13 cities/counties), all MRT systems (Taipei, Kaohsiung, Taoyuan, Taichung), TRA lines (13 lines with 200+ stations), THSR (12 stations), airports (17), and intercity bus terminals (26+).
+Taiwan Transport PWA - a comprehensive public transportation app displaying:
+- **YouBike** bike-sharing stations (13 cities, 2000+ stations)
+- **MRT** metro systems (Taipei, Kaohsiung, Taoyuan, Taichung - including light rails)
+- **TRA** Taiwan Rail stations (13 lines, 200+ stations)
+- **THSR** High Speed Rail (12 stations with schedules)
+- **City Bus** nearby stops with real-time arrivals
+
+All displayed on interactive Leaflet/OpenStreetMap maps with bilingual support (EN/中文).
 
 **Hosted on:** GitHub Pages (gh-pages branch)
 **Live URL:** https://oouyang.github.io/ubike/
@@ -14,23 +21,30 @@ Taiwan Transport PWA that displays YouBike bike-sharing stations, MRT metro stat
 ### Core Technologies
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| HTML5 | - | Page structure, semantic markup |
-| CSS3 | - | Styling, flexbox/grid layouts, responsive design |
-| JavaScript | ES6+ | Application logic, async/await, modules |
+| HTML5 | - | Semantic markup, PWA meta tags |
+| CSS3 | - | Flexbox/Grid layouts, responsive design, animations |
+| JavaScript | ES6+ | async/await, arrow functions, template literals, modules |
 
 ### External Libraries (CDN)
 | Library | Version | CDN | Purpose |
 |---------|---------|-----|---------|
-| Leaflet | 1.9.4 | unpkg.com | Interactive maps, markers, popups |
-| OpenStreetMap | - | tile.openstreetmap.org | Free map tiles (no API key) |
+| Leaflet | 1.9.4 | unpkg.com | Interactive maps, markers, popups, polylines |
+| OpenStreetMap | - | tile.openstreetmap.org | Free map tiles (no API key required) |
+
+### Browser APIs Used
+| API | Purpose |
+|-----|---------|
+| Geolocation | User location for distance calculations, map centering |
+| localStorage | Persist preferences (language, city, view mode) |
+| Service Worker | Offline caching, PWA installation |
+| Fetch | API requests with async/await |
 
 ### PWA Features
-- **Service Worker** (`sw.js`) - Offline caching, background sync
+- **Service Worker** (`sw.js`) - Multi-strategy caching (cache-first, network-first, stale-while-revalidate)
 - **Web App Manifest** (`manifest.webapp`) - Install prompt, icons, theme colors
-- **Geolocation API** - User location for distance calculations
-- **localStorage** - Persist user preferences across sessions
+- **Offline Support** - Static assets cached, API responses cached with TTL
 
-### APIs
+### External APIs
 | API | Endpoint | Auth | Purpose |
 |-----|----------|------|---------|
 | YouBike Official | `apis.youbike.com.tw/json/station-yb2.json` | None | Real-time bike station data |
@@ -38,196 +52,193 @@ Taiwan Transport PWA that displays YouBike bike-sharing stations, MRT metro stat
 
 ## Development
 
-This is a static web application with no build system. To develop:
+This is a static web application with **no build system**. To develop:
 
-1. Serve files locally with any static HTTP server:
-   ```bash
-   python -m http.server 8000
-   # or
-   npx serve .
-   ```
-2. Open `http://localhost:8000` in a browser
+```bash
+# Option 1: Python
+python -m http.server 8000
 
-There are no npm dependencies, build commands, or test frameworks.
+# Option 2: Node.js
+npx serve .
+
+# Option 3: PHP
+php -S localhost:8000
+```
+
+Open `http://localhost:8000` in a browser. No npm install, no build commands.
 
 ## File Structure
 
 ```
 ubike/
-├── index.html          # Main dashboard (primary entry point)
-├── ubike.html          # YouBike unified page (Map/List toggle)
-├── mrt.html            # MRT metro stations
-├── rail.html           # Taiwan Rail (TRA) stations
-├── thsr.html           # High Speed Rail with schedules
-├── bus.html            # City bus nearby stops
+├── index.html          # Main dashboard with service overview
+├── ubike.html          # YouBike - Map/List toggle, search, city selector
+├── mrt.html            # MRT - System/line filters, all metro stations
+├── rail.html           # TRA - Train schedules, line/class filters
+├── thsr.html           # THSR - Train schedules, station info
+├── bus.html            # Bus - Route schedules, nearby stops, arrivals
 ├── js/
-│   ├── common.js       # Shared utilities (CITIES, normalizeStation, etc.)
-│   ├── ubike.js        # YouBike page controller
-│   ├── bus.js          # City bus page controller
+│   ├── common.js       # Shared utilities (CITIES, distance, language)
+│   ├── ubike.js        # YouBike page logic
+│   ├── bus.js          # Bus page logic
 │   └── util.js         # Legacy utilities
 ├── tdx/
-│   ├── index.html      # TDX data hub
+│   ├── index.html      # TDX static data hub
 │   ├── thsr.html       # THSR stations (static)
 │   ├── air.html        # Airports (static)
 │   └── bus.html        # Intercity bus terminals (static)
-├── sw.js               # Service worker for PWA
+├── workers/
+│   └── tdx-proxy.js    # Cloudflare Worker for TDX API proxy
+├── sw.js               # Service worker
 ├── manifest.webapp     # PWA manifest
-└── img/                # Icons and images
+└── img/                # Icons (180px, etc.)
 ```
 
-## Architecture
+## Page Features
 
-### Entry Points
-| Page | Description | Features |
-|------|-------------|----------|
-| `index.html` | Main dashboard | Service overview, cards with stats |
-| `ubike.html` | YouBike stations | Map/List toggle, search, city selector, auto-refresh |
-| `mrt.html` | MRT stations | System/line filters, color-coded markers |
-| `rail.html` | TRA stations | Line/class filters, search |
-| `thsr.html` | High Speed Rail | Train schedules, station info |
-| `bus.html` | City bus | Nearby stops, real-time arrivals |
-| `tdx/*.html` | Static data pages | No API auth required |
+### YouBike (`ubike.html`)
+- **Map View**: Leaflet map with color-coded markers, search panel, auto-refresh (5 min)
+- **List View**: Sortable table (click header: desc → asc → reset), responsive columns
+- **City Selector**: 13 Taiwan cities with YouBike
+- **Locate Button**: Center map to user location (📍)
+- **Route Tracking**: Blue polyline showing user's travel path
 
-### YouBike Unified Page (`ubike.html`)
-The YouBike page combines map and list views into a single page with toggle:
+### MRT (`mrt.html`)
+- **System Filter**: Taipei (TRTC), Kaohsiung (KRTC), Taoyuan (TYMC), Taichung (TMRT)
+- **Line Filter**: All lines including Ankeng LRT (LG) and Kaohsiung Circular LRT (KC)
+- **Station Data**: 200+ stations with coordinates, embedded as static JSON
+- **Locate Button**: Center map to user location
 
-**Map View:**
-- Full-screen Leaflet map with OpenStreetMap tiles
-- Color-coded markers (green/orange/red by availability)
-- Collapsible search panel with station list
-- Auto-refresh every 5 minutes
-- Route tracking (blue polyline) via geolocation
+### Taiwan Rail (`rail.html`)
+- **Train Schedule Tab**: Origin/destination selectors, departure times, fare, duration
+- **Stations Tab**: Browse all stations with line/class filters
+- **Direction Tabs**: Northbound/Southbound toggle
+- **Train Types**: Express, Limited Express, Local, Fast Local
+- **Locate Button**: Center map to user location
 
-**List View:**
-- Sortable table (click headers: desc → asc → reset)
-- Color-coded availability cells
-- Distance column (auto-populated via geolocation)
-- Responsive (hides Lat/Lng on mobile, Location on small screens)
+### THSR (`thsr.html`)
+- **Train Schedule**: Origin/destination selectors, departure times
+- **Station Info**: 12 stations from Nangang to Zuoying
+- **Real-time Display**: Current time, next train countdown
+- **Timetable Popup**: Full route with arrival times at each stop
 
-### Multi-City Support
-City selector dropdown allows switching between all Taiwan cities with YouBike:
+### Bus (`bus.html`)
+- **Route Schedule Tab**:
+  - City and route selectors with search
+  - Origin/destination stop selectors
+  - Trip-specific fare and duration calculation
+  - ETA at each stop based on next bus departure
+  - Stop highlighting (green=board, red=alight, yellow=in-trip)
+- **Nearby Stops Tab**:
+  - Real-time arrivals from TDX API (or demo mode)
+  - Distance-sorted stop list
+  - Arrival badges with countdown
+- **Locate Button**: Center map to user location
 
-| City Key | Area Code | Chinese | English |
-|----------|-----------|---------|---------|
-| taipei | 00 | 台北市 | Taipei |
-| newtaipei | 05 | 新北市 | New Taipei |
-| taoyuan | 07 | 桃園市 | Taoyuan |
-| hsinchu | 09 | 新竹市 | Hsinchu City |
-| hsinchuCounty | 0B | 新竹縣 | Hsinchu County |
-| miaoli | 0A | 苗栗縣 | Miaoli |
-| taichung | 01 | 台中市 | Taichung |
-| chiayi | 08 | 嘉義市 | Chiayi City |
-| chiayiCounty | 11 | 嘉義縣 | Chiayi County |
-| tainan | 13 | 台南市 | Tainan |
-| kaohsiung | 12 | 高雄市 | Kaohsiung |
-| pingtung | 14 | 屏東縣 | Pingtung |
-| taitung | 15 | 台東縣 | Taitung |
+### Common UI Features (All Pages)
+- **Navigation Bar**: Links to all transport pages
+- **Language Toggle**: EN/中文 button
+- **Locate Button**: 📍 button at bottom-right of all maps
+- **Responsive Design**: Mobile-friendly layouts
 
-### MRT Systems Support
-MRT page (`mrt.html`) displays metro stations for all Taiwan MRT systems:
+## MRT Systems & Lines
 
-| System Code | Chinese | English | Lines |
-|-------------|---------|---------|-------|
-| TRTC | 台北捷運 | Taipei Metro | BR (文湖), R (淡水信義), G (松山新店), O (中和新蘆), BL (板南), Y (環狀), LG (安坑輕軌) |
-| KRTC | 高雄捷運 | Kaohsiung Metro | KR (紅線), KO (橘線), KC (環狀輕軌) |
-| TYMC | 桃園捷運 | Taoyuan Metro | A (機場線) |
-| TMRT | 台中捷運 | Taichung Metro | TG (綠線) |
+| System | Code | Lines |
+|--------|------|-------|
+| Taipei Metro | TRTC | BR (文湖), R (淡水信義), G (松山新店), O (中和新蘆), BL (板南), Y (環狀), **LG (安坑輕軌)** |
+| Kaohsiung Metro | KRTC | KR (紅線), KO (橘線), **KC (環狀輕軌 - 37 stations)** |
+| Taoyuan Metro | TYMC | A (機場線) |
+| Taichung Metro | TMRT | TG (綠線) |
 
-### Taiwan Rail (TRA) Lines Support
+## Taiwan Rail Lines
 
-| Line Code | Chinese | English | Description |
-|-----------|---------|---------|-------------|
-| WL | 西部幹線(北段) | Western Line (North) | Keelung to Zhunan |
-| ML | 山線 | Mountain Line | Zhunan to Changhua (inland) |
-| CL | 海線 | Coast Line | Zhunan to Changhua (coastal) |
-| SL | 西部幹線(南段) | Western Line (South) | Changhua to Kaohsiung |
-| YL | 宜蘭線 | Yilan Line | Badu to Su'aoxin |
-| NL | 北迴線 | North-Link Line | Su'aoxin to Hualien |
-| TL | 臺東線 | Taitung Line | Hualien to Taitung |
-| SLL | 南迴線 | South-Link Line | Fangliao to Taitung |
-| PX | 平溪線 | Pingxi Line | Branch line |
-| NW | 內灣線 | Neiwan Line | Branch line |
-| JJ | 集集線 | Jiji Line | Branch line |
-| SH | 沙崙線 | Shalun Line | Branch line |
-| LJ | 六家線 | Liujia Line | Branch line |
+| Code | Name | Description |
+|------|------|-------------|
+| WL | Western Line (North) | Keelung to Zhunan |
+| ML | Mountain Line | Zhunan to Changhua (inland) |
+| CL | Coast Line | Zhunan to Changhua (coastal) |
+| SL | Western Line (South) | Changhua to Kaohsiung |
+| YL | Yilan Line | Badu to Su'aoxin |
+| NL | North-Link Line | Su'aoxin to Hualien |
+| TL | Taitung Line | Hualien to Taitung |
+| SLL | South-Link Line | Fangliao to Taitung |
+| PX, NW, JJ, SH, LJ | Branch Lines | Various branch lines |
 
-Station classes: **1st Class** (major) → **2nd Class** (regional) → **3rd Class** (local) → **Simple** (minimal)
-
-## Key Files
+## Key JavaScript Modules
 
 ### `js/common.js` - Shared Utilities
 ```javascript
 // Constants
-YOUBIKE_API          // Official YouBike API endpoint
-CITIES               // City configs with area codes and centers
-STORAGE_KEYS         // localStorage key constants
+YOUBIKE_API              // Official YouBike API endpoint
+CITIES                   // 13 city configs with area codes
+STORAGE_KEYS             // localStorage key constants
 
 // Language
-detectLanguage()     // Detect from localStorage or navigator.language
-isChineseLocale()    // Check if current language is Chinese
-saveLanguage(lang)   // Save preference to localStorage
+detectLanguage()         // From localStorage or navigator.language
+saveLanguage(lang)       // Save to localStorage
 
 // Distance (Haversine)
 getDistanceInMeters(lat1, lon1, lat2, lon2)
 formatDistance(meters, isZh)
 
-// YouBike Data
-normalizeStation(s)  // Convert API data to common schema
-getMarkerType(station) // 'ok' | 'empty' | 'full'
+// YouBike
+normalizeStation(s)      // API → common schema
+getMarkerType(station)   // 'ok' | 'empty' | 'full'
+
+// Geolocation
+getUserLocation(options) // Promise-based wrapper
 
 // UI Helpers
-getNavigationHtml(lat, lng, isZh) // Google/Apple Maps links
-createMarkerIcon(options)         // Leaflet divIcon factory
-createMap(elementId, center, zoom) // Standard OSM map setup
-updateNavButtons(lang)            // Update nav button text
+getNavigationHtml(lat, lng, isZh)  // Google/Apple Maps links
+updateNavButtons(lang)              // Update nav text by language
 ```
 
-### `js/ubike.js` - YouBike Page Controller
+### `js/ubike.js` - YouBike Controller
 ```javascript
-// View Management
-setView(view)        // Toggle 'map' or 'list' view
-toggleSearchPanel()  // Collapse/expand search panel
-
-// Data
-loadStations()       // Fetch and display station data
-filterStations(query) // Search by name/address
-
-// Map Functions
-initMap()            // Initialize Leaflet map
-updateMarkers(stations) // Refresh map markers
-selectStation(sno)   // Zoom to and highlight station
-
-// Table Functions
-renderTable(stations) // Build HTML table
-sortByColumn(colIndex) // Sort: desc → asc → reset
-
-// Auto-refresh
-startAutoRefresh()   // Start 5-min refresh timer
-stopAutoRefresh()    // Stop timer (when in list view)
+setView(view)            // Toggle 'map' | 'list'
+loadStations()           // Fetch and render
+filterStations(query)    // Search
+selectStation(sno)       // Zoom and highlight
+sortByColumn(colIndex)   // Table sorting
+centerToUserLocation()   // Locate button handler
+startAutoRefresh()       // 5-min refresh timer
 ```
 
-### `sw.js` - Service Worker
-Caching strategies:
-- **Static assets**: Cache-first (HTML, JS, CSS)
-- **Map tiles**: Cache-first with 7-day expiry
-- **YouBike API**: Stale-while-revalidate (5-min cache)
-- **TDX API**: Network-first with fallback
+### `js/bus.js` - Bus Controller
+```javascript
+// Route Schedule
+onRouteSearch()          // Filter routes by search
+onStopSelectorChange()   // Origin/destination selection
+renderRouteSchedule()    // Render stops with ETA
+getNextBusTime()         // Calculate next departure
+
+// Nearby Stops
+loadNearbyStops()        // Fetch from TDX or demo
+fetchArrivals(stopIds)   // Real-time arrival data
+centerToUserLocation()   // Locate button handler
+```
+
+## Service Worker Caching Strategies
+
+| Resource | Strategy | TTL |
+|----------|----------|-----|
+| Static assets (HTML, JS, CSS) | Cache-first | 24 hours |
+| Map tiles (OSM) | Cache-first | 7 days |
+| YouBike API | Stale-while-revalidate | 5 minutes |
+| TDX API | Network-first | 30 seconds |
 
 ## localStorage Keys
 
 | Key | Purpose | Values |
 |-----|---------|--------|
-| `ubike-lang` | Language preference | `'en'` \| `'zh'` |
-| `ubike-city` | Selected city | City key (e.g., `'taipei'`) |
-| `ubike-view` | YouBike view mode | `'map'` \| `'list'` |
-| `mrt-system` | Selected MRT system | System code (e.g., `'TRTC'`) |
-| `mrt-lang` | MRT page language | `'en'` \| `'zh'` |
-| `rail-line` | Selected TRA line | Line code (e.g., `'WL'`) |
-| `rail-lang` | Rail page language | `'en'` \| `'zh'` |
-| `tdx-lang` | TDX pages language | `'en'` \| `'zh'` |
-| `bus-city` | Bus page city | City code |
+| `ubike-lang` | Language | `'en'` \| `'zh'` |
+| `ubike-city` | YouBike city | City key |
+| `ubike-view` | YouBike view | `'map'` \| `'list'` |
+| `mrt-system` | MRT system | System code |
+| `rail-line` | TRA line | Line code |
+| `bus-city` | Bus city | City code |
 
-## Data Schema
+## Data Schemas
 
 ### YouBike Station (Normalized)
 ```javascript
@@ -235,41 +246,33 @@ Caching strategies:
   sno: string,                    // Station ID
   sna: string,                    // Name (Chinese)
   snaen: string,                  // Name (English)
-  sarea: string,                  // District (Chinese)
-  sareaen: string,                // District (English)
-  ar: string,                     // Address (Chinese)
-  aren: string,                   // Address (English)
-  latitude: number,               // Latitude
-  longitude: number,              // Longitude
+  latitude: number,
+  longitude: number,
   available_rent_bikes: number,   // Bikes available
   available_return_bikes: number, // Empty slots
   city: string,                   // City key
-  areaCode: string                // Area code from API
+  areaCode: string                // API area code
 }
 ```
 
-### Marker Color Coding
+### Marker Colors
 | Color | Hex | Condition |
 |-------|-----|-----------|
 | Green | #80FF00 | Bikes > 0 AND Slots > 0 |
-| Orange | #FF9E21 | Bikes = 0 (no bikes) |
-| Red | #FF4D00 | Slots = 0 (no parking) |
+| Orange | #FF9E21 | Bikes = 0 |
+| Red | #FF4D00 | Slots = 0 |
 
 ## Localization
 
-Automatic language detection via `navigator.language`:
-- `zh-TW`, `zh-CN`, `zh-*` → Chinese content
-- All others → English content (default)
-
-All pages support bilingual content via:
-- `data-en` / `data-zh` attributes on elements
-- `LABELS` object with translations
-- Language toggle button in header
+- Auto-detect from `navigator.language` (zh-TW/zh-CN → Chinese, else English)
+- Manual toggle via language button
+- `data-en` / `data-zh` attributes on HTML elements
+- `LABELS` objects for programmatic text
 
 ## Code Style
 
-- ES6+ JavaScript (const/let, async/await, arrow functions, template literals)
-- `'use strict'` mode in all JS files
-- Console logging with prefixes: `[UBike]`, `[MRT]`, `[Rail]`, etc.
-- Error handling with try/catch and user-visible error messages
-- CSS: BEM-like naming, mobile-first responsive design
+- `'use strict'` in all JS files
+- ES6+: const/let, async/await, arrow functions, template literals
+- Console prefixes: `[UBike]`, `[MRT]`, `[Rail]`, `[Bus]`
+- CSS: Mobile-first, flexbox/grid, CSS custom properties
+- No external CSS frameworks (pure CSS)
