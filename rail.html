@@ -1754,7 +1754,19 @@ async function initialize() {
   console.log('[Rail] Taiwan Rail map initialized successfully');
 }
 
-document.addEventListener('DOMContentLoaded', initialize);
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L !== 'undefined') {
+    initialize();
+  } else {
+    const checkLeaflet = setInterval(() => {
+      if (typeof L !== 'undefined') {
+        clearInterval(checkLeaflet);
+        initialize();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkLeaflet), 10000);
+  }
+});
   </script>
 </body>
 </html>

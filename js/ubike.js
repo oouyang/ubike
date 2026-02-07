@@ -752,8 +752,27 @@ async function init() {
   console.log('[UBike] Initialization complete');
 }
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Start when DOM is ready and Leaflet is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L !== 'undefined') {
+    init();
+  } else {
+    // Wait for Leaflet to load
+    const checkLeaflet = setInterval(() => {
+      if (typeof L !== 'undefined') {
+        clearInterval(checkLeaflet);
+        init();
+      }
+    }, 100);
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      clearInterval(checkLeaflet);
+      if (typeof L === 'undefined') {
+        console.error('[UBike] Leaflet failed to load');
+      }
+    }, 10000);
+  }
+});
 
 // Make functions available globally for onclick handlers
 window.setView = setView;

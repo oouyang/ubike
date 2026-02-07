@@ -1261,5 +1261,17 @@ window.onRouteSearch = onRouteSearch;
 window.onStopSelectorChange = onStopSelectorChange;
 window.centerToUserLocation = centerToUserLocation;
 
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', init);
+// Initialize on DOM ready (wait for Leaflet)
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L !== 'undefined') {
+    init();
+  } else {
+    const checkLeaflet = setInterval(() => {
+      if (typeof L !== 'undefined') {
+        clearInterval(checkLeaflet);
+        init();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkLeaflet), 10000);
+  }
+});
