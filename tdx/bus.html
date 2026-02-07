@@ -231,6 +231,40 @@
       { id: 'TT-STATION', name: { en: 'Taitung Bus Station', zh: '台東客運總站' }, lat: 22.7492, lng: 121.1497, region: 'east', city: { en: 'Taitung', zh: '台東縣' }, address: { en: 'Taitung City', zh: '台東市' }, operators: ['Taitung Bus', 'Dingdong Bus'] }
     ];
 
+    // Operator name translations
+    const OPERATORS = {
+      'Kuo-Kuang': '國光客運',
+      'UBus': '統聯客運',
+      'Kamalan': '葛瑪蘭客運',
+      'Capital Bus': '首都客運',
+      'Various operators': '多家業者',
+      'Various': '多家業者',
+      'Taoyuan Bus': '桃園客運',
+      'Zhongli Bus': '中壢客運',
+      'Hsinchu Bus': '新竹客運',
+      'Taichung Bus': '台中客運',
+      'Changhua Bus': '彰化客運',
+      'Yuanlin Bus': '員林客運',
+      'Nantou Bus': '南投客運',
+      'Chiayi Bus': '嘉義客運',
+      'BRT': '嘉義BRT',
+      'Tainan Bus': '興南客運',
+      'H31 Shuttle': 'H31接駁車',
+      'Kaohsiung Bus': '高雄客運',
+      'Pingtung Bus': '屏東客運',
+      'Hualien Bus': '花蓮客運',
+      'Tairoko Bus': '太魯閣客運',
+      'Taitung Bus': '鼎東客運(山線)',
+      'Dingdong Bus': '鼎東客運(海線)'
+    };
+
+    function getOperators(terminal) {
+      if (isZh) {
+        return terminal.operators.map(op => OPERATORS[op] || op).join('、');
+      }
+      return terminal.operators.join(', ');
+    }
+
     let map = null;
     let markers = {};
     let selectedTerminal = null;
@@ -328,7 +362,7 @@
             <span class="station-name">${getName(terminal)}</span>
           </div>
           <div class="station-details">${getCity(terminal)} - ${getAddress(terminal)}</div>
-          <div class="station-operators">${terminal.operators.join(', ')}</div>
+          <div class="station-operators">${getOperators(terminal)}</div>
         </li>
       `).join('');
 
@@ -352,7 +386,7 @@
         <strong>${getName(terminal)}</strong><br>
         <small>${getCity(terminal)}</small><br>
         ${getAddress(terminal)}<br>
-        <em style="font-size:0.85em;color:#7b1fa2;">${terminal.operators.join(', ')}</em>
+        <em style="font-size:0.85em;color:#7b1fa2;">${getOperators(terminal)}</em>
       </div>`;
     }
 
