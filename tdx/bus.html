@@ -275,7 +275,6 @@
 
     function updateUI() {
       document.getElementById('page-title').textContent = isZh ? '🚌 客運轉運站' : '🚌 Intercity Bus Terminals';
-      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
       document.getElementById('info-box').textContent = isZh
         ? '台灣主要國道客運轉運站'
         : 'Major intercity bus terminals across Taiwan';
@@ -285,6 +284,12 @@
       document.getElementById('opt-central').textContent = isZh ? '中部' : 'Central';
       document.getElementById('opt-south').textContent = isZh ? '南部' : 'Southern';
       document.getElementById('opt-east').textContent = isZh ? '東部' : 'Eastern';
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn[data-en][data-zh]').forEach(btn => {
+        btn.textContent = isZh ? btn.dataset.zh : btn.dataset.en;
+      });
+
       renderList();
       updatePopups();
     }

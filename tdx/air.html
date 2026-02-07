@@ -231,13 +231,18 @@
 
     function updateUI() {
       document.getElementById('page-title').textContent = isZh ? '✈️ 台灣機場' : '✈️ Taiwan Airports';
-      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
       document.getElementById('info-box').textContent = isZh
         ? '4座國際機場 • 13座國內機場'
         : '4 international airports • 13 domestic airports';
       document.getElementById('opt-all').textContent = isZh ? '全部' : 'All';
       document.getElementById('opt-intl').textContent = isZh ? '國際機場' : 'International';
       document.getElementById('opt-domestic').textContent = isZh ? '國內機場' : 'Domestic';
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn[data-en][data-zh]').forEach(btn => {
+        btn.textContent = isZh ? btn.dataset.zh : btn.dataset.en;
+      });
+
       renderList();
       updatePopups();
     }

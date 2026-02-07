@@ -204,10 +204,15 @@
 
     function updateUI() {
       document.getElementById('page-title').textContent = isZh ? '🚄 台灣高鐵' : '🚄 Taiwan High Speed Rail';
-      document.getElementById('back-link').textContent = isZh ? '← 返回' : '← Back';
       document.getElementById('info-box').textContent = isZh
         ? '12站 • 南港至左營 • 350公里約90分鐘'
         : '12 stations • Nangang to Zuoying • 350 km in ~90 min';
+
+      // Update nav buttons
+      document.querySelectorAll('.nav-btn[data-en][data-zh]').forEach(btn => {
+        btn.textContent = isZh ? btn.dataset.zh : btn.dataset.en;
+      });
+
       renderStationList();
       updatePopups();
     }
