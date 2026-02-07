@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <title>Taiwan Transport Hub</title>
+    <link rel="manifest" href="manifest.webapp">
+    <link rel="icon" type="image/png" href="img/icon-128.png">
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+      header {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 2em;
+        font-weight: 700;
+      }
+      .subtitle {
+        opacity: 0.9;
+        font-size: 1em;
+      }
+      .lang-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background 0.2s;
+      }
+      .lang-toggle:hover {
+        background: rgba(255,255,255,0.3);
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px 20px;
+      }
+      .section {
+        margin-bottom: 40px;
+      }
+      .section-header {
+        color: white;
+        font-size: 1.3em;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-icon {
+        font-size: 1.2em;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 24px;
+      }
+      .card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+      }
+      .card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      }
+      .card-banner {
+        height: 8px;
+      }
+      .card-content {
+        padding: 24px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .card-icon {
+        font-size: 2.5em;
+        line-height: 1;
+      }
+      .card-titles {
+        flex: 1;
+      }
+      .card-title {
+        font-size: 1.3em;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: #333;
+      }
+      .card-subtitle {
+        font-size: 0.9em;
+        color: #888;
+      }
+      .card-desc {
+        color: #555;
+        font-size: 0.95em;
+        line-height: 1.6;
+        margin-bottom: 16px;
+        flex: 1;
+      }
+      .card-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .feature-tag {
+        background: #f0f0f0;
+        color: #666;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.8em;
+      }
+      .card-stats {
+        display: flex;
+        gap: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #eee;
+      }
+      .stat {
+        text-align: center;
+      }
+      .stat-value {
+        font-size: 1.4em;
+        font-weight: 700;
+        color: #333;
+      }
+      .stat-label {
+        font-size: 0.75em;
+        color: #888;
+        text-transform: uppercase;
+      }
+      .card-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #667eea;
+      }
+      .card-action-arrow {
+        font-size: 1.2em;
+      }
+      /* Banner colors */
+      .banner-green { background: linear-gradient(90deg, #4CAF50, #8BC34A); }
+      .banner-orange { background: linear-gradient(90deg, #f57c00, #ff9800); }
+      .banner-blue { background: linear-gradient(90deg, #1976d2, #42a5f5); }
+      .banner-purple { background: linear-gradient(90deg, #7b1fa2, #ab47bc); }
+      .banner-teal { background: linear-gradient(90deg, #00838f, #26c6da); }
+      .banner-red { background: linear-gradient(90deg, #c62828, #ef5350); }
+
+      .data-note {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 16px 20px;
+        color: white;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .data-note-icon {
+        font-size: 1.5em;
+      }
+      .data-note-text {
+        flex: 1;
+        font-size: 0.9em;
+        line-height: 1.5;
+      }
+      .data-note a {
+        color: #ffd54f;
+      }
+
+      footer {
+        text-align: center;
+        padding: 30px 20px;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.85em;
+      }
+      footer a {
+        color: rgba(255,255,255,0.9);
+      }
+
+      @media (max-width: 768px) {
+        h1 { font-size: 1.5em; }
+        .lang-toggle {
+          position: static;
+          margin-top: 12px;
+        }
+        header { text-align: center; }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">🚀 Taiwan Transport Hub</h1>
+      <div class="subtitle" id="page-subtitle">Real-time transit information across Taiwan</div>
+      <button class="lang-toggle" onclick="toggleLang()">EN / 中文</button>
+    </header>
+
+    <div class="container">
+      <div class="data-note">
+        <span class="data-note-icon">💡</span>
+        <span class="data-note-text" id="data-note">
+          This hub provides transport information using open data APIs and static datasets.
+          YouBike data updates in real-time. Station data for rail and bus uses static snapshots.
+          For official real-time data, visit <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>.
+        </span>
+      </div>
+
+      <!-- Bike Sharing Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🚲</span>
+          <span id="section-bike">Bike Sharing</span>
+        </div>
+        <div class="grid">
+          <a href="ubike.html" class="card">
+            <div class="card-banner banner-green"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚲</span>
+                <div class="card-titles">
+                  <div class="card-title">YouBike</div>
+                  <div class="card-subtitle" data-en="Public Bike Sharing System" data-zh="公共自行車系統">Public Bike Sharing System</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Real-time bike availability at YouBike 2.0 stations across Taiwan. View available bikes and empty slots, search stations by name or address, and find the nearest station on an interactive map." data-zh="即時顯示全台 YouBike 2.0 站點的車輛與空位資訊。可依站名或地址搜尋，並在互動地圖上找到最近的站點。">
+                Real-time bike availability at YouBike 2.0 stations across Taiwan. View available bikes and empty slots, search stations by name or address, and find the nearest station on an interactive map.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Real-time" data-zh="即時更新">Real-time</span>
+                <span class="feature-tag" data-en="13 Cities" data-zh="13縣市">13 Cities</span>
+                <span class="feature-tag" data-en="Search" data-zh="搜尋功能">Search</span>
+                <span class="feature-tag" data-en="GPS" data-zh="定位功能">GPS</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">2000+</div>
+                  <div class="stat-label" data-en="Stations" data-zh="站點">Stations</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">13</div>
+                  <div class="stat-label" data-en="Cities" data-zh="縣市">Cities</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">5min</div>
+                  <div class="stat-label" data-en="Refresh" data-zh="更新">Refresh</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Open Map View" data-zh="開啟地圖">Open Map View</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="map.html" class="card">
+            <div class="card-banner banner-green"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🗺️</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="YouBike Map" data-zh="YouBike 地圖">YouBike Map</div>
+                  <div class="card-subtitle" data-en="Full-screen Map View" data-zh="全螢幕地圖檢視">Full-screen Map View</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Simplified full-screen map interface focused on quick station lookup. Color-coded markers show availability at a glance - green (available), orange (no bikes), red (no slots)." data-zh="簡化的全螢幕地圖介面，專注於快速查找站點。顏色標記一目了然：綠色（可用）、橘色（無車）、紅色（無位）。">
+                Simplified full-screen map interface focused on quick station lookup. Color-coded markers show availability at a glance - green (available), orange (no bikes), red (no slots).
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Full-screen" data-zh="全螢幕">Full-screen</span>
+                <span class="feature-tag" data-en="Auto-refresh" data-zh="自動更新">Auto-refresh</span>
+                <span class="feature-tag" data-en="Color-coded" data-zh="顏色標記">Color-coded</span>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Open Full Map" data-zh="開啟全螢幕地圖">Open Full Map</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="list.html" class="card">
+            <div class="card-banner banner-green"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">📋</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="YouBike List" data-zh="YouBike 列表">YouBike List</div>
+                  <div class="card-subtitle" data-en="Sortable Table View" data-zh="可排序表格檢視">Sortable Table View</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Tabular view of all stations with sortable columns. Sort by available bikes, empty slots, or distance from your location. Useful for comparing multiple stations at once." data-zh="所有站點的表格檢視，可依各欄位排序。可依可借車輛、空位或距離排序，方便一次比較多個站點。">
+                Tabular view of all stations with sortable columns. Sort by available bikes, empty slots, or distance from your location. Useful for comparing multiple stations at once.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Sortable" data-zh="可排序">Sortable</span>
+                <span class="feature-tag" data-en="Distance" data-zh="距離計算">Distance</span>
+                <span class="feature-tag" data-en="Table View" data-zh="表格檢視">Table View</span>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Open List View" data-zh="開啟列表">Open List View</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Rail Transport Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">🚄</span>
+          <span id="section-rail">Rail Transport</span>
+        </div>
+        <div class="grid">
+          <a href="tdx/thsr.html" class="card">
+            <div class="card-banner banner-orange"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚄</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="High Speed Rail" data-zh="台灣高鐵">High Speed Rail</div>
+                  <div class="card-subtitle" data-en="Taiwan HSR (THSR)" data-zh="Taiwan High Speed Rail">Taiwan HSR (THSR)</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Taiwan's high-speed rail network connecting major cities from Nangang (Taipei) to Zuoying (Kaohsiung) in approximately 90 minutes. View all 12 stations with route visualization and kilometer markers." data-zh="台灣高速鐵路網絡，連接南港（台北）至左營（高雄），全程約90分鐘。可查看全部12站的路線圖與里程標記。">
+                Taiwan's high-speed rail network connecting major cities from Nangang (Taipei) to Zuoying (Kaohsiung) in approximately 90 minutes. View all 12 stations with route visualization and kilometer markers.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="12 Stations" data-zh="12站">12 Stations</span>
+                <span class="feature-tag" data-en="350 km" data-zh="350公里">350 km</span>
+                <span class="feature-tag" data-en="Route Map" data-zh="路線圖">Route Map</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">12</div>
+                  <div class="stat-label" data-en="Stations" data-zh="車站">Stations</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">350</div>
+                  <div class="stat-label" data-en="KM" data-zh="公里">KM</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">300</div>
+                  <div class="stat-label" data-en="KM/H" data-zh="時速">KM/H</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="View Stations" data-zh="查看車站">View Stations</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="rail.html" class="card">
+            <div class="card-banner banner-blue"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚃</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="Taiwan Rail" data-zh="台鐵">Taiwan Rail</div>
+                  <div class="card-subtitle" data-en="TRA - Taiwan Railways" data-zh="臺灣鐵路管理局">TRA - Taiwan Railways</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Complete Taiwan Railways network with 13 lines covering the entire island. Includes Western Main Line, Mountain/Coast Lines, Eastern Lines (Yilan, North-Link, Taitung, South-Link), and 5 branch lines. Filter by line or station class." data-zh="完整台鐵路網，涵蓋全島13條路線。包含西部幹線、山線/海線、東部路線（宜蘭、北迴、台東、南迴線）及5條支線。可依路線或車站等級篩選。">
+                Complete Taiwan Railways network with 13 lines covering the entire island. Includes Western Main Line, Mountain/Coast Lines, Eastern Lines (Yilan, North-Link, Taitung, South-Link), and 5 branch lines. Filter by line or station class.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="13 Lines" data-zh="13條線">13 Lines</span>
+                <span class="feature-tag" data-en="200+ Stations" data-zh="200+站">200+ Stations</span>
+                <span class="feature-tag" data-en="Line Filter" data-zh="路線篩選">Line Filter</span>
+                <span class="feature-tag" data-en="Class Filter" data-zh="等級篩選">Class Filter</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">13</div>
+                  <div class="stat-label" data-en="Lines" data-zh="路線">Lines</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">200+</div>
+                  <div class="stat-label" data-en="Stations" data-zh="車站">Stations</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">1000+</div>
+                  <div class="stat-label" data-en="KM" data-zh="公里">KM</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Explore Network" data-zh="探索路網">Explore Network</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="mrt.html" class="card">
+            <div class="card-banner banner-red"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚇</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="Metro (MRT)" data-zh="捷運">Metro (MRT)</div>
+                  <div class="card-subtitle" data-en="Mass Rapid Transit Systems" data-zh="大眾捷運系統">Mass Rapid Transit Systems</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="All Taiwan MRT/Metro systems in one place. Taipei Metro (7 lines), Kaohsiung Metro (3 lines including Light Rail), Taoyuan Airport MRT, and Taichung Metro Green Line. Filter by system and line with color-coded stations." data-zh="台灣所有捷運系統一站查詢。台北捷運（7條線）、高雄捷運（含輕軌3條線）、桃園機場捷運、台中捷運綠線。可依系統和路線篩選，站點以顏色標記。">
+                All Taiwan MRT/Metro systems in one place. Taipei Metro (7 lines), Kaohsiung Metro (3 lines including Light Rail), Taoyuan Airport MRT, and Taichung Metro Green Line. Filter by system and line with color-coded stations.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="4 Systems" data-zh="4大系統">4 Systems</span>
+                <span class="feature-tag" data-en="15+ Lines" data-zh="15+線">15+ Lines</span>
+                <span class="feature-tag" data-en="Color-coded" data-zh="顏色標記">Color-coded</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">4</div>
+                  <div class="stat-label" data-en="Systems" data-zh="系統">Systems</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">200+</div>
+                  <div class="stat-label" data-en="Stations" data-zh="車站">Stations</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="View Metro Map" data-zh="查看捷運圖">View Metro Map</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Other Transport Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">✈️</span>
+          <span id="section-other">Air & Bus</span>
+        </div>
+        <div class="grid">
+          <a href="tdx/air.html" class="card">
+            <div class="card-banner banner-teal"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">✈️</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="Airports" data-zh="機場">Airports</div>
+                  <div class="card-subtitle" data-en="International & Domestic" data-zh="國際及國內機場">International & Domestic</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="All Taiwan civil aviation airports. 4 international airports (Taoyuan, Songshan, Kaohsiung, Taichung) and 13 domestic airports serving outlying islands including Penghu, Kinmen, Matsu, Green Island, and Orchid Island." data-zh="台灣所有民用航空機場。4座國際機場（桃園、松山、高雄、台中）及13座國內機場，服務澎湖、金門、馬祖、綠島、蘭嶼等離島。">
+                All Taiwan civil aviation airports. 4 international airports (Taoyuan, Songshan, Kaohsiung, Taichung) and 13 domestic airports serving outlying islands including Penghu, Kinmen, Matsu, Green Island, and Orchid Island.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="IATA/ICAO Codes" data-zh="IATA/ICAO代碼">IATA/ICAO Codes</span>
+                <span class="feature-tag" data-en="Filter by Type" data-zh="類型篩選">Filter by Type</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">4</div>
+                  <div class="stat-label" data-en="International" data-zh="國際">International</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">13</div>
+                  <div class="stat-label" data-en="Domestic" data-zh="國內">Domestic</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="View Airports" data-zh="查看機場">View Airports</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="tdx/bus.html" class="card">
+            <div class="card-banner banner-purple"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚌</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="Intercity Bus" data-zh="國道客運">Intercity Bus</div>
+                  <div class="card-subtitle" data-en="Highway Bus Terminals" data-zh="客運轉運站">Highway Bus Terminals</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Major intercity bus terminals across Taiwan. Includes terminals at major train stations, HSR stations, and city centers. Filter by region (North, Central, South, East) and search by name. Shows operators serving each terminal." data-zh="台灣主要國道客運轉運站。包含各大火車站、高鐵站及市中心的轉運站。可依地區（北、中、南、東）篩選並搜尋站名。顯示各站服務的客運業者。">
+                Major intercity bus terminals across Taiwan. Includes terminals at major train stations, HSR stations, and city centers. Filter by region (North, Central, South, East) and search by name. Shows operators serving each terminal.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Region Filter" data-zh="地區篩選">Region Filter</span>
+                <span class="feature-tag" data-en="Operators" data-zh="客運業者">Operators</span>
+                <span class="feature-tag" data-en="Search" data-zh="搜尋">Search</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">26+</div>
+                  <div class="stat-label" data-en="Terminals" data-zh="轉運站">Terminals</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">4</div>
+                  <div class="stat-label" data-en="Regions" data-zh="地區">Regions</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Find Terminals" data-zh="查找轉運站">Find Terminals</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
+          <a href="tdx/index.html" class="card">
+            <div class="card-banner banner-purple"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">📊</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="TDX Data Hub" data-zh="TDX 資料中心">TDX Data Hub</div>
+                  <div class="card-subtitle" data-en="Transport Data eXchange" data-zh="交通資料整合平台">Transport Data eXchange</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Central hub for all TDX-compatible transport data. Quick access to THSR, TRA, MRT, airports, and bus information. Designed for minimal API usage with static data for stations that rarely change." data-zh="所有 TDX 相容交通資料的中央入口。快速存取高鐵、台鐵、捷運、機場及客運資訊。採用靜態資料設計，減少 API 呼叫次數。">
+                Central hub for all TDX-compatible transport data. Quick access to THSR, TRA, MRT, airports, and bus information. Designed for minimal API usage with static data for stations that rarely change.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Static Data" data-zh="靜態資料">Static Data</span>
+                <span class="feature-tag" data-en="No API Key" data-zh="免API金鑰">No API Key</span>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Open TDX Hub" data-zh="開啟 TDX 中心">Open TDX Hub</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p id="footer-text">
+        Open source project using public transport data from Taiwan.
+        Data sources: YouBike Official API, TDX (Transport Data eXchange).
+      </p>
+      <p>
+        <a href="https://github.com/oouyang/ubike" target="_blank">GitHub</a> •
+        <a href="https://tdx.transportdata.tw/" target="_blank">TDX Platform</a>
+      </p>
+    </footer>
+
+    <script>
+    'use strict';
+
+    let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+
+    function toggleLang() {
+      isZh = !isZh;
+      localStorage.setItem('transport-lang', isZh ? 'zh' : 'en');
+      updateLang();
+    }
+
+    function updateLang() {
+      // Page header
+      document.getElementById('page-title').textContent = isZh
+        ? '🚀 台灣交通資訊站'
+        : '🚀 Taiwan Transport Hub';
+      document.getElementById('page-subtitle').textContent = isZh
+        ? '全台即時交通資訊查詢'
+        : 'Real-time transit information across Taiwan';
+
+      // Data note
+      document.getElementById('data-note').innerHTML = isZh
+        ? '本站使用開放資料 API 及靜態資料集提供交通資訊。YouBike 資料即時更新，軌道與客運資料為靜態快照。如需官方即時資料，請造訪 <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>。'
+        : 'This hub provides transport information using open data APIs and static datasets. YouBike data updates in real-time. Station data for rail and bus uses static snapshots. For official real-time data, visit <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>.';
+
+      // Section headers
+      document.getElementById('section-bike').textContent = isZh ? '公共自行車' : 'Bike Sharing';
+      document.getElementById('section-rail').textContent = isZh ? '軌道運輸' : 'Rail Transport';
+      document.getElementById('section-other').textContent = isZh ? '航空與客運' : 'Air & Bus';
+
+      // Footer
+      document.getElementById('footer-text').textContent = isZh
+        ? '使用台灣公共交通開放資料的開源專案。資料來源：YouBike 官方 API、TDX 交通資料平台。'
+        : 'Open source project using public transport data from Taiwan. Data sources: YouBike Official API, TDX (Transport Data eXchange).';
+
+      // Update all elements with data-en/data-zh attributes
+      document.querySelectorAll('[data-en]').forEach(el => {
+        el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+      });
+    }
+
+    // Initialize
+    const savedLang = localStorage.getItem('transport-lang');
+    if (savedLang) {
+      isZh = savedLang === 'zh';
+    }
+    updateLang();
+    </script>
+  </body>
+</html>

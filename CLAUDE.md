@@ -21,7 +21,8 @@ There are no npm dependencies, build commands, or test frameworks.
 ## Architecture
 
 ### Entry Points
-- **map.html** - YouBike map view with real-time station markers and auto-refresh (primary)
+- **index.html** - Main dashboard with all services overview and detailed explanations (primary)
+- **map.html** - YouBike map view with real-time station markers and auto-refresh
 - **list.html** - YouBike sortable table view with distance column and language toggle (EN/中文)
 - **ubike.html** - YouBike map with search panel, station list, and city selector
 - **mrt.html** - MRT metro stations map with system/line filters and search
