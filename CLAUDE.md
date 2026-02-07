@@ -56,9 +56,14 @@ There are no npm dependencies, build commands, or test frameworks.
 
 ### Key Files
 - `js/util.js` - Utility functions:
-  - `fetchJSON(url)` - Async fetch with Promise (modern)
-  - `httpGet(url)` - Synchronous XHR (legacy, used by map.html/list.html)
+  - `fetchJSON(url)` - Async fetch with Promise
+  - `httpGet(url)` - Synchronous XHR (legacy)
   - `getDistanceFromLatLonInM()` - Haversine distance calculation
+- `ubike.js` - Store locator integration:
+  - `UBikeDataFeed` class for async data loading
+  - `initStoreLocator()` - Initializes map with panel view
+- `sorttable.js` - Table sorting (add `class="sortable"` to tables)
+- `js/sortable.min.js` - HubSpot Sortable v0.8.0 (use `data-sortable` attribute)
 - `js/store-locator.min.js` - Google Maps store locator library
 - `manifest.webapp` - Firefox OS / PWA manifest with i18n support
 
@@ -66,6 +71,13 @@ There are no npm dependencies, build commands, or test frameworks.
 Automatic language detection via `navigator.language`:
 - `zh-TW`, `zh-CN` → Chinese content
 - All others → English content (default)
+
+## Code Style
+
+- ES6+ JavaScript (const/let, async/await, arrow functions, template literals)
+- `'use strict'` mode in all JS files
+- Console logging with prefixes: `[UBike]`, `[SortTable]`
+- Error handling with try/catch and user-visible error messages
 
 ## External Dependencies
 
