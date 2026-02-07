@@ -72,6 +72,11 @@
 			document.title = LABELS[lang].title;
 			document.getElementById('page-title').textContent = LABELS[lang].title;
 			document.getElementById('lang-btn').textContent = LABELS[lang].switchLang;
+			// Update navigation buttons
+			document.querySelectorAll('.nav-btn').forEach(btn => {
+				const text = lang === 'zh' ? btn.dataset.zh : btn.dataset.en;
+				if (text) btn.textContent = text;
+			});
 			updateCitySelector();
 			console.log(`[UBike] Language set to: ${lang}`);
 		}
@@ -444,6 +449,32 @@
 		#lang-btn:hover {
 			background: #45a049;
 		}
+		.nav-btn {
+			padding: 8px 12px;
+			background: #fff;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			cursor: pointer;
+			text-decoration: none;
+			color: #333;
+			font-size: 14px;
+		}
+		.nav-btn:hover {
+			background: #f0f0f0;
+		}
+		.nav-btn.active {
+			background: #4CAF50;
+			color: white;
+			border-color: #4CAF50;
+		}
+		.nav-btn.home {
+			background: #FF9800;
+			color: white;
+			border-color: #FF9800;
+		}
+		.nav-btn.home:hover {
+			background: #F57C00;
+		}
 		#status {
 			color: #666;
 			font-size: 0.9em;
@@ -471,6 +502,10 @@
 	<div class="header">
 		<h1 id="page-title">YouBike Station List</h1>
 		<div class="header-controls">
+			<a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+			<a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="UBike">UBike</a>
+			<a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
+			<a href="list.html" class="nav-btn active" data-en="List" data-zh="列表">List</a>
 			<select id="city-select" onchange="changeCity()">
 				<option value="all">All Cities</option>
 				<option value="taipei" selected>Taipei</option>

@@ -90,6 +90,28 @@ let markers = {};
 let selectedStation = null;
 let currentCity = 'all';
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let userLocation = null; // Store user's current location for distance calculation
+
+// Haversine formula to calculate distance between two lat/lng points
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Earth radius in meters
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function formatDistance(meters) {
+    if (meters < 1000) {
+        return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+}
 
 function isChineseLocale() {
     return isZh;
@@ -107,6 +129,12 @@ function updateUI() {
     if (searchInput) {
         searchInput.placeholder = isZh ? '搜尋站點...' : 'Search stations...';
     }
+
+    // Update navigation buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const text = isZh ? btn.dataset.zh : btn.dataset.en;
+        if (text) btn.textContent = text;
+    });
 
     // Update city selector options
     const cityOptions = {
@@ -245,11 +273,32 @@ function getPopupContent(station) {
     const slots = station.available_return_bikes;
     const isZh = isChineseLocale();
 
+    // Calculate distance if user location is available
+    let distanceHtml = '';
+    if (userLocation) {
+        const distance = getDistanceInMeters(
+            userLocation.lat, userLocation.lng,
+            station.latitude, station.longitude
+        );
+        distanceHtml = `<br><strong>${isZh ? '距離' : 'Distance'}:</strong> ${formatDistance(distance)}`;
+    }
+
+    // Navigation links
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
+    const appleMapsUrl = `http://maps.apple.com/?daddr=${station.latitude},${station.longitude}`;
+    const navBtnStyle = 'display:inline-block;padding:4px 8px;margin:2px;background:#4CAF50;color:white;text-decoration:none;border-radius:4px;font-size:12px;';
+
+    const navHtml = `<div style="margin-top:8px;">
+        <a href="${googleMapsUrl}" target="_blank" style="${navBtnStyle}">${isZh ? 'Google導航' : 'Google Maps'}</a>
+        <a href="${appleMapsUrl}" target="_blank" style="${navBtnStyle}">${isZh ? 'Apple導航' : 'Apple Maps'}</a>
+    </div>`;
+
     return `<div>
         <strong>${getStationName(station)}</strong><br>
         <small>${getCityName(station.city)}</small><br>
         ${getStationAddress(station)}<br>
-        ${isZh ? '可借' : 'Bikes'}: ${bikes} | ${isZh ? '可停' : 'Slots'}: ${slots}
+        ${isZh ? '可借' : 'Bikes'}: ${bikes} | ${isZh ? '可停' : 'Slots'}: ${slots}${distanceHtml}
+        ${navHtml}
     </div>`;
 }
 
@@ -404,8 +453,23 @@ async function initStoreLocator() {
     // Update UI with language
     updateUI();
 
+    // Try to get user location for distance calculations
+    if ('geolocation' in navigator) {
+        try {
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+            console.log(`[UBike] User location: ${userLocation.lat}, ${userLocation.lng}`);
+        } catch (error) {
+            console.warn('[UBike] Could not get user location:', error.message);
+        }
+    }
+
     // Create map
-    const center = CITIES[currentCity]?.center || CONFIG.DEFAULT_CENTER;
+    const center = userLocation
+        ? [userLocation.lat, userLocation.lng]
+        : (CITIES[currentCity]?.center || CONFIG.DEFAULT_CENTER);
     map = L.map('map-canvas').setView(center, CONFIG.DEFAULT_ZOOM);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

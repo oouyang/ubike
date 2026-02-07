@@ -37,6 +37,35 @@
       #lang-btn:hover {
         background: rgba(255,255,255,0.3);
       }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 13px;
+      }
+      .nav-btn:hover {
+        background: rgba(255,255,255,0.3);
+      }
+      .nav-btn.active {
+        background: rgba(255,255,255,0.4);
+        font-weight: bold;
+      }
+      .nav-btn.home {
+        background: #FF9800;
+        border-color: #FF9800;
+      }
+      .nav-btn.home:hover {
+        background: #F57C00;
+      }
+      .header-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
       .container {
         display: flex;
         height: calc(100vh - 52px);
@@ -132,7 +161,13 @@
   <body>
     <header>
       <h1>YouBike</h1>
-      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+      <div class="header-controls">
+        <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+        <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
+        <a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
+        <a href="list.html" class="nav-btn" data-en="List" data-zh="列表">List</a>
+        <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+      </div>
     </header>
     <div class="container">
       <div id="panel">
