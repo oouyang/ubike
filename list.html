@@ -3,7 +3,8 @@
 
 <head>
 	<meta charset='UTF-8'>
-	<title>ubike site list</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>YouBike Station List</title>
 	<script src="sorttable.js"></script>
 	<link rel="stylesheet" href="css/sortable-theme-finder.css">
 	<script>
@@ -11,15 +12,58 @@
 
 		const API_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
 
-		function isChineseLocale() {
+		// State
+		let stations = [];
+		let currentLang = null;
+
+		const LABELS = {
+			en: {
+				title: 'YouBike Station List',
+				loading: 'Loading stations...',
+				error: 'Error loading stations',
+				showing: 'Showing',
+				stations: 'stations',
+				headers: ['#', 'Station', 'Location', 'Lat', 'Lng', 'Bikes', 'Slots', 'Dist(m)'],
+				switchLang: '中文'
+			},
+			zh: {
+				title: '微笑單車站點列表',
+				loading: '載入中...',
+				error: '載入失敗',
+				showing: '顯示',
+				stations: '個站點',
+				headers: ['#', '站名', '位置', '緯度', '經度', '可借數', '可停數', '距離(m)'],
+				switchLang: 'EN'
+			}
+		};
+
+		function detectLanguage() {
+			const saved = localStorage.getItem('ubike-lang');
+			if (saved) return saved;
 			const userLang = navigator.language || navigator.userLanguage;
-			return userLang === 'zh-TW' || userLang === 'zh-CN';
+			return (userLang === 'zh-TW' || userLang === 'zh-CN') ? 'zh' : 'en';
+		}
+
+		function setLanguage(lang) {
+			currentLang = lang;
+			localStorage.setItem('ubike-lang', lang);
+			document.title = LABELS[lang].title;
+			document.getElementById('lang-btn').textContent = LABELS[lang].switchLang;
+			console.log(`[UBike] Language set to: ${lang}`);
+		}
+
+		function toggleLanguage() {
+			const newLang = currentLang === 'en' ? 'zh' : 'en';
+			setLanguage(newLang);
+			if (stations.length > 0) {
+				renderTable(stations);
+			}
 		}
 
 		const deg2rad = (deg) => deg * (Math.PI / 180);
 
 		function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-			const R = 6371000; // Earth radius in meters
+			const R = 6371000;
 			const dLat = deg2rad(lat2 - lat1);
 			const dLon = deg2rad(lon2 - lon1);
 			const a = Math.sin(dLat / 2) ** 2 +
@@ -40,16 +84,21 @@
 			return data;
 		}
 
-		function buildTableRow(station, index, isZh) {
-			const name = isZh ? station.sna : station.snaen;
-			const location = isZh
+		function getStationName(station) {
+			return currentLang === 'zh' ? station.sna : station.snaen;
+		}
+
+		function getStationLocation(station) {
+			return currentLang === 'zh'
 				? `${station.sarea} ${station.ar}`
 				: `${station.sareaen} ${station.aren}`;
+		}
 
+		function buildTableRow(station, index) {
 			return `<tr>
 				<td>${index + 1}</td>
-				<td>${name}</td>
-				<td>${location}</td>
+				<td>${getStationName(station)}</td>
+				<td>${getStationLocation(station)}</td>
 				<td>${station.latitude}</td>
 				<td>${station.longitude}</td>
 				<td>${station.available_rent_bikes}</td>
@@ -57,12 +106,11 @@
 			</tr>`;
 		}
 
-		function renderTable(stations, isZh) {
-			console.log(`[UBike] Rendering table (locale: ${isZh ? 'zh' : 'en'})`);
+		function renderTable(stationList) {
+			const L = LABELS[currentLang];
+			console.log(`[UBike] Rendering table (${currentLang})`);
 
-			const headers = isZh
-				? ['#', '站名', '位置', '緯度', '經度', '可借數', '可停數']
-				: ['#', 'Station', 'Location', 'Lat', 'Lng', 'Bike #', 'Park #'];
+			const headers = L.headers.slice(0, 7); // Exclude distance initially
 
 			let html = `<table class="sortable sortable-theme-finder" id="tbl" border="1">
 				<thead>
@@ -70,20 +118,43 @@
 				</thead>
 				<tbody>`;
 
-			for (let i = 0; i < stations.length; i++) {
-				html += buildTableRow(stations[i], i, isZh);
+			for (let i = 0; i < stationList.length; i++) {
+				html += buildTableRow(stationList[i], i);
 			}
 
 			html += '</tbody></table>';
-			return html;
+
+			document.getElementById('table-container').innerHTML = html;
+			document.getElementById('status').textContent = `${L.showing} ${stationList.length} ${L.stations}`;
+
+			// Try to add distance column
+			tryAddDistanceColumn();
 		}
 
-		function addDistanceColumn(table, userLat, userLng, isZh) {
-			console.log(`[UBike] Calculating distances (user: ${userLat.toFixed(5)}, ${userLng.toFixed(5)})`);
+		function tryAddDistanceColumn() {
+			if (!('geolocation' in navigator)) return;
 
+			navigator.geolocation.getCurrentPosition(
+				(pos) => addDistanceColumn(pos.coords.latitude, pos.coords.longitude),
+				(error) => console.warn('[UBike] Could not get location:', error.message),
+				{ timeout: 10000 }
+			);
+		}
+
+		function addDistanceColumn(userLat, userLng) {
+			const table = document.getElementById('tbl');
+			if (!table) return;
+
+			console.log(`[UBike] Adding distance column (user: ${userLat.toFixed(5)}, ${userLng.toFixed(5)})`);
+
+			const L = LABELS[currentLang];
 			const headerRow = table.querySelector('thead tr');
+
+			// Check if distance column already exists
+			if (headerRow.cells.length > 7) return;
+
 			const distanceHeader = document.createElement('th');
-			distanceHeader.textContent = isZh ? '距離(m)' : 'Dist(m)';
+			distanceHeader.textContent = L.headers[7];
 			headerRow.appendChild(distanceHeader);
 
 			const rows = table.querySelectorAll('tbody tr');
@@ -102,40 +173,26 @@
 			// Re-initialize sortable and sort by distance
 			if (typeof sorttable !== 'undefined') {
 				sorttable.makeSortable(table);
-				distanceHeader.click(); // Sort by distance ascending
+				distanceHeader.click();
 				console.log('[UBike] Sorted by distance');
 			}
 		}
 
 		async function init() {
-			const container = document.getElementById('ubike');
-			const isZh = isChineseLocale();
+			// Initialize language
+			setLanguage(detectLanguage());
+
+			const container = document.getElementById('table-container');
+			const L = LABELS[currentLang];
 
 			try {
-				container.innerHTML = isZh ? '<p>載入中...</p>' : '<p>Loading stations...</p>';
-				const stations = await fetchStations();
-				container.innerHTML = renderTable(stations, isZh);
-
-				const table = document.getElementById('tbl');
-
-				// Add distance column if geolocation available
-				if ('geolocation' in navigator) {
-					navigator.geolocation.getCurrentPosition(
-						(pos) => {
-							addDistanceColumn(table, pos.coords.latitude, pos.coords.longitude, isZh);
-						},
-						(error) => {
-							console.warn('[UBike] Could not get location:', error.message);
-						},
-						{ timeout: 10000 }
-					);
-				}
-
+				container.innerHTML = `<p>${L.loading}</p>`;
+				stations = await fetchStations();
+				renderTable(stations);
 				console.log('[UBike] Table rendered successfully');
 			} catch (error) {
 				console.error('[UBike] Failed to load stations:', error.message);
-				const msg = isZh ? '載入失敗' : 'Error loading stations';
-				container.innerHTML = `<p style="color: red;">${msg}: ${error.message}</p>`;
+				container.innerHTML = `<p style="color: red;">${L.error}: ${error.message}</p>`;
 			}
 		}
 
@@ -144,12 +201,46 @@
 	<style>
 		body {
 			font-family: sans-serif;
+			margin: 0;
+			padding: 10px;
+		}
+		.header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+		.header h1 {
+			margin: 0;
+			font-size: 1.5em;
+		}
+		#lang-btn {
+			padding: 8px 16px;
+			font-size: 14px;
+			cursor: pointer;
+			background: #4CAF50;
+			color: white;
+			border: none;
+			border-radius: 4px;
+		}
+		#lang-btn:hover {
+			background: #45a049;
+		}
+		#status {
+			color: #666;
+			font-size: 0.9em;
+			margin-bottom: 10px;
 		}
 	</style>
 </head>
 
 <body>
-	<div id='ubike'></div>
+	<div class="header">
+		<h1>YouBike Station List</h1>
+		<button id="lang-btn" onclick="toggleLanguage()">中文</button>
+	</div>
+	<div id="status"></div>
+	<div id="table-container"></div>
 </body>
 
 </html>
