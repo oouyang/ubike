@@ -226,6 +226,9 @@ let scheduleTimer = null;
 let currentRouteCity = 'Taipei';
 let currentRoute = '';
 let routeDirection = 'go';
+let routeSearchQuery = '';
+let selectedOriginStop = null;
+let selectedDestStop = null;
 
 // Use shared utilities from common.js: deg2rad, getDistanceInMeters, formatDistance, formatTime, getCurrentMinutes, getCountdown
 
@@ -242,6 +245,10 @@ function toggleLang() {
 function updateUI() {
     document.getElementById('page-title').textContent = isZh ? '台灣公車' : 'Taiwan Bus';
     document.getElementById('search-input').placeholder = isZh ? '搜尋站牌或路線...' : 'Search stops or routes...';
+    const routeSearchInput = document.getElementById('route-search-input');
+    if (routeSearchInput) {
+        routeSearchInput.placeholder = isZh ? '搜尋路線...' : 'Search route...';
+    }
 
     // Update navigation buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -297,10 +304,22 @@ function updateRouteSelector() {
     const select = document.getElementById('route-select');
     if (!select) return;
 
-    const routes = BUS_ROUTES[currentRouteCity] || [];
+    let routes = BUS_ROUTES[currentRouteCity] || [];
     const currentValue = select.value;
 
-    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}</option>`;
+    // Filter by search query
+    if (routeSearchQuery) {
+        const q = routeSearchQuery.toLowerCase();
+        routes = routes.filter(route =>
+            route.id.toLowerCase().includes(q) ||
+            route.name.en.toLowerCase().includes(q) ||
+            route.name.zh.includes(q) ||
+            route.terminals.en.toLowerCase().includes(q) ||
+            route.terminals.zh.includes(q)
+        );
+    }
+
+    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}${routes.length > 0 ? ` (${routes.length})` : ''}</option>`;
     routes.forEach(route => {
         const name = isZh ? route.name.zh : route.name.en;
         const terminals = isZh ? route.terminals.zh : route.terminals.en;
@@ -316,6 +335,12 @@ function updateRouteSelector() {
     updateRouteCitySelector();
 }
 
+function onRouteSearch() {
+    const input = document.getElementById('route-search-input');
+    routeSearchQuery = input ? input.value.trim() : '';
+    updateRouteSelector();
+}
+
 function onRouteCityChange() {
     const select = document.getElementById('route-city-select');
     currentRouteCity = select.value;
@@ -327,6 +352,85 @@ function onRouteCityChange() {
 function onRouteChange() {
     const select = document.getElementById('route-select');
     currentRoute = select.value;
+    selectedOriginStop = null;
+    selectedDestStop = null;
+    updateStopSelectors();
+    renderRouteSchedule();
+}
+
+function updateStopSelectors() {
+    const container = document.getElementById('stop-selectors');
+    const originSelect = document.getElementById('origin-stop-select');
+    const destSelect = document.getElementById('dest-stop-select');
+
+    if (!container || !originSelect || !destSelect) return;
+
+    if (!currentRoute) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+
+    const stops = getRouteStops(currentRoute, routeDirection);
+
+    // Populate origin selector
+    originSelect.innerHTML = `<option value="">${isZh ? '-- 起站 --' : '-- Origin --'}</option>`;
+    stops.forEach((stop, idx) => {
+        const name = isZh ? stop.name.zh : stop.name.en;
+        originSelect.innerHTML += `<option value="${idx}">${idx + 1}. ${name}</option>`;
+    });
+
+    // Populate destination selector
+    destSelect.innerHTML = `<option value="">${isZh ? '-- 迄站 --' : '-- Destination --'}</option>`;
+    stops.forEach((stop, idx) => {
+        const name = isZh ? stop.name.zh : stop.name.en;
+        destSelect.innerHTML += `<option value="${idx}">${idx + 1}. ${name}</option>`;
+    });
+
+    // Restore selections
+    if (selectedOriginStop !== null) {
+        originSelect.value = selectedOriginStop;
+    }
+    if (selectedDestStop !== null) {
+        destSelect.value = selectedDestStop;
+    }
+
+    // Update destination options based on origin
+    updateDestStopOptions();
+}
+
+function updateDestStopOptions() {
+    const destSelect = document.getElementById('dest-stop-select');
+    if (!destSelect) return;
+
+    const originIdx = selectedOriginStop !== null ? parseInt(selectedOriginStop) : -1;
+
+    // Disable stops before origin (can only travel forward on a route)
+    Array.from(destSelect.options).forEach((opt, idx) => {
+        if (idx === 0) return; // Skip placeholder
+        const stopIdx = parseInt(opt.value);
+        opt.disabled = stopIdx <= originIdx;
+    });
+}
+
+function onStopSelectorChange() {
+    const originSelect = document.getElementById('origin-stop-select');
+    const destSelect = document.getElementById('dest-stop-select');
+
+    selectedOriginStop = originSelect.value !== '' ? originSelect.value : null;
+    selectedDestStop = destSelect.value !== '' ? destSelect.value : null;
+
+    updateDestStopOptions();
+
+    // Clear invalid destination selection
+    if (selectedDestStop !== null && selectedOriginStop !== null) {
+        if (parseInt(selectedDestStop) <= parseInt(selectedOriginStop)) {
+            destSelect.value = '';
+            selectedDestStop = null;
+        }
+    }
+
     renderRouteSchedule();
 }
 
@@ -335,6 +439,10 @@ function setRouteDirection(dir) {
     document.querySelectorAll('.direction-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.dir === dir);
     });
+    // Reset stop selections when direction changes
+    selectedOriginStop = null;
+    selectedDestStop = null;
+    updateStopSelectors();
     renderRouteSchedule();
 }
 
@@ -431,17 +539,39 @@ function renderRouteSchedule() {
     const routeData = (BUS_ROUTES[currentRouteCity] || []).find(r => r.id === currentRoute);
     const routeTerminals = routeData ? (isZh ? routeData.terminals.zh : routeData.terminals.en) : '';
 
+    // Calculate trip-specific info if origin and destination are selected
+    let tripDuration = totalJourneyTime;
+    let tripStops = stops.length;
+    let tripFare = fareInfo.totalFare;
+
+    if (selectedOriginStop !== null && selectedDestStop !== null) {
+        const originIdx = parseInt(selectedOriginStop);
+        const destIdx = parseInt(selectedDestStop);
+        const originTime = stops[originIdx].time.split(':').map(Number);
+        const destTime = stops[destIdx].time.split(':').map(Number);
+        tripDuration = (destTime[0] * 60 + destTime[1]) - (originTime[0] * 60 + originTime[1]);
+        tripStops = destIdx - originIdx + 1;
+        // Calculate fare based on sections traveled (approximate)
+        const totalStops = stops.length;
+        const stopsPerSection = totalStops / fareInfo.sections;
+        const sectionsTraveled = Math.max(1, Math.ceil(tripStops / stopsPerSection));
+        tripFare = fareInfo.baseFare * sectionsTraveled;
+    }
+
+    const hasTripSelection = selectedOriginStop !== null && selectedDestStop !== null;
+
     let summaryHtml = `<li class="route-summary-card">
+        ${hasTripSelection ? `<div style="text-align:center;font-size:0.85em;color:#1565C0;margin-bottom:8px;font-weight:500;">📍 ${isZh ? '您的行程' : 'Your Trip'}</div>` : ''}
         <div class="summary-row">
             <div class="summary-item">
                 <span class="summary-label">${isZh ? '票價' : 'Fare'}</span>
-                <span class="summary-value fare-value">NT$${fareInfo.totalFare}</span>
-                ${fareInfo.sections > 1 ? `<span class="summary-note">${fareInfo.sections} ${isZh ? '段票' : 'sections'}</span>` : ''}
+                <span class="summary-value fare-value">NT$${tripFare}</span>
+                ${!hasTripSelection && fareInfo.sections > 1 ? `<span class="summary-note">${fareInfo.sections} ${isZh ? '段票' : 'sections'}</span>` : ''}
             </div>
             <div class="summary-item">
-                <span class="summary-label">${isZh ? '全程' : 'Duration'}</span>
-                <span class="summary-value">${totalJourneyTime} ${isZh ? '分鐘' : 'min'}</span>
-                <span class="summary-note">${stops.length} ${isZh ? '站' : 'stops'}</span>
+                <span class="summary-label">${isZh ? (hasTripSelection ? '行程' : '全程') : (hasTripSelection ? 'Trip' : 'Total')}</span>
+                <span class="summary-value">${tripDuration} ${isZh ? '分鐘' : 'min'}</span>
+                <span class="summary-note">${tripStops} ${isZh ? '站' : 'stops'}</span>
             </div>
             <div class="summary-item">
                 <span class="summary-label">${isZh ? '班距' : 'Interval'}</span>
@@ -481,25 +611,43 @@ function renderRouteSchedule() {
         </li>`;
     }
 
+    const originIdx = selectedOriginStop !== null ? parseInt(selectedOriginStop) : -1;
+    const destIdx = selectedDestStop !== null ? parseInt(selectedDestStop) : -1;
+
     const stopsHtml = stops.map((stop, index) => {
         const isFirst = index === 0;
         const isLast = index === stops.length - 1;
         const stopName = isZh ? stop.name.zh : stop.name.en;
 
-        // Calculate elapsed time from first stop
-        const firstTime = stops[0].time.split(':').map(Number);
+        // Check if this stop is selected origin/destination
+        const isOrigin = index === originIdx;
+        const isDestination = index === destIdx;
+        const isInTrip = originIdx >= 0 && destIdx >= 0 && index >= originIdx && index <= destIdx;
+
+        // Calculate elapsed time from origin (or first stop if no selection)
+        const baseIdx = originIdx >= 0 ? originIdx : 0;
+        const baseTime = stops[baseIdx].time.split(':').map(Number);
         const stopTime = stop.time.split(':').map(Number);
-        const elapsedMinutes = (stopTime[0] * 60 + stopTime[1]) - (firstTime[0] * 60 + firstTime[1]);
+        const elapsedMinutes = (stopTime[0] * 60 + stopTime[1]) - (baseTime[0] * 60 + baseTime[1]);
+
+        // Build class list
+        let classList = ['route-stop-item'];
+        if (isFirst) classList.push('first-stop');
+        if (isLast) classList.push('last-stop');
+        if (isOrigin) classList.push('selected-origin');
+        if (isDestination) classList.push('selected-dest');
+        if (isInTrip && !isOrigin && !isDestination) classList.push('in-trip');
 
         return `
-            <li class="route-stop-item ${isFirst ? 'first-stop' : ''} ${isLast ? 'last-stop' : ''}">
-                <div class="stop-sequence ${isFirst || isLast ? 'terminal' : ''}">${index + 1}</div>
+            <li class="${classList.join(' ')}">
+                <div class="stop-sequence ${isFirst || isLast ? 'terminal' : ''} ${isOrigin ? 'origin-marker' : ''} ${isDestination ? 'dest-marker' : ''}">${index + 1}</div>
                 <div class="route-stop-info">
-                    <div class="route-stop-name">${stopName}</div>
+                    <div class="route-stop-name">${stopName}${isOrigin ? ` <span style="color:#2E7D32;font-size:0.8em;">(${isZh ? '上車' : 'Board'})</span>` : ''}${isDestination ? ` <span style="color:#c62828;font-size:0.8em;">(${isZh ? '下車' : 'Alight'})</span>` : ''}</div>
                     <div class="route-stop-details">
                         <span class="stop-time-value">${stop.time}</span>
-                        ${!isFirst ? `<span class="elapsed-time">+${elapsedMinutes} ${isZh ? '分' : 'min'}</span>` : `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>`}
-                        ${isLast ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
+                        ${index > baseIdx ? `<span class="elapsed-time">+${elapsedMinutes} ${isZh ? '分' : 'min'}</span>` : ''}
+                        ${isFirst && !isOrigin ? `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>` : ''}
+                        ${isLast && !isDestination ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
                     </div>
                 </div>
             </li>
@@ -1007,6 +1155,8 @@ window.changeCity = changeCity;
 window.onRouteCityChange = onRouteCityChange;
 window.onRouteChange = onRouteChange;
 window.setRouteDirection = setRouteDirection;
+window.onRouteSearch = onRouteSearch;
+window.onStopSelectorChange = onStopSelectorChange;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', init);

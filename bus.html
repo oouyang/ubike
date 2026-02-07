@@ -234,6 +234,53 @@
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        /* Stop selectors */
+        .stop-selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: #E3F2FD;
+            border-radius: 4px;
+        }
+        .stop-selector-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stop-selector-row label {
+            min-width: 40px;
+            font-weight: 500;
+            color: #1565C0;
+            font-size: 13px;
+        }
+        .stop-selector-row select {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .trip-summary {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.85em;
+        }
+        .trip-summary-item {
+            text-align: center;
+        }
+        .trip-summary-label {
+            display: block;
+            color: #666;
+            font-size: 0.85em;
+        }
+        .trip-summary-value {
+            display: block;
+            font-weight: bold;
+            color: #1565C0;
+        }
         /* Direction tabs */
         .direction-tabs {
             display: flex;
@@ -410,6 +457,20 @@
         }
         .first-stop { border-left: 3px solid #2E7D32; }
         .last-stop { border-left: 3px solid #c62828; }
+        .selected-origin {
+            background: #E8F5E9 !important;
+            border-left: 4px solid #2E7D32 !important;
+        }
+        .selected-dest {
+            background: #FFEBEE !important;
+            border-left: 4px solid #c62828 !important;
+        }
+        .in-trip {
+            background: #FFF8E1 !important;
+            border-left: 3px solid #FFC107 !important;
+        }
+        .origin-marker { background: #2E7D32 !important; }
+        .dest-marker { background: #c62828 !important; }
         .route-stop-details {
             display: flex;
             gap: 10px;
@@ -469,9 +530,24 @@
                         <option value="Tainan">台南市 Tainan</option>
                         <option value="Kaohsiung">高雄市 Kaohsiung</option>
                     </select>
+                    <input type="text" id="route-search-input" placeholder="Search route..." oninput="onRouteSearch()">
                     <select id="route-select" onchange="onRouteChange()">
                         <option value="">-- Select Route --</option>
                     </select>
+                    <div class="stop-selectors" id="stop-selectors" style="display:none;">
+                        <div class="stop-selector-row">
+                            <label data-en="From" data-zh="起站">From</label>
+                            <select id="origin-stop-select" onchange="onStopSelectorChange()">
+                                <option value="">-- Select Stop --</option>
+                            </select>
+                        </div>
+                        <div class="stop-selector-row">
+                            <label data-en="To" data-zh="迄站">To</label>
+                            <select id="dest-stop-select" onchange="onStopSelectorChange()">
+                                <option value="">-- Select Stop --</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="direction-tabs">
                         <div class="direction-tab active" data-dir="go" onclick="setRouteDirection('go')">
                             <span data-en="→ Outbound" data-zh="→ 去程">→ Outbound</span>
