@@ -391,6 +391,7 @@
     </div>
     <div id="map-canvas"></div>
   </div>
+  <script src="js/common.js"></script>
   <script>
 'use strict';
 
@@ -491,56 +492,14 @@ let markers = {};
 let routeLine = null;
 let selectedStation = null;
 let currentDirection = 'south';
-let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let isZh = detectLanguage() === 'zh';
 let userLocation = null;
 let timeUpdateInterval = null;
 
-// Utilities
-const deg2rad = (deg) => deg * (Math.PI / 180);
-
-function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function formatDistance(meters) {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
-function formatTime(minutes) {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = minutes % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-}
-
-function getCurrentMinutes() {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
-}
-
-function getCountdown(departureMinutes) {
-  const now = getCurrentMinutes();
-  let diff = departureMinutes - now;
-  if (diff < 0) diff += 24 * 60; // next day
-  if (diff < 1) return isZh ? '即將發車' : 'Departing';
-  if (diff < 60) return `${diff} ${isZh ? '分鐘' : 'min'}`;
-  const h = Math.floor(diff / 60);
-  const m = diff % 60;
-  return `${h}${isZh ? '時' : 'h'} ${m}${isZh ? '分' : 'm'}`;
-}
-
-function isChineseLocale() { return isZh; }
-
+// Use shared utilities from common.js
 function toggleLang() {
   isZh = !isZh;
-  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  saveLanguage(isZh ? 'zh' : 'en');
   updateUI();
 }
 
@@ -657,7 +616,7 @@ function getTrainsForStation(stationId, direction) {
       isDeparted: depTime < now && diff < -5,
       isArriving: isArriving,
       isNext: isNext,
-      countdown: getCountdown(depTime)
+      countdown: getCountdown(depTime, isZh)
     };
   }).filter(t => t !== null);
 

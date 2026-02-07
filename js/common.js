@@ -162,6 +162,104 @@ function getMarkerType(station) {
 }
 
 // ============================================================
+// SCHEDULE/TIME UTILITIES
+// ============================================================
+
+/**
+ * Format minutes since midnight to HH:MM string
+ * @param {number} minutes - Minutes since midnight
+ * @returns {string} Formatted time string (e.g., "08:30")
+ */
+function formatTime(minutes) {
+    const h = Math.floor(minutes / 60) % 24;
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Get current time as minutes since midnight
+ * @returns {number} Current minutes since midnight
+ */
+function getCurrentMinutes() {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+}
+
+/**
+ * Format countdown display for upcoming departures
+ * @param {number} departureMinutes - Departure time in minutes since midnight
+ * @param {boolean} [isZh=false] - Use Chinese labels
+ * @returns {string} Formatted countdown string
+ */
+function getCountdown(departureMinutes, isZh = false) {
+    const now = getCurrentMinutes();
+    let diff = departureMinutes - now;
+    if (diff < 0) diff += 24 * 60; // Handle next day
+
+    if (diff < 1) return isZh ? '即將發車' : 'Departing';
+    if (diff < 60) return `${diff} ${isZh ? '分鐘' : 'min'}`;
+
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return `${h}${isZh ? '時' : 'h'} ${m}${isZh ? '分' : 'm'}`;
+}
+
+/**
+ * Format duration in minutes to readable string
+ * @param {number} minutes - Duration in minutes
+ * @param {boolean} [isZh=false] - Use Chinese labels
+ * @returns {string} Formatted duration string
+ */
+function formatDuration(minutes, isZh = false) {
+    if (minutes < 60) {
+        return `${minutes}${isZh ? '分鐘' : ' min'}`;
+    }
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (m === 0) {
+        return `${h}${isZh ? '小時' : 'h'}`;
+    }
+    return `${h}${isZh ? '時' : 'h'}${m}${isZh ? '分' : 'm'}`;
+}
+
+/**
+ * Get localized text from an object with en/zh properties
+ * @param {Object} obj - Object containing {en: string, zh: string}
+ * @param {boolean} [isZh=false] - Return Chinese text
+ * @returns {string} Localized text
+ */
+function getLocalizedText(obj, isZh = false) {
+    if (!obj) return '';
+    return isZh ? (obj.zh || obj.en || '') : (obj.en || obj.zh || '');
+}
+
+/**
+ * Create a Leaflet divIcon marker
+ * @param {Object} options - Marker options
+ * @param {string} [options.content=''] - HTML content or text inside marker
+ * @param {string} [options.bgColor='#4CAF50'] - Background color
+ * @param {number} [options.size=28] - Marker size in pixels
+ * @param {string} [options.className=''] - Additional CSS class
+ * @returns {L.DivIcon} Leaflet divIcon instance
+ */
+function createMarkerIcon(options = {}) {
+    const {
+        content = '',
+        bgColor = '#4CAF50',
+        size = 28,
+        className = ''
+    } = options;
+
+    return L.divIcon({
+        className: '',
+        html: `<div class="marker-icon ${className}" style="width:${size}px;height:${size}px;background-color:${bgColor};border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:${Math.floor(size * 0.4)}px;">${content}</div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+        popupAnchor: [0, -size / 2]
+    });
+}
+
+// ============================================================
 // NAVIGATION UTILITIES
 // ============================================================
 
@@ -276,6 +374,12 @@ window.getDistanceInMeters = getDistanceInMeters;
 window.formatDistance = formatDistance;
 window.normalizeStation = normalizeStation;
 window.getMarkerType = getMarkerType;
+window.formatTime = formatTime;
+window.getCurrentMinutes = getCurrentMinutes;
+window.getCountdown = getCountdown;
+window.formatDuration = formatDuration;
+window.getLocalizedText = getLocalizedText;
+window.createMarkerIcon = createMarkerIcon;
 window.getGoogleMapsUrl = getGoogleMapsUrl;
 window.getAppleMapsUrl = getAppleMapsUrl;
 window.getNavigationHtml = getNavigationHtml;
@@ -297,6 +401,12 @@ if (typeof module !== 'undefined' && module.exports) {
         formatDistance,
         normalizeStation,
         getMarkerType,
+        formatTime,
+        getCurrentMinutes,
+        getCountdown,
+        formatDuration,
+        getLocalizedText,
+        createMarkerIcon,
         getGoogleMapsUrl,
         getAppleMapsUrl,
         getNavigationHtml,

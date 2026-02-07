@@ -218,7 +218,7 @@ let selectedStop = null;
 let searchQuery = '';
 let accessToken = null;
 let tokenExpiry = 0;
-let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let isZh = (typeof detectLanguage === 'function') ? detectLanguage() === 'zh' : (navigator.language || navigator.userLanguage).startsWith('zh');
 let refreshTimer = null;
 let scheduleTimer = null;
 
@@ -227,31 +227,15 @@ let currentRouteCity = 'Taipei';
 let currentRoute = '';
 let routeDirection = 'go';
 
-// Use common.js utilities if available, otherwise define locally
-const deg2rad = (typeof window.deg2rad === 'function') ? window.deg2rad : (deg) => deg * (Math.PI / 180);
-
-function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-    if (typeof window.getDistanceInMeters === 'function') {
-        return window.getDistanceInMeters(lat1, lon1, lat2, lon2);
-    }
-    const R = 6371000;
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-function formatDistance(meters) {
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${(meters / 1000).toFixed(1)} km`;
-}
+// Use shared utilities from common.js: deg2rad, getDistanceInMeters, formatDistance, formatTime, getCurrentMinutes, getCountdown
 
 function toggleLang() {
     isZh = !isZh;
-    localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+    if (typeof saveLanguage === 'function') {
+        saveLanguage(isZh ? 'zh' : 'en');
+    } else {
+        localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+    }
     updateUI();
 }
 
