@@ -2,9 +2,14 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#0072c6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Taiwan MRT Stations</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; }
@@ -25,6 +30,25 @@
       margin: 0;
       font-size: 1.5em;
     }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 12px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+    .nav-btn.home:hover { background: #F57C00; }
     #lang-btn {
       padding: 6px 12px;
       background: rgba(255,255,255,0.2);
@@ -36,6 +60,14 @@
     }
     #lang-btn:hover {
       background: rgba(255,255,255,0.3);
+    }
+    .station-distance {
+      font-size: 0.75em;
+      color: #666;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
     }
     .container {
       display: flex;
@@ -165,7 +197,15 @@
 <body>
   <header>
     <h1 id="page-title">Taiwan MRT</h1>
-    <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="UBike">UBike</a>
+      <a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
+      <a href="mrt.html" class="nav-btn active" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+    </div>
   </header>
   <div class="container">
     <div id="panel">
@@ -477,6 +517,26 @@ let currentSystem = 'TRTC';
 let currentLine = 'all';
 let selectedStation = null;
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let userLocation = null;
+
+// Distance calculation utilities
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
 
 function isChineseLocale() {
   return isZh;
@@ -497,6 +557,12 @@ function updateUI() {
   if (searchInput) {
     searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
   }
+
+  // Update navigation buttons
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const text = isZh ? btn.dataset.zh : btn.dataset.en;
+    if (text) btn.textContent = text;
+  });
 
   // Update system select options
   const systemSelect = document.getElementById('system-select');
@@ -564,24 +630,44 @@ function getPopupContent(station) {
   const systemName = getSystemName(station.system);
   const lineName = getLineName(station.system, station.line);
 
+  let distanceHtml = '';
+  if (userLocation && station.lat && station.lng) {
+    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(distance)}`;
+  }
+
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
+  const appleMapsUrl = `http://maps.apple.com/?daddr=${station.lat},${station.lng}`;
+  const btnStyle = 'display:inline-block;padding:4px 8px;margin:2px;background:#0072c6;color:white;text-decoration:none;border-radius:4px;font-size:11px;';
+
   return `<div>
     <strong>${getStationName(station)}</strong><br>
     <small>${station.id}</small><br>
     ${isZh ? '系統' : 'System'}: ${systemName}<br>
     ${isZh ? '路線' : 'Line'}: ${lineName}<br>
-    ${station.address || ''}
+    ${station.address || ''}${distanceHtml}
+    <div style="margin-top:8px;">
+      <a href="${googleMapsUrl}" target="_blank" style="${btnStyle}">${isZh ? 'Google導航' : 'Google Maps'}</a>
+      <a href="${appleMapsUrl}" target="_blank" style="${btnStyle}">${isZh ? 'Apple導航' : 'Apple Maps'}</a>
+    </div>
   </div>`;
 }
 
 function createStationListItem(station) {
   const lineInfo = getLineInfo(station.system, station.line);
   const lineName = getLineName(station.system, station.line);
+  let distanceHtml = '';
+  if (userLocation && station.lat && station.lng) {
+    const distance = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
+    distanceHtml = `<span class="station-distance">${formatDistance(distance)}</span>`;
+  }
 
   return `
     <li class="station-item" data-id="${station.id}" data-system="${station.system}">
       <div class="station-name">
         <span class="station-id" style="background-color:${lineInfo.color}">${station.id}</span>
         ${getStationName(station)}
+        ${distanceHtml}
       </div>
       <div class="station-address">
         <span class="line-badge line-${station.line}">${lineName}</span>
@@ -729,11 +815,11 @@ function handleSearch(e) {
   console.log(`[MRT] Search: "${e.target.value}" - ${filtered.length} results`);
 }
 
-function initialize() {
+async function initialize() {
   console.log('[MRT] Initializing MRT map...');
 
   // Restore language preference
-  const savedLang = localStorage.getItem('mrt-lang');
+  const savedLang = localStorage.getItem('ubike-lang');
   if (savedLang) {
     isZh = savedLang === 'zh';
   }
@@ -743,6 +829,19 @@ function initialize() {
   if (savedSystem && (MRT_SYSTEMS[savedSystem] || savedSystem === 'all')) {
     currentSystem = savedSystem;
     document.getElementById('system-select').value = currentSystem;
+  }
+
+  // Get user location
+  if ('geolocation' in navigator) {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+      console.log('[MRT] User location:', userLocation);
+    } catch (error) {
+      console.warn('[MRT] Could not get location:', error.message);
+    }
   }
 
   // Update UI with language

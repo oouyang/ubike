@@ -2,9 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>YouBike Station Locator</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="manifest" href="manifest.webapp">
+    <link rel="apple-touch-icon" href="img/icon-180.png">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
       * { box-sizing: border-box; }
@@ -166,6 +171,7 @@
         <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="UBike">UBike</a>
         <a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
         <a href="list.html" class="nav-btn" data-en="List" data-zh="列表">List</a>
+        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
         <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
       </div>
     </header>

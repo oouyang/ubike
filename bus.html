@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#1976D2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Taiwan Bus - Nearby Stops & Arrivals</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="manifest" href="manifest.webapp">
+    <link rel="apple-touch-icon" href="img/icon-180.png">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background: linear-gradient(135deg, #1976D2, #0D47A1);
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        h1 { margin: 0; font-size: 1.3em; }
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .nav-btn {
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            font-size: 12px;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.3); }
+        .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+        .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+        .nav-btn.home:hover { background: #F57C00; }
+        #lang-btn {
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .container {
+            display: flex;
+            height: calc(100vh - 52px);
+        }
+        #panel {
+            width: 380px;
+            height: 100%;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+            background: #f5f5f5;
+        }
+        #map-canvas {
+            flex: 1;
+            height: 100%;
+        }
+        .controls {
+            padding: 10px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .controls select, .controls input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .controls select:last-child, .controls input:last-child {
+            margin-bottom: 0;
+        }
+        .info-bar {
+            padding: 8px 12px;
+            background: #E3F2FD;
+            border-bottom: 1px solid #BBDEFB;
+            font-size: 0.85em;
+            color: #1565C0;
+        }
+        .stop-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        .stop-item {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            background: white;
+            transition: background 0.2s;
+        }
+        .stop-item:hover { background: #E3F2FD; }
+        .stop-item.selected { background: #BBDEFB; }
+        .stop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .stop-name {
+            font-weight: bold;
+            font-size: 1em;
+            color: #1565C0;
+        }
+        .stop-distance {
+            font-size: 0.8em;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .stop-address {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .arrivals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .arrival-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        .arrival-badge.arriving {
+            background: #FFF3E0;
+            color: #E65100;
+            animation: pulse 1s infinite;
+        }
+        .arrival-badge.waiting {
+            background: #ECEFF1;
+            color: #546E7A;
+        }
+        .route-name {
+            font-weight: bold;
+        }
+        .arrival-time {
+            font-size: 0.9em;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #E3F2FD;
+            border-top-color: #1976D2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .error-msg {
+            text-align: center;
+            padding: 20px;
+            color: #c62828;
+            background: #FFEBEE;
+        }
+        .marker-icon {
+            background: #1976D2;
+            color: white;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .user-marker {
+            background: #4CAF50;
+        }
+        .no-arrivals {
+            font-size: 0.85em;
+            color: #999;
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            #panel { width: 100%; height: 50%; }
+            #map-canvas { height: 50%; }
+            .header-controls { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="page-title">Taiwan Bus</h1>
+        <div class="header-controls">
+            <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+            <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="UBike">UBike</a>
+            <a href="map.html" class="nav-btn" data-en="Map" data-zh="地圖">Map</a>
+            <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+            <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+            <a href="bus.html" class="nav-btn active" data-en="Bus" data-zh="公車">Bus</a>
+            <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
+        </div>
+    </header>
+    <div class="container">
+        <div id="panel">
+            <div class="controls">
+                <select id="city-select" onchange="changeCity()">
+                    <option value="Taipei">台北市 Taipei</option>
+                    <option value="NewTaipei">新北市 New Taipei</option>
+                    <option value="Taoyuan">桃園市 Taoyuan</option>
+                    <option value="Taichung">台中市 Taichung</option>
+                    <option value="Tainan">台南市 Tainan</option>
+                    <option value="Kaohsiung">高雄市 Kaohsiung</option>
+                    <option value="Keelung">基隆市 Keelung</option>
+                    <option value="Hsinchu">新竹市 Hsinchu</option>
+                    <option value="HsinchuCounty">新竹縣 Hsinchu County</option>
+                    <option value="MiaoliCounty">苗栗縣 Miaoli</option>
+                    <option value="ChanghuaCounty">彰化縣 Changhua</option>
+                    <option value="NantouCounty">南投縣 Nantou</option>
+                    <option value="YunlinCounty">雲林縣 Yunlin</option>
+                    <option value="ChiayiCounty">嘉義縣 Chiayi County</option>
+                    <option value="Chiayi">嘉義市 Chiayi City</option>
+                    <option value="PingtungCounty">屏東縣 Pingtung</option>
+                    <option value="YilanCounty">宜蘭縣 Yilan</option>
+                    <option value="HualienCounty">花蓮縣 Hualien</option>
+                    <option value="TaitungCounty">台東縣 Taitung</option>
+                    <option value="KinmenCounty">金門縣 Kinmen</option>
+                    <option value="PenghuCounty">澎湖縣 Penghu</option>
+                </select>
+                <input type="text" id="search-input" placeholder="Search stops or routes...">
+            </div>
+            <div class="info-bar" id="info-bar">
+                Finding nearby bus stops...
+            </div>
+            <ul id="stop-list" class="stop-list">
+                <li class="loading">
+                    <div class="loading-spinner"></div>
+                    <div id="loading-text">Getting your location...</div>
+                </li>
+            </ul>
+        </div>
+        <div id="map-canvas"></div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/bus.js"></script>
+</body>
+</html>

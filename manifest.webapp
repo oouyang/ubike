@@ -1,31 +1,66 @@
 {
-  "version": "1.0",
-  "type": "web",
-  "name": "Ubike",
-  "description": "Marker all Taipei UBike sites in google map",
-  "icons":{
-    "32": "http://oouyang.github.io/ubike/img/ubike32.png",
-    "64": "http://oouyang.github.io/ubike/img/ubike64.png",
-    "128": "http://oouyang.github.io/ubike/img/ubike128.png"
-  },
-  "launch_path": "/ubike/map.html",
+  "name": "Taiwan Transport",
+  "short_name": "Transport",
+  "description": "Taiwan Transport PWA - YouBike, MRT, TRA Rail, and Bus information",
+  "version": "2.0",
+  "start_url": "/ubike/index.html",
+  "scope": "/ubike/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "img/ubike32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "img/ubike64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "img/ubike128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "img/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["transportation", "navigation", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
   "developer": {
     "name": "Owen Ouyang",
-      "url": "https://github.com/oouyang"
+    "url": "https://github.com/oouyang"
   },
-  "default_locale": "en",
   "locales": {
     "zh-TW": {
-      "name": "微笑單車",
-      "description": "台北微笑單車地圖"
+      "name": "台灣交通",
+      "short_name": "交通",
+      "description": "台灣交通 PWA - 微笑單車、捷運、台鐵、公車資訊"
     },
     "zh-CN": {
-      "name": "微笑單車",
-      "description": "台北微笑單車地圖"
-    },
-    "en-US": {
-      "name": "Ubike",
-      "description": "Marker all Taipei UBike sites in google map"
+      "name": "台湾交通",
+      "short_name": "交通",
+      "description": "台湾交通 PWA - 微笑单车、捷运、台铁、公车资讯"
     }
   }
 }

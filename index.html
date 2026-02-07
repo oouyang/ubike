@@ -2,10 +2,15 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Taiwan Transport PWA - YouBike, MRT, TRA Rail, and Bus information">
     <title>Taiwan Transport Hub</title>
     <link rel="manifest" href="manifest.webapp">
     <link rel="icon" type="image/png" href="img/icon-128.png">
+    <link rel="apple-touch-icon" href="img/icon-180.png">
     <style>
       * { box-sizing: border-box; }
       body {
@@ -544,6 +549,41 @@
             </div>
           </a>
 
+          <a href="bus.html" class="card">
+            <div class="card-banner banner-blue"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <span class="card-icon">🚍</span>
+                <div class="card-titles">
+                  <div class="card-title" data-en="City Bus" data-zh="市區公車">City Bus</div>
+                  <div class="card-subtitle" data-en="Nearby Stops & Arrivals" data-zh="附近站牌與到站資訊">Nearby Stops & Arrivals</div>
+                </div>
+              </div>
+              <div class="card-desc" data-en="Real-time city bus information for all Taiwan cities. Find nearby bus stops based on your location, view estimated arrival times, and get directions. Supports all 22 cities and counties with TDX integration." data-zh="全台市區公車即時資訊。依據您的位置尋找附近站牌，查看預估到站時間，並取得導航路線。支援全台22縣市，整合TDX平台資料。">
+                Real-time city bus information for all Taiwan cities. Find nearby bus stops based on your location, view estimated arrival times, and get directions. Supports all 22 cities and counties with TDX integration.
+              </div>
+              <div class="card-features">
+                <span class="feature-tag" data-en="Real-time" data-zh="即時">Real-time</span>
+                <span class="feature-tag" data-en="Nearby Stops" data-zh="附近站牌">Nearby Stops</span>
+                <span class="feature-tag" data-en="All Cities" data-zh="全台">All Cities</span>
+              </div>
+              <div class="card-stats">
+                <div class="stat">
+                  <div class="stat-value">22</div>
+                  <div class="stat-label" data-en="Cities" data-zh="縣市">Cities</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">TDX</div>
+                  <div class="stat-label" data-en="API" data-zh="API">API</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+              <span data-en="Find Buses" data-zh="查公車">Find Buses</span>
+              <span class="card-action-arrow">→</span>
+            </div>
+          </a>
+
           <a href="tdx/index.html" class="card">
             <div class="card-banner banner-purple"></div>
             <div class="card-content">
@@ -589,7 +629,7 @@
 
     function toggleLang() {
       isZh = !isZh;
-      localStorage.setItem('transport-lang', isZh ? 'zh' : 'en');
+      localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
       updateLang();
     }
 
@@ -623,8 +663,21 @@
       });
     }
 
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => {
+            console.log('[SW] Registered:', registration.scope);
+          })
+          .catch(error => {
+            console.warn('[SW] Registration failed:', error);
+          });
+      });
+    }
+
     // Initialize
-    const savedLang = localStorage.getItem('transport-lang');
+    const savedLang = localStorage.getItem('ubike-lang');
     if (savedLang) {
       isZh = savedLang === 'zh';
     }
