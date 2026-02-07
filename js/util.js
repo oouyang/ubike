@@ -1,55 +1,52 @@
-function fetchJSONFile(path, callback) {
-    var httpRequest = new XMLHttpRequest();
-    httpRequest.onreadystatechange = function() {
-        if (httpRequest.readyState === 4) {
-            if (httpRequest.status === 200) {
-                var data = JSON.parse(httpRequest.responseText);
-                if (callback) callback(data);
-            }
-        }
-    };
-    httpRequest.open('GET', path);
-    httpRequest.send();
-}
-function net46JSONFile(path, callback) {
-    var httpRequest = new XMLHttpRequest();
-    httpRequest.onreadystatechange = function() {
-        if (httpRequest.readyState === 4) {
-            if (httpRequest.status === 200) {
-                var str = httpRequest.responseText;
-                str = str.substring(0, str.indexOf('<')-1);
-                var data = JSON.parse(str);
+'use strict';
 
-                if (callback) callback(data);
-            }
-        }
-    };
-    httpRequest.open('GET', path);
-    httpRequest.send();
+/**
+ * Fetch JSON from URL using modern fetch API
+ * @param {string} url - URL to fetch
+ * @returns {Promise<any>} - Parsed JSON data
+ */
+async function fetchJSON(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
 }
 
+/**
+ * Synchronous HTTP GET (legacy support for existing code)
+ * @param {string} url - URL to fetch
+ * @returns {string} - Response text
+ */
 function httpGet(url) {
-	var xmlHttp = new XMLHttpRequest({
-		mozSystem: true
-	});
-	xmlHttp.open("GET", url, false);
-	xmlHttp.send(null);
-	return xmlHttp.responseText;
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, false);
+    xhr.send(null);
+    return xhr.responseText;
 }
 
+/**
+ * Convert degrees to radians
+ * @param {number} deg - Degrees
+ * @returns {number} - Radians
+ */
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * @param {number} lat1 - Latitude of point 1
+ * @param {number} lon1 - Longitude of point 1
+ * @param {number} lat2 - Latitude of point 2
+ * @param {number} lon2 - Longitude of point 2
+ * @returns {number} - Distance in meters
+ */
 function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-	var R = 6371007; // Radius of the earth in km
-	var dLat = deg2rad(lat2 - lat1); // deg2rad below
-	var dLon = deg2rad(lon2 - lon1);
-	var a =
-		Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-		Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-		Math.sin(dLon / 2) * Math.sin(dLon / 2);
-	var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-	var d = R * c; // Distance in km
-	return d;
-}
-
-function deg2rad(deg) {
-	return deg * (Math.PI / 180)
+    const R = 6371007; // Earth's radius in meters
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+              Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
