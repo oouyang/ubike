@@ -9,10 +9,31 @@
 	<script>
 		'use strict';
 
-		const API_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
+		// Official YouBike API - covers all cities
+		const YOUBIKE_API = 'https://apis.youbike.com.tw/json/station-yb2.json';
+
+		// City configurations
+		const CITIES = {
+			all: { name: { en: 'All Cities', zh: '全部' }, areaCode: null, center: [23.5, 121] },
+			taipei: { name: { en: 'Taipei', zh: '台北市' }, areaCode: '00' },
+			newtaipei: { name: { en: 'New Taipei', zh: '新北市' }, areaCode: '05' },
+			taoyuan: { name: { en: 'Taoyuan', zh: '桃園市' }, areaCode: '07' },
+			hsinchu: { name: { en: 'Hsinchu City', zh: '新竹市' }, areaCode: '09' },
+			hsinchuCounty: { name: { en: 'Hsinchu County', zh: '新竹縣' }, areaCode: '0B' },
+			miaoli: { name: { en: 'Miaoli', zh: '苗栗縣' }, areaCode: '0A' },
+			taichung: { name: { en: 'Taichung', zh: '台中市' }, areaCode: '01' },
+			chiayi: { name: { en: 'Chiayi City', zh: '嘉義市' }, areaCode: '08' },
+			chiayiCounty: { name: { en: 'Chiayi County', zh: '嘉義縣' }, areaCode: '11' },
+			tainan: { name: { en: 'Tainan', zh: '台南市' }, areaCode: '13' },
+			kaohsiung: { name: { en: 'Kaohsiung', zh: '高雄市' }, areaCode: '12' },
+			pingtung: { name: { en: 'Pingtung', zh: '屏東縣' }, areaCode: '14' },
+			taitung: { name: { en: 'Taitung', zh: '台東縣' }, areaCode: '15' }
+		};
 
 		// State
+		let allStationsCache = [];
 		let stations = [];
+		let currentCity = 'taipei';
 		let currentLang = null;
 		let sortState = { column: null, direction: null }; // null, 'asc', 'desc'
 		let originalOrder = []; // Store original order for reset
@@ -50,6 +71,7 @@
 			localStorage.setItem('ubike-lang', lang);
 			document.title = LABELS[lang].title;
 			document.getElementById('lang-btn').textContent = LABELS[lang].switchLang;
+			updateCitySelector();
 			console.log(`[UBike] Language set to: ${lang}`);
 		}
 
@@ -74,15 +96,94 @@
 			return R * c;
 		}
 
-		async function fetchStations() {
-			console.log('[UBike] Fetching station data...');
-			const response = await fetch(API_URL);
+		// Normalize station data from official YouBike API
+		function normalizeStation(s) {
+			const cityKey = Object.keys(CITIES).find(key => CITIES[key].areaCode === s.area_code) || s.area_code;
+			return {
+				sno: s.station_no,
+				sna: s.name_tw,
+				snaen: s.name_en || s.name_tw,
+				sarea: s.district_tw,
+				sareaen: s.district_en || s.district_tw,
+				ar: s.address_tw,
+				aren: s.address_en || s.address_tw,
+				latitude: parseFloat(s.lat),
+				longitude: parseFloat(s.lng),
+				available_rent_bikes: parseInt(s.available_spaces) || 0,
+				available_return_bikes: parseInt(s.empty_spaces) || 0,
+				city: cityKey,
+				areaCode: s.area_code
+			};
+		}
+
+		async function fetchAllStationsFromAPI() {
+			console.log('[UBike] Fetching all stations from official API...');
+			const response = await fetch(YOUBIKE_API);
 			if (!response.ok) {
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
 			const data = await response.json();
-			console.log(`[UBike] Loaded ${data.length} stations`);
-			return data;
+			const normalized = data
+				.filter(s => s.status === 1)
+				.map(normalizeStation);
+			console.log(`[UBike] Loaded ${normalized.length} stations from official API`);
+			return normalized;
+		}
+
+		async function fetchStations() {
+			// Fetch all if not cached
+			if (allStationsCache.length === 0) {
+				allStationsCache = await fetchAllStationsFromAPI();
+			}
+
+			// Filter by city
+			if (currentCity === 'all') {
+				console.log(`[UBike] Returning all ${allStationsCache.length} stations`);
+				return allStationsCache;
+			}
+
+			const city = CITIES[currentCity];
+			if (!city) throw new Error(`Unknown city: ${currentCity}`);
+
+			const filtered = allStationsCache.filter(s => s.areaCode === city.areaCode);
+			console.log(`[UBike] Filtered ${filtered.length} stations for ${currentCity}`);
+			return filtered;
+		}
+
+		function updateCitySelector() {
+			const select = document.getElementById('city-select');
+			if (!select) return;
+
+			Array.from(select.options).forEach(option => {
+				const city = CITIES[option.value];
+				if (city) {
+					option.textContent = currentLang === 'zh' ? city.name.zh : city.name.en;
+				}
+			});
+		}
+
+		async function changeCity() {
+			const select = document.getElementById('city-select');
+			currentCity = select.value;
+			localStorage.setItem('ubike-city', currentCity);
+			console.log(`[UBike] City changed to: ${currentCity}`);
+
+			// Reset sort state
+			sortState = { column: null, direction: null };
+
+			// Reload stations
+			const container = document.getElementById('table-container');
+			const L = LABELS[currentLang];
+			container.innerHTML = `<p>${L.loading}</p>`;
+
+			try {
+				stations = await fetchStations();
+				originalOrder = [...stations];
+				renderTable(stations);
+			} catch (error) {
+				console.error('[UBike] Failed to load stations:', error.message);
+				container.innerHTML = `<p style="color: red;">${L.error}: ${error.message}</p>`;
+			}
 		}
 
 		function getStationName(station) {
@@ -278,6 +379,13 @@
 			// Initialize language
 			setLanguage(detectLanguage());
 
+			// Restore saved city preference
+			const savedCity = localStorage.getItem('ubike-city');
+			if (savedCity && CITIES[savedCity]) {
+				currentCity = savedCity;
+				document.getElementById('city-select').value = currentCity;
+			}
+
 			const container = document.getElementById('table-container');
 			const L = LABELS[currentLang];
 
@@ -310,6 +418,18 @@
 		.header h1 {
 			margin: 0;
 			font-size: 1.5em;
+		}
+		.header-controls {
+			display: flex;
+			gap: 10px;
+			align-items: center;
+		}
+		#city-select {
+			padding: 8px 12px;
+			font-size: 14px;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			cursor: pointer;
 		}
 		#lang-btn {
 			padding: 8px 16px;
@@ -349,7 +469,25 @@
 <body>
 	<div class="header">
 		<h1>YouBike Station List</h1>
-		<button id="lang-btn" onclick="toggleLanguage()">中文</button>
+		<div class="header-controls">
+			<select id="city-select" onchange="changeCity()">
+				<option value="all">All Cities</option>
+				<option value="taipei" selected>Taipei</option>
+				<option value="newtaipei">New Taipei</option>
+				<option value="taoyuan">Taoyuan</option>
+				<option value="hsinchu">Hsinchu City</option>
+				<option value="hsinchuCounty">Hsinchu County</option>
+				<option value="miaoli">Miaoli</option>
+				<option value="taichung">Taichung</option>
+				<option value="chiayi">Chiayi City</option>
+				<option value="chiayiCounty">Chiayi County</option>
+				<option value="tainan">Tainan</option>
+				<option value="kaohsiung">Kaohsiung</option>
+				<option value="pingtung">Pingtung</option>
+				<option value="taitung">Taitung</option>
+			</select>
+			<button id="lang-btn" onclick="toggleLanguage()">中文</button>
+		</div>
 	</div>
 	<div id="status"></div>
 	<div id="table-container"></div>
