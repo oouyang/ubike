@@ -2,58 +2,89 @@
 
 /**
  * UBike Station Locator with Leaflet/OpenStreetMap
- * Supports multiple cities
+ * Supports all Taiwan cities via official YouBike API
  */
 
-// City configurations
+// Official YouBike API - covers all cities
+const YOUBIKE_API = 'https://apis.youbike.com.tw/json/station-yb2.json';
+
+// City configurations with area codes from official API
 const CITIES = {
     taipei: {
         name: { en: 'Taipei', zh: '台北市' },
-        api: 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json',
-        center: [25.03304, 121.5656],
-        normalize: (data) => data.map(s => ({
-            sno: s.sno,
-            sna: s.sna,
-            snaen: s.snaen,
-            sarea: s.sarea,
-            sareaen: s.sareaen,
-            ar: s.ar,
-            aren: s.aren,
-            latitude: parseFloat(s.latitude),
-            longitude: parseFloat(s.longitude),
-            available_rent_bikes: parseInt(s.available_rent_bikes) || 0,
-            available_return_bikes: parseInt(s.available_return_bikes) || 0,
-            city: 'taipei'
-        }))
+        areaCode: '00',
+        center: [25.0330, 121.5654]
     },
     newtaipei: {
         name: { en: 'New Taipei', zh: '新北市' },
-        api: 'https://data.ntpc.gov.tw/api/datasets/010e5b15-3823-4b20-b401-b1cf000550c5/json?size=2000',
-        center: [25.0119, 121.4650],
-        normalize: (data) => data.map(s => ({
-            sno: s.sno,
-            sna: s.sna,
-            snaen: s.snaen,
-            sarea: s.sarea,
-            sareaen: s.sareaen,
-            ar: s.ar,
-            aren: s.aren,
-            latitude: parseFloat(s.lat),
-            longitude: parseFloat(s.lng),
-            available_rent_bikes: parseInt(s.sbi_quantity) || 0,
-            available_return_bikes: parseInt(s.bemp) || 0,
-            city: 'newtaipei'
-        }))
+        areaCode: '05',
+        center: [25.0119, 121.4650]
+    },
+    taoyuan: {
+        name: { en: 'Taoyuan', zh: '桃園市' },
+        areaCode: '07',
+        center: [24.9936, 121.3010]
+    },
+    hsinchu: {
+        name: { en: 'Hsinchu City', zh: '新竹市' },
+        areaCode: '09',
+        center: [24.8138, 120.9675]
+    },
+    hsinchuCounty: {
+        name: { en: 'Hsinchu County', zh: '新竹縣' },
+        areaCode: '0B',
+        center: [24.8387, 121.0178]
+    },
+    miaoli: {
+        name: { en: 'Miaoli', zh: '苗栗縣' },
+        areaCode: '0A',
+        center: [24.5602, 120.8214]
+    },
+    taichung: {
+        name: { en: 'Taichung', zh: '台中市' },
+        areaCode: '01',
+        center: [24.1477, 120.6736]
+    },
+    chiayi: {
+        name: { en: 'Chiayi City', zh: '嘉義市' },
+        areaCode: '08',
+        center: [23.4800, 120.4491]
+    },
+    chiayiCounty: {
+        name: { en: 'Chiayi County', zh: '嘉義縣' },
+        areaCode: '11',
+        center: [23.4518, 120.2555]
+    },
+    tainan: {
+        name: { en: 'Tainan', zh: '台南市' },
+        areaCode: '13',
+        center: [22.9998, 120.2270]
+    },
+    kaohsiung: {
+        name: { en: 'Kaohsiung', zh: '高雄市' },
+        areaCode: '12',
+        center: [22.6273, 120.3014]
+    },
+    pingtung: {
+        name: { en: 'Pingtung', zh: '屏東縣' },
+        areaCode: '14',
+        center: [22.6762, 120.4929]
+    },
+    taitung: {
+        name: { en: 'Taitung', zh: '台東縣' },
+        areaCode: '15',
+        center: [22.7583, 121.1444]
     }
 };
 
 const CONFIG = {
-    DEFAULT_CENTER: [25.03304, 121.5656],
+    DEFAULT_CENTER: [25.0330, 121.5654],
     DEFAULT_ZOOM: 14
 };
 
 // State
 let map = null;
+let allStationsCache = [];
 let stations = [];
 let markers = {};
 let selectedStation = null;
@@ -81,37 +112,62 @@ function getMarkerType(station) {
     return 'ok';
 }
 
-async function fetchStations(cityKey) {
-    const city = CITIES[cityKey];
-    if (!city) throw new Error(`Unknown city: ${cityKey}`);
+// Normalize station data from official YouBike API
+function normalizeStation(s) {
+    // Find city key by area code
+    const cityKey = Object.keys(CITIES).find(key => CITIES[key].areaCode === s.area_code) || s.area_code;
 
-    console.log(`[UBike] Fetching ${cityKey} stations...`);
-    const response = await fetch(city.api);
+    return {
+        sno: s.station_no,
+        sna: s.name_tw,
+        snaen: s.name_en || s.name_tw,
+        sarea: s.district_tw,
+        sareaen: s.district_en || s.district_tw,
+        ar: s.address_tw,
+        aren: s.address_en || s.address_tw,
+        latitude: parseFloat(s.lat),
+        longitude: parseFloat(s.lng),
+        available_rent_bikes: parseInt(s.available_spaces) || 0,
+        available_return_bikes: parseInt(s.empty_spaces) || 0,
+        city: cityKey,
+        areaCode: s.area_code
+    };
+}
+
+async function fetchAllStationsFromAPI() {
+    console.log('[UBike] Fetching all stations from official API...');
+    const response = await fetch(YOUBIKE_API);
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    const normalized = city.normalize(data);
-    console.log(`[UBike] Loaded ${normalized.length} stations from ${cityKey}`);
+    const normalized = data
+        .filter(s => s.status === 1) // Only active stations
+        .map(normalizeStation);
+    console.log(`[UBike] Loaded ${normalized.length} stations from official API`);
     return normalized;
 }
 
+async function fetchStations(cityKey) {
+    // Fetch all stations if not cached
+    if (allStationsCache.length === 0) {
+        allStationsCache = await fetchAllStationsFromAPI();
+    }
+
+    const city = CITIES[cityKey];
+    if (!city) throw new Error(`Unknown city: ${cityKey}`);
+
+    const filtered = allStationsCache.filter(s => s.areaCode === city.areaCode);
+    console.log(`[UBike] Filtered ${filtered.length} stations for ${cityKey}`);
+    return filtered;
+}
+
 async function fetchAllStations() {
-    const results = await Promise.allSettled([
-        fetchStations('taipei'),
-        fetchStations('newtaipei')
-    ]);
-
-    const allStations = [];
-    results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-            allStations.push(...result.value);
-        } else {
-            console.error(`[UBike] Failed to load city:`, result.reason);
-        }
-    });
-
-    return allStations;
+    // Fetch all stations if not cached
+    if (allStationsCache.length === 0) {
+        allStationsCache = await fetchAllStationsFromAPI();
+    }
+    return allStationsCache;
 }
 
 function getStationName(station) {
@@ -280,7 +336,8 @@ async function initStoreLocator() {
     const savedCity = localStorage.getItem('ubike-city');
     if (savedCity && (CITIES[savedCity] || savedCity === 'all')) {
         currentCity = savedCity;
-        document.getElementById('city-select').value = currentCity;
+        const select = document.getElementById('city-select');
+        if (select) select.value = currentCity;
     }
 
     // Create map
@@ -297,8 +354,10 @@ async function initStoreLocator() {
 
     // Setup search
     const searchInput = document.getElementById('search-input');
-    searchInput.addEventListener('input', handleSearch);
-    searchInput.placeholder = isChineseLocale() ? '搜尋站點...' : 'Search stations...';
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearch);
+        searchInput.placeholder = isChineseLocale() ? '搜尋站點...' : 'Search stations...';
+    }
 
     console.log('[UBike] Station locator initialized successfully');
 }
