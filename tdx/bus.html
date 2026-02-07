@@ -274,6 +274,7 @@
     }
 
     function updateUI() {
+      document.title = isZh ? '客運轉運站' : 'Intercity Bus Terminals';
       document.getElementById('page-title').textContent = isZh ? '🚌 客運轉運站' : '🚌 Intercity Bus Terminals';
       document.getElementById('info-box').textContent = isZh
         ? '台灣主要國道客運轉運站'

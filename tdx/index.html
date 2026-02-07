@@ -281,6 +281,7 @@
 
     function updateLang() {
       // Update page title
+      document.title = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
       document.getElementById('page-title').textContent = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
       document.getElementById('page-subtitle').textContent = isZh ? 'TDX 靜態資料中心' : 'TDX Static Data Hub';
       document.getElementById('note-title').textContent = isZh ? '關於 TDX' : 'About TDX';
