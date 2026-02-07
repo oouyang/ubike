@@ -212,6 +212,27 @@
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    /* Station selectors */
+    .station-selectors {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .station-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .station-row label {
+      min-width: 40px;
+      font-weight: 500;
+      color: #666;
+      font-size: 13px;
+    }
+    .station-row select {
+      flex: 1;
+    }
     /* Direction tabs */
     .direction-tabs {
       display: flex;
@@ -309,6 +330,10 @@
       background: #e8f5e9;
       color: #2e7d32;
     }
+    .train-status.departed {
+      background: #f5f5f5;
+      color: #999;
+    }
     .train-countdown {
       font-size: 0.85em;
       color: #999;
@@ -384,6 +409,79 @@
       gap: 4px;
       min-width: 80px;
     }
+    .timetable-btn {
+      padding: 4px 8px;
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 4px;
+      color: #0d47a1;
+      font-size: 0.75em;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.2s;
+    }
+    .timetable-btn:hover {
+      background: #bbdefb;
+    }
+    .timetable-btn.active {
+      background: #0d47a1;
+      color: white;
+      border-color: #0d47a1;
+    }
+    .train-timetable {
+      display: none;
+      background: #fafafa;
+      border-top: 1px solid #eee;
+      padding: 10px 15px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .train-timetable.show {
+      display: block;
+    }
+    .timetable-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85em;
+    }
+    .timetable-stop {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #ddd;
+    }
+    .timetable-stop.current {
+      background: #e3f2fd;
+      border-left-color: #0d47a1;
+      font-weight: bold;
+    }
+    .timetable-stop.passed {
+      opacity: 0.5;
+    }
+    .timetable-stop-num {
+      width: 24px;
+      height: 24px;
+      background: #0d47a1;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75em;
+      font-weight: bold;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .timetable-stop-name {
+      flex: 1;
+    }
+    .timetable-stop-time {
+      font-weight: 500;
+      color: #333;
+    }
     /* Markers */
     .marker-icon {
       border-radius: 50%;
@@ -432,9 +530,20 @@
             <option value="SL" data-en="Western Line (South)" data-zh="西部幹線(南段)">Western Line (South)</option>
             <option value="YL" data-en="Yilan Line" data-zh="宜蘭線">Yilan Line</option>
           </select>
-          <select id="schedule-station-select" onchange="onScheduleStationChange()">
-            <option value="">-- Select Station --</option>
-          </select>
+          <div class="station-selectors">
+            <div class="station-row">
+              <label data-en="From" data-zh="起站">From</label>
+              <select id="schedule-station-select" onchange="onScheduleStationChange()">
+                <option value="">-- Select Station --</option>
+              </select>
+            </div>
+            <div class="station-row">
+              <label data-en="To" data-zh="迄站">To</label>
+              <select id="dest-station-select" onchange="onDestChange()">
+                <option value="">-- Select Destination --</option>
+              </select>
+            </div>
+          </div>
           <div class="direction-tabs">
             <div class="direction-tab active" data-dir="south" onclick="setDirection('south')">
               <span data-en="↓ Southbound" data-zh="↓ 南下">↓ Southbound</span>
@@ -932,11 +1041,15 @@ let filteredStations = [...STATIONS];
 let currentLine = 'all';
 let currentClass = 'all';
 let selectedStation = null;
+let selectedDestStation = null;
 let isZh = detectLanguage() === 'zh';
 let userLocation = null;
 let currentScheduleLine = 'WL';
 let currentDirection = 'south';
 let timeUpdateInterval = null;
+
+// Config for showing previous trains
+const SHOW_DEPARTED_MINUTES = 30;
 
 // Use shared utilities from common.js: deg2rad, getDistanceInMeters, formatDistance, formatTime, getCurrentMinutes, getCountdown
 
@@ -1253,16 +1366,20 @@ function updateScheduleLineSelector() {
 
 function updateScheduleStationSelector() {
   const select = document.getElementById('schedule-station-select');
+  const destSelect = document.getElementById('dest-station-select');
   const currentValue = select.value;
+  const currentDestValue = destSelect.value;
   const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
 
-  select.innerHTML = `<option value="">${isZh ? '-- 選擇車站 --' : '-- Select Station --'}</option>`;
+  select.innerHTML = `<option value="">${isZh ? '-- 選擇起站 --' : '-- Select Origin --'}</option>`;
+  destSelect.innerHTML = `<option value="">${isZh ? '-- 選擇迄站 --' : '-- Select Destination --'}</option>`;
 
   stationIds.forEach(id => {
     const station = STATIONS.find(s => s.id === id);
     if (station) {
       const name = isZh ? station.name.zh : station.name.en;
       select.innerHTML += `<option value="${id}">${name}</option>`;
+      destSelect.innerHTML += `<option value="${id}">${name}</option>`;
     }
   });
 
@@ -1270,11 +1387,39 @@ function updateScheduleStationSelector() {
   if (stationIds.includes(currentValue)) {
     select.value = currentValue;
   }
+  if (stationIds.includes(currentDestValue)) {
+    destSelect.value = currentDestValue;
+  }
+  updateDestOptions();
+}
+
+function updateDestOptions() {
+  const originId = document.getElementById('schedule-station-select').value;
+  const destSelect = document.getElementById('dest-station-select');
+  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+  const originIndex = stationIds.indexOf(originId);
+
+  // Enable/disable destination options based on direction
+  Array.from(destSelect.options).forEach((opt, idx) => {
+    if (idx === 0) return; // Skip placeholder
+    const destIndex = stationIds.indexOf(opt.value);
+    if (currentDirection === 'south') {
+      opt.disabled = destIndex <= originIndex;
+    } else {
+      opt.disabled = destIndex >= originIndex;
+    }
+  });
+}
+
+function onDestChange() {
+  selectedDestStation = document.getElementById('dest-station-select').value;
+  renderTrainSchedule();
 }
 
 function onScheduleLineChange() {
   const select = document.getElementById('schedule-line-select');
   currentScheduleLine = select.value;
+  selectedDestStation = null;
   updateScheduleStationSelector();
   renderTrainSchedule();
 }
@@ -1288,6 +1433,7 @@ function onScheduleStationChange() {
       markers[stationId].openPopup();
     }
   }
+  updateDestOptions();
   renderTrainSchedule();
 }
 
@@ -1296,6 +1442,13 @@ function setDirection(dir) {
   document.querySelectorAll('.direction-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.dir === dir);
   });
+  updateDestOptions();
+  // Clear destination if it's no longer valid
+  const destSelect = document.getElementById('dest-station-select');
+  if (destSelect.selectedOptions[0]?.disabled) {
+    destSelect.value = '';
+    selectedDestStation = null;
+  }
   renderTrainSchedule();
 }
 
@@ -1313,14 +1466,21 @@ function getTrainsForStation(stationId, lineCode, direction) {
   const now = getCurrentMinutes();
   const distances = SCHEDULE_DISTANCES[lineCode] || [];
 
-  // Get destination index (first or last station in line)
+  // Use selected destination or default to terminal
   let destIndex;
-  if (direction === 'south') {
-    destIndex = stationIds.length - 1;
+  let destStation;
+  if (selectedDestStation && stationIds.includes(selectedDestStation)) {
+    destIndex = stationIds.indexOf(selectedDestStation);
+    destStation = STATIONS.find(s => s.id === selectedDestStation);
   } else {
-    destIndex = 0;
+    // Default to terminal station
+    if (direction === 'south') {
+      destIndex = stationIds.length - 1;
+    } else {
+      destIndex = 0;
+    }
+    destStation = STATIONS.find(s => s.id === stationIds[destIndex]);
   }
-  const destStation = STATIONS.find(s => s.id === stationIds[destIndex]);
 
   // Calculate distance to destination
   const startDist = distances[stationIndex] || 0;
@@ -1333,7 +1493,9 @@ function getTrainsForStation(stationId, lineCode, direction) {
     if (depTime === undefined || arrTime === undefined) return null;
 
     const diff = depTime - now;
-    const isDeparted = diff < -5;
+    // Show trains departed within SHOW_DEPARTED_MINUTES
+    const isDeparted = diff < -SHOW_DEPARTED_MINUTES;
+    const isRecentlyDeparted = diff < 0 && diff >= -SHOW_DEPARTED_MINUTES;
     const isArriving = diff >= 0 && diff <= 5;
 
     // Calculate duration
@@ -1361,12 +1523,13 @@ function getTrainsForStation(stationId, lineCode, direction) {
       fare: fare,
       platform: platform,
       isDeparted: isDeparted,
+      isRecentlyDeparted: isRecentlyDeparted,
       isArriving: isArriving,
       countdown: getCountdown(depTime, isZh)
     };
   }).filter(t => t !== null);
 
-  // Sort by departure time, show next 10 trains
+  // Sort by departure time, show next 15 trains (including recently departed)
   return trains
     .filter(t => !t.isDeparted)
     .sort((a, b) => {
@@ -1374,7 +1537,7 @@ function getTrainsForStation(stationId, lineCode, direction) {
       const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
       return aNorm - bNorm;
     })
-    .slice(0, 10);
+    .slice(0, 15);
 }
 
 function renderTrainSchedule() {
@@ -1415,7 +1578,10 @@ function renderTrainSchedule() {
     let statusClass = 'ontime';
     let statusText = isZh ? '準點' : 'On time';
 
-    if (train.isArriving) {
+    if (train.isRecentlyDeparted) {
+      statusClass = 'departed';
+      statusText = isZh ? '已發車' : 'Departed';
+    } else if (train.isArriving) {
       statusClass = 'arriving';
       statusText = isZh ? '即將到站' : 'Arriving';
     }
@@ -1427,11 +1593,11 @@ function renderTrainSchedule() {
       ? `${durationH}${isZh ? '時' : 'h'}${durationM}${isZh ? '分' : 'm'}`
       : `${durationM}${isZh ? '分鐘' : ' min'}`;
 
-    // First train gets "next" highlight
-    const isFirstUpcoming = index === 0 && !train.isDeparted;
+    // First non-departed train gets "next" highlight
+    const isFirstUpcoming = !train.isRecentlyDeparted && trains.filter(t => !t.isRecentlyDeparted).indexOf(train) === 0;
 
     return `
-      <li class="train-item${train.isDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}">
+      <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}" style="flex-wrap:wrap;">
         <div class="train-main">
           <div class="train-time-block">
             <div class="train-time">${train.depTimeStr}</div>
@@ -1449,15 +1615,93 @@ function renderTrainSchedule() {
               <span class="train-duration">⏱ ${durationStr}</span>
               <span class="train-fare">💰 NT$${train.fare}</span>
             </div>
+            <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')">${isZh ? '時刻表' : 'Timetable'}</button>
           </div>
         </div>
         <div class="train-right">
           <div class="train-status ${statusClass}">${statusText}</div>
           <div class="train-countdown">${train.countdown}</div>
         </div>
+        <div class="train-timetable" id="timetable-${train.trainNo}"></div>
       </li>
     `;
   }).join('');
+}
+
+function toggleTimetable(trainNo) {
+  const timetableEl = document.getElementById(`timetable-${trainNo}`);
+  const btn = document.querySelector(`[data-train="${trainNo}"] .timetable-btn`);
+
+  if (timetableEl.classList.contains('show')) {
+    timetableEl.classList.remove('show');
+    btn.classList.remove('active');
+    return;
+  }
+
+  // Close other open timetables
+  document.querySelectorAll('.train-timetable.show').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.timetable-btn.active').forEach(el => el.classList.remove('active'));
+
+  // Find train data
+  const schedule = currentDirection === 'south'
+    ? TRAIN_SCHEDULE[currentScheduleLine]?.southbound
+    : TRAIN_SCHEDULE[currentScheduleLine]?.northbound;
+
+  if (!schedule) return;
+
+  const train = schedule.find(t => t.trainNo === trainNo);
+  if (!train) return;
+
+  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+  const selectedStationId = document.getElementById('schedule-station-select').value;
+  const selectedStationIndex = stationIds.indexOf(selectedStationId);
+
+  // Build station list with times
+  let stationsToShow = [];
+  if (currentDirection === 'south') {
+    for (let i = 0; i < stationIds.length; i++) {
+      const station = STATIONS.find(s => s.id === stationIds[i]);
+      if (station && train.times[i] !== undefined) {
+        stationsToShow.push({ station, index: i, time: train.times[i] });
+      }
+    }
+  } else {
+    // Northbound: times are in reverse order
+    for (let i = 0; i < stationIds.length; i++) {
+      const station = STATIONS.find(s => s.id === stationIds[i]);
+      const timeIndex = stationIds.length - 1 - i;
+      if (station && train.times[timeIndex] !== undefined) {
+        stationsToShow.push({ station, index: i, time: train.times[timeIndex] });
+      }
+    }
+    stationsToShow.reverse();
+  }
+
+  const html = `
+    <div class="timetable-list">
+      ${stationsToShow.map((item, idx) => {
+        const isCurrent = item.station.id === selectedStationId;
+        const isPassed = currentDirection === 'south'
+          ? item.index < selectedStationIndex
+          : item.index > selectedStationIndex;
+        const stopClass = isCurrent ? 'current' : (isPassed ? 'passed' : '');
+        const stationName = isZh ? item.station.name.zh : item.station.name.en;
+        const timeStr = formatTime(item.time);
+
+        return `
+          <div class="timetable-stop ${stopClass}">
+            <span class="timetable-stop-num">${idx + 1}</span>
+            <span class="timetable-stop-name">${stationName}</span>
+            <span class="timetable-stop-time">${timeStr}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  timetableEl.innerHTML = html;
+  timetableEl.classList.add('show');
+  btn.classList.add('active');
 }
 
 async function initialize() {
