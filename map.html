@@ -31,9 +31,19 @@
         border: 1px solid #ccc;
         max-width: 180px;
       }
-      #refresh-btn {
+      #refresh-btn, #lang-btn {
         padding: 6px 12px;
         cursor: pointer;
+      }
+      #lang-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+      #lang-btn:hover {
+        background: #5a6fd6;
       }
       .marker-icon {
         border-radius: 50%;
@@ -77,6 +87,7 @@
         <option value="taitung">台東縣 Taitung</option>
       </select>
       <input id="refresh-btn" onclick="refreshUbike();" type="button" value="Refresh">
+      <button id="lang-btn" onclick="toggleLang()">EN/中文</button>
     </div>
     <div id="map-canvas"></div>
     <script>
@@ -162,15 +173,68 @@ const CONFIG = {
 // State
 let map = null;
 let markers = [];
+let stationsData = [];
 let refreshTimer = null;
 let routePath = null;
 let routeCoords = [];
 let currentCity = 'taipei';
 let allStationsCache = [];
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 
 function isChineseLocale() {
-  const userLang = navigator.language || navigator.userLanguage;
-  return userLang === 'zh-TW' || userLang === 'zh-CN';
+  return isZh;
+}
+
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  updateUI();
+  updatePopups();
+}
+
+function updateUI() {
+  // Update loading text
+  document.getElementById('loading').textContent = isZh ? '載入中...' : 'Loading...';
+
+  // Update refresh button
+  document.getElementById('refresh-btn').value = isZh ? '重新整理' : 'Refresh';
+
+  // Update city select options
+  const cityOptions = {
+    all: { en: 'All Cities', zh: '全部' },
+    taipei: { en: 'Taipei', zh: '台北市' },
+    newtaipei: { en: 'New Taipei', zh: '新北市' },
+    taoyuan: { en: 'Taoyuan', zh: '桃園市' },
+    hsinchu: { en: 'Hsinchu City', zh: '新竹市' },
+    hsinchuCounty: { en: 'Hsinchu County', zh: '新竹縣' },
+    miaoli: { en: 'Miaoli', zh: '苗栗縣' },
+    taichung: { en: 'Taichung', zh: '台中市' },
+    chiayi: { en: 'Chiayi City', zh: '嘉義市' },
+    chiayiCounty: { en: 'Chiayi County', zh: '嘉義縣' },
+    tainan: { en: 'Tainan', zh: '台南市' },
+    kaohsiung: { en: 'Kaohsiung', zh: '高雄市' },
+    pingtung: { en: 'Pingtung', zh: '屏東縣' },
+    taitung: { en: 'Taitung', zh: '台東縣' }
+  };
+
+  const select = document.getElementById('city-select');
+  Array.from(select.options).forEach(option => {
+    const city = cityOptions[option.value];
+    if (city) {
+      option.textContent = isZh ? city.zh : city.en;
+    }
+  });
+}
+
+function updatePopups() {
+  // Re-binds popups with new language
+  if (stationsData.length > 0 && markers.length > 0) {
+    markers.forEach((marker, index) => {
+      if (stationsData[index]) {
+        marker.setPopupContent(getPopupContent(stationsData[index]));
+      }
+    });
+  }
 }
 
 function showLoading(show) {
@@ -247,9 +311,9 @@ function clearMarkers() {
 function updateMarkers(stations) {
   console.log(`[UBike] Updating ${stations.length} markers`);
   clearMarkers();
+  stationsData = stations.filter(s => s.latitude && s.longitude);
 
-  stations.forEach(station => {
-    if (!station.latitude || !station.longitude) return;
+  stationsData.forEach(station => {
     const marker = L.marker([station.latitude, station.longitude], {
       icon: createMarkerIcon(getMarkerType(station))
     });
@@ -358,6 +422,13 @@ function initGeolocationTracking() {
 
 async function initialize() {
   console.log('[UBike] Initializing map...');
+
+  // Restore saved language preference
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) {
+    isZh = savedLang === 'zh';
+  }
+  updateUI();
 
   // Restore saved city preference
   const savedCity = localStorage.getItem('ubike-city');
