@@ -33,17 +33,37 @@
         opacity: 0.9;
       }
       .back-link:hover { opacity: 1; }
-      .lang-toggle {
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.3);
-        color: white;
-        padding: 6px 12px;
+      /* Floating buttons */
+      .float-btn-container {
+        position: absolute;
+        bottom: 20px;
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1000;
+      }
+      .float-btn {
+        width: 44px;
+        height: 44px;
+        background: white;
+        border: 2px solid rgba(0,0,0,0.2);
         border-radius: 4px;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        transition: background 0.2s;
       }
+      .float-btn:hover { background: #f4f4f4; }
+      .float-btn:active { background: #e0e0e0; }
       .container {
         display: flex;
         height: calc(100vh - 52px);
+        position: relative;
       }
       #panel {
         width: 380px;
@@ -159,7 +179,6 @@
         <a href="../rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
         <a href="../thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
         <a href="../bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-        <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
       </nav>
     </header>
     <div class="container">
@@ -170,6 +189,9 @@
         <ul id="station-list" class="station-list"></ul>
       </div>
       <div id="map-canvas"></div>
+      <div class="float-btn-container">
+        <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+      </div>
     </div>
 
     <script>
@@ -213,6 +235,12 @@
       document.querySelectorAll('.nav-btn[data-en][data-zh]').forEach(btn => {
         btn.textContent = isZh ? btn.dataset.zh : btn.dataset.en;
       });
+
+      // Update language button
+      const langBtn = document.getElementById('lang-btn');
+      if (langBtn) {
+        langBtn.textContent = isZh ? '中' : 'EN';
+      }
 
       renderStationList();
       updatePopups();
