@@ -109,6 +109,28 @@
       flex: 1;
       margin-bottom: 0;
     }
+    /* View toggle for mobile */
+    .view-toggle {
+      display: none;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .view-toggle-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: center;
+    }
+    .view-toggle-btn:hover { background: #fff3e0; }
+    .view-toggle-btn.active {
+      background: #f57c00;
+      color: white;
+      border-color: #f57c00;
+    }
     .direction-tabs {
       display: flex;
       gap: 8px;
@@ -157,18 +179,14 @@
       list-style: none;
     }
     .train-item {
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-bottom: 1px solid #eee;
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 6px 8px;
+      gap: 8px;
       background: white;
       transition: background 0.15s;
-    }
-    .train-item > span,
-    .train-item > button {
-      flex-shrink: 0;
     }
     .train-item:hover { background: #fff8e1; }
     .train-item.departed { opacity: 0.5; }
@@ -177,59 +195,45 @@
       border-left: 3px solid #f57c00;
     }
     .train-time {
-      font-size: 1.1em;
+      font-size: 1.2em;
       font-weight: bold;
       color: #333;
-      min-width: 50px;
+      min-width: 52px;
     }
     .train-number {
       font-weight: 600;
       color: #f57c00;
-      min-width: 45px;
+      min-width: 42px;
     }
     .train-dest {
       font-weight: 500;
       color: #333;
       white-space: nowrap;
+      flex: 1;
     }
-    .train-meta {
+    .train-info {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       font-size: 0.8em;
       color: #666;
-    }
-    .train-platform {
-      background: #f5f5f5;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.75em;
+      margin-left: auto;
     }
     .train-duration {
-      color: #888;
+      color: #666;
     }
     .train-fare {
       color: #e65100;
-      font-weight: 500;
+      font-weight: 600;
     }
-    .train-status {
-      font-size: 0.75em;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: 500;
-      min-width: 50px;
-      text-align: center;
-    }
-    .train-status.arriving { background: #fff3e0; color: #e65100; }
-    .train-status.ontime { background: #e8f5e9; color: #2e7d32; }
-    .train-status.departed { background: #f5f5f5; color: #999; }
     .next-badge {
       background: #f57c00;
       color: white;
-      font-size: 0.65em;
-      padding: 1px 4px;
-      border-radius: 2px;
+      font-size: 0.7em;
+      padding: 2px 6px;
+      border-radius: 3px;
       font-weight: bold;
+      margin-left: 4px;
     }
     .no-trains {
       padding: 30px 20px;
@@ -237,25 +241,27 @@
       color: #999;
     }
     .timetable-btn {
-      padding: 2px 6px;
-      background: #fff3e0;
-      border: 1px solid #ffcc80;
+      padding: 4px 8px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
       border-radius: 3px;
-      color: #e65100;
+      color: #666;
       font-size: 0.7em;
       cursor: pointer;
       flex-shrink: 0;
     }
-    .timetable-btn:hover { background: #ffe0b2; }
-    .timetable-btn.active { background: #f57c00; color: white; }
+    .timetable-btn:hover { background: #e0e0e0; }
+    .timetable-btn.active { background: #f57c00; color: white; border-color: #f57c00; }
     .train-timetable {
       display: none;
       width: 100%;
-      padding: 8px 0;
-      font-size: 0.8em;
-      line-height: 1.6;
+      padding: 10px 0 4px;
+      font-size: 0.85em;
+      line-height: 1.8;
       flex-wrap: wrap;
-      gap: 4px 12px;
+      gap: 2px 10px;
+      border-top: 1px dashed #eee;
+      margin-top: 8px;
     }
     .train-timetable.show { display: flex; }
     .train-timetable .stop {
@@ -352,10 +358,47 @@
       color: #999;
     }
     @media (max-width: 768px) {
+      header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.2em;
+        width: 100%;
+      }
+      .header-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn, .lang-toggle {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
       .container { flex-direction: column; }
-      #panel { width: 100%; height: 40%; }
-      #map-canvas { height: 60%; }
-      .header-controls { flex-wrap: wrap; }
+      #panel { width: 100%; height: 55%; transition: height 0.3s; }
+      #map-canvas { height: 45%; transition: height 0.3s; }
+      #panel.list-only { height: 100%; }
+      #panel.list-only + #map-canvas { height: 0; overflow: hidden; }
+      .container.map-only #panel { height: 0; overflow: hidden; }
+      .container.map-only #map-canvas { height: 100%; }
+      .search-box { padding: 8px; }
+      .search-box select { padding: 6px 8px; font-size: 12px; }
+      .view-toggle { display: flex; }
+      .station-selectors { flex-direction: row; gap: 6px; }
+      .station-row { flex: 1; }
+      .station-row label { min-width: auto; font-size: 11px; padding-right: 2px; }
+      .direction-tab { padding: 6px; font-size: 12px; }
+      .schedule-header { padding: 8px 10px; font-size: 0.9em; }
+      .train-item { padding: 8px 10px; gap: 6px; }
+      .train-time { font-size: 1.1em; min-width: 48px; }
+      .train-number { font-size: 0.9em; min-width: 38px; }
+      .train-dest { font-size: 0.9em; }
+      .train-info { gap: 4px; font-size: 0.75em; }
+      .timetable-btn { padding: 3px 6px; }
     }
   </style>
 </head>
@@ -381,6 +424,17 @@
 
       <div id="tab-schedule" class="tab-content active">
         <div class="search-box">
+          <div class="view-toggle">
+            <button class="view-toggle-btn active" data-view="split" onclick="setViewMode('split')">
+              <span data-en="Split" data-zh="分割">Split</span>
+            </button>
+            <button class="view-toggle-btn" data-view="list" onclick="setViewMode('list')">
+              <span data-en="List" data-zh="列表">List</span>
+            </button>
+            <button class="view-toggle-btn" data-view="map" onclick="setViewMode('map')">
+              <span data-en="Map" data-zh="地圖">Map</span>
+            </button>
+          </div>
           <div class="station-selectors">
             <div class="station-row">
               <label data-en="From" data-zh="起站">From</label>
@@ -429,7 +483,12 @@
   <script>
 'use strict';
 
-// Taiwan High Speed Rail Stations
+// TDX API Configuration
+const TDX_PROXY_URL = 'https://tdx-proxy.owen-ouyang.workers.dev';
+const TIMETABLE_CACHE_KEY = 'thsr-timetable-cache';
+const TIMETABLE_CACHE_TTL = 3600000; // 1 hour
+
+// Taiwan High Speed Rail Stations (with TDX station IDs)
 const STATIONS = [
   { id: 'THSR-01', code: '0990', name: { en: 'Nangang', zh: '南港' }, lat: 25.0530, lng: 121.6070, km: 0, address: { en: 'Nangang District, Taipei', zh: '台北市南港區' } },
   { id: 'THSR-02', code: '1000', name: { en: 'Taipei', zh: '台北' }, lat: 25.0478, lng: 121.5170, km: 6.4, address: { en: 'Zhongzheng District, Taipei', zh: '台北市中正區' } },
@@ -445,52 +504,17 @@ const STATIONS = [
   { id: 'THSR-12', code: '1070', name: { en: 'Zuoying', zh: '左營' }, lat: 22.6875, lng: 120.3080, km: 345.2, address: { en: 'Zuoying District, Kaohsiung', zh: '高雄市左營區' } }
 ];
 
-// Demo train schedule times (minutes from midnight)
-// In production, this would come from TDX API
-const TRAIN_SCHEDULE_BASE = {
-  southbound: [
-    { trainNo: '0103', times: [366, 396, 423, 454, 488, 510, 552, 566, 592, 624, 662, 687] }, // 6:06 from Nangang
-    { trainNo: '0203', times: [396, 426, 453, 484, 518, 540, 582, 596, 622, 654, 692, 717] }, // 6:36
-    { trainNo: '0605', times: [426, 456, 483, 514, 548, 570, 612, 626, 652, 684, 722, 747] }, // 7:06
-    { trainNo: '0109', times: [456, 486, 513, 544, 578, 600, 642, 656, 682, 714, 752, 777] }, // 7:36
-    { trainNo: '0111', times: [486, 516, 543, 574, 608, 630, 672, 686, 712, 744, 782, 807] }, // 8:06
-    { trainNo: '0809', times: [516, 546, 573, 604, 638, 660, 702, 716, 742, 774, 812, 837] }, // 8:36
-    { trainNo: '0117', times: [546, 576, 603, 634, 668, 690, 732, 746, 772, 804, 842, 867] }, // 9:06
-    { trainNo: '0295', times: [606, 636, 663, 694, 728, 750, 792, 806, 832, 864, 902, 927] }, // 10:06
-    { trainNo: '0123', times: [666, 696, 723, 754, 788, 810, 852, 866, 892, 924, 962, 987] }, // 11:06
-    { trainNo: '0129', times: [726, 756, 783, 814, 848, 870, 912, 926, 952, 984, 1022, 1047] }, // 12:06
-    { trainNo: '0135', times: [786, 816, 843, 874, 908, 930, 972, 986, 1012, 1044, 1082, 1107] }, // 13:06
-    { trainNo: '0141', times: [846, 876, 903, 934, 968, 990, 1032, 1046, 1072, 1104, 1142, 1167] }, // 14:06
-    { trainNo: '0147', times: [906, 936, 963, 994, 1028, 1050, 1092, 1106, 1132, 1164, 1202, 1227] }, // 15:06
-    { trainNo: '0153', times: [966, 996, 1023, 1054, 1088, 1110, 1152, 1166, 1192, 1224, 1262, 1287] }, // 16:06
-    { trainNo: '0159', times: [1026, 1056, 1083, 1114, 1148, 1170, 1212, 1226, 1252, 1284, 1322, 1347] }, // 17:06
-    { trainNo: '0165', times: [1086, 1116, 1143, 1174, 1208, 1230, 1272, 1286, 1312, 1344, 1382, 1407] }, // 18:06
-    { trainNo: '0171', times: [1146, 1176, 1203, 1234, 1268, 1290, 1332, 1346, 1372, 1404, 1442, 1467] }, // 19:06
-    { trainNo: '0177', times: [1206, 1236, 1263, 1294, 1328, 1350, 1392, 1406, 1432, 1464, 1502, 1527] }, // 20:06
-    { trainNo: '0183', times: [1266, 1296, 1323, 1354, 1388, 1410, 1452, 1466, 1492, 1524, 1562, 1587] }, // 21:06
-  ],
-  northbound: [
-    { trainNo: '0102', times: [1587, 1552, 1522, 1492, 1466, 1452, 1410, 1388, 1354, 1323, 1296, 1266] }, // reverse
-    { trainNo: '0202', times: [360, 325, 295, 265, 239, 225, 183, 161, 127, 96, 69, 39] },
-    { trainNo: '0604', times: [420, 385, 355, 325, 299, 285, 243, 221, 187, 156, 129, 99] },
-    { trainNo: '0108', times: [480, 445, 415, 385, 359, 345, 303, 281, 247, 216, 189, 159] },
-    { trainNo: '0110', times: [540, 505, 475, 445, 419, 405, 363, 341, 307, 276, 249, 219] },
-    { trainNo: '0806', times: [600, 565, 535, 505, 479, 465, 423, 401, 367, 336, 309, 279] },
-    { trainNo: '0116', times: [660, 625, 595, 565, 539, 525, 483, 461, 427, 396, 369, 339] },
-    { trainNo: '0294', times: [720, 685, 655, 625, 599, 585, 543, 521, 487, 456, 429, 399] },
-    { trainNo: '0122', times: [780, 745, 715, 685, 659, 645, 603, 581, 547, 516, 489, 459] },
-    { trainNo: '0128', times: [840, 805, 775, 745, 719, 705, 663, 641, 607, 576, 549, 519] },
-    { trainNo: '0134', times: [900, 865, 835, 805, 779, 765, 723, 701, 667, 636, 609, 579] },
-    { trainNo: '0140', times: [960, 925, 895, 865, 839, 825, 783, 761, 727, 696, 669, 639] },
-    { trainNo: '0146', times: [1020, 985, 955, 925, 899, 885, 843, 821, 787, 756, 729, 699] },
-    { trainNo: '0152', times: [1080, 1045, 1015, 985, 959, 945, 903, 881, 847, 816, 789, 759] },
-    { trainNo: '0158', times: [1140, 1105, 1075, 1045, 1019, 1005, 963, 941, 907, 876, 849, 819] },
-    { trainNo: '0164', times: [1200, 1165, 1135, 1105, 1079, 1065, 1023, 1001, 967, 936, 909, 879] },
-    { trainNo: '0170', times: [1260, 1225, 1195, 1165, 1139, 1125, 1083, 1061, 1027, 996, 969, 939] },
-    { trainNo: '0176', times: [1320, 1285, 1255, 1225, 1199, 1185, 1143, 1121, 1087, 1056, 1029, 999] },
-    { trainNo: '0682', times: [1380, 1345, 1315, 1285, 1259, 1245, 1203, 1181, 1147, 1116, 1089, 1059] },
-  ]
+// TDX Station ID mapping (TDX uses 4-digit codes)
+const STATION_ID_MAP = {
+  '0990': 0, '1000': 1, '1010': 2, '1020': 3, '1030': 4, '1035': 5,
+  '1040': 6, '1043': 7, '1047': 8, '1050': 9, '1060': 10, '1070': 11
 };
+
+// Real timetable data (loaded from TDX API)
+let timetableData = { southbound: [], northbound: [] };
+let isLoadingTimetable = false;
+let timetableError = null;
+let lastTimetableUpdate = null;
 
 // THSR Fare Table (Standard Car, in NTD)
 // Index matches station order: Nangang(0) to Zuoying(11)
@@ -509,11 +533,6 @@ const THSR_FARES = [
   [790, 750, 710, 650, 590, 540, 460, 410, 340, 250, 120, 0]    // From Zuoying
 ];
 
-// Train car assignments (demo - would come from API)
-const TRAIN_CARS = {
-  standard: { en: 'Standard Car', zh: '標準車廂' },
-  business: { en: 'Business Car', zh: '商務車廂' }
-};
 
 const CONFIG = {
   DEFAULT_CENTER: [24.0, 120.8],
@@ -533,6 +552,154 @@ let timeUpdateInterval = null;
 
 // Config for showing previous trains
 const SHOW_DEPARTED_MINUTES = 30; // Show trains departed within last 30 minutes
+
+// Convert HH:MM to minutes from midnight
+function timeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Fetch real timetable from TDX API
+async function fetchTimetable() {
+  if (isLoadingTimetable) return;
+
+  // Check cache first
+  try {
+    const cached = localStorage.getItem(TIMETABLE_CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < TIMETABLE_CACHE_TTL) {
+        timetableData = data;
+        lastTimetableUpdate = new Date(timestamp);
+        console.log('[THSR] Using cached timetable:', timetableData.southbound.length + timetableData.northbound.length, 'trains');
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('[THSR] Cache read error:', e);
+  }
+
+  isLoadingTimetable = true;
+  timetableError = null;
+
+  try {
+    console.log('[THSR] Fetching timetable from TDX...');
+    const response = await fetch(`${TDX_PROXY_URL}/v2/Rail/THSR/GeneralTimetable?$format=JSON`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const rawData = await response.json();
+    console.log('[THSR] Received', rawData.length, 'train records from TDX');
+
+    // Transform TDX data to our format
+    const southbound = [];
+    const northbound = [];
+
+    rawData.forEach(train => {
+      const trainNo = train.GeneralTimetable?.GeneralTrainInfo?.TrainNo || train.TrainNo;
+      const direction = train.GeneralTimetable?.GeneralTrainInfo?.Direction ?? train.Direction;
+      const stopTimes = train.GeneralTimetable?.StopTimes || train.StopTimes || [];
+
+      if (!trainNo || stopTimes.length === 0) return;
+
+      // Build times array indexed by station position (0-11)
+      const times = new Array(12).fill(null);
+      const stationTimes = {}; // Store full stop info for timetable display
+
+      stopTimes.forEach(stop => {
+        const stationId = stop.StationID;
+        const stationIdx = STATION_ID_MAP[stationId];
+        if (stationIdx !== undefined) {
+          const depTime = timeToMinutes(stop.DepartureTime);
+          const arrTime = timeToMinutes(stop.ArrivalTime);
+          times[stationIdx] = depTime !== null ? depTime : arrTime;
+          stationTimes[stationIdx] = {
+            arr: arrTime,
+            dep: depTime,
+            stationName: stop.StationName
+          };
+        }
+      });
+
+      const trainData = {
+        trainNo,
+        times,
+        stationTimes,
+        direction
+      };
+
+      // Direction: 0 = Southbound, 1 = Northbound
+      if (direction === 0) {
+        southbound.push(trainData);
+      } else {
+        northbound.push(trainData);
+      }
+    });
+
+    // Sort by first departure time
+    southbound.sort((a, b) => {
+      const aTime = a.times.find(t => t !== null) || 0;
+      const bTime = b.times.find(t => t !== null) || 0;
+      return aTime - bTime;
+    });
+
+    northbound.sort((a, b) => {
+      const aTime = a.times.find(t => t !== null) || 0;
+      const bTime = b.times.find(t => t !== null) || 0;
+      return aTime - bTime;
+    });
+
+    timetableData = { southbound, northbound };
+    lastTimetableUpdate = new Date();
+
+    // Cache the data
+    try {
+      localStorage.setItem(TIMETABLE_CACHE_KEY, JSON.stringify({
+        data: timetableData,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.warn('[THSR] Cache write error:', e);
+    }
+
+    console.log('[THSR] Loaded', southbound.length, 'southbound,', northbound.length, 'northbound trains');
+
+  } catch (error) {
+    console.error('[THSR] Timetable fetch error:', error);
+    timetableError = error.message;
+  } finally {
+    isLoadingTimetable = false;
+  }
+}
+
+// View mode toggle for mobile
+let currentViewMode = 'split';
+function setViewMode(mode) {
+  currentViewMode = mode;
+  const panel = document.getElementById('panel');
+  const container = document.querySelector('.container');
+
+  panel.classList.remove('list-only');
+  container.classList.remove('map-only');
+
+  if (mode === 'list') {
+    panel.classList.add('list-only');
+  } else if (mode === 'map') {
+    container.classList.add('map-only');
+  }
+
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === mode);
+  });
+
+  // Invalidate map size after transition
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 350);
+}
 
 // Use shared utilities from common.js
 function toggleLang() {
@@ -647,7 +814,10 @@ function getTrainsForStation(stationId, direction) {
   const stationIndex = STATIONS.findIndex(s => s.id === stationId);
   if (stationIndex === -1) return [];
 
-  const schedule = direction === 'south' ? TRAIN_SCHEDULE_BASE.southbound : TRAIN_SCHEDULE_BASE.northbound;
+  // Use real timetable data from TDX API
+  const schedule = direction === 'south' ? timetableData.southbound : timetableData.northbound;
+  if (!schedule || schedule.length === 0) return [];
+
   const now = getCurrentMinutes();
 
   // Use selected destination or default to terminal
@@ -662,23 +832,31 @@ function getTrainsForStation(stationId, direction) {
 
   const trains = schedule.map(train => {
     const depTime = train.times[stationIndex];
-    if (depTime === undefined) return null;
+    if (depTime === null || depTime === undefined) return null;
 
     const destStation = STATIONS[destIndex];
 
     // Get arrival time at destination
     const arrTime = train.times[destIndex];
-    const duration = direction === 'south'
-      ? arrTime - depTime
-      : depTime - arrTime;
+    if (arrTime === null || arrTime === undefined) return null;
+
+    const duration = Math.abs(arrTime - depTime);
 
     // Get fare
     const fare = THSR_FARES[stationIndex][destIndex];
 
-    // Demo platform assignment (1 or 2 based on train number)
+    // Platform assignment based on train number
     const platform = parseInt(train.trainNo) % 2 === 0 ? 1 : 2;
 
-    const diff = depTime - now;
+    // Handle late night wrap-around: treat early morning trains as "tomorrow"
+    // If current time is after 10 PM (1320 min) and train is before 8 AM (480 min),
+    // treat the train as being +1440 minutes (tomorrow)
+    let adjustedDepTime = depTime;
+    if (now >= 1320 && depTime < 480) {
+      adjustedDepTime = depTime + 1440; // Tomorrow's train
+    }
+
+    const diff = adjustedDepTime - now;
     // Show trains departed within SHOW_DEPARTED_MINUTES
     const isDeparted = diff < -SHOW_DEPARTED_MINUTES;
     const isRecentlyDeparted = diff < 0 && diff >= -SHOW_DEPARTED_MINUTES;
@@ -700,7 +878,8 @@ function getTrainsForStation(stationId, direction) {
       isRecentlyDeparted: isRecentlyDeparted,
       isArriving: isArriving,
       isNext: isNext,
-      countdown: getCountdown(depTime, isZh)
+      countdown: getCountdown(depTime, isZh),
+      stationTimes: train.stationTimes // For timetable display
     };
   }).filter(t => t !== null);
 
@@ -708,12 +887,12 @@ function getTrainsForStation(stationId, direction) {
   return trains
     .filter(t => !t.isDeparted)
     .sort((a, b) => {
-      // Handle day wraparound
+      // Handle day wraparound for sorting
       const aNorm = a.depTime < now - 120 ? a.depTime + 1440 : a.depTime;
       const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
       return aNorm - bNorm;
     })
-    .slice(0, 15); // Show more trains
+    .slice(0, 20); // Show more trains
 }
 
 function renderTrainSchedule() {
@@ -726,6 +905,18 @@ function renderTrainSchedule() {
 
   if (!stationId) {
     listEl.innerHTML = `<li class="no-trains">${isZh ? '請選擇車站查看時刻表' : 'Select a station to view schedule'}</li>`;
+    return;
+  }
+
+  // Show loading state
+  if (isLoadingTimetable) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '載入時刻表中...' : 'Loading timetable...'}</li>`;
+    return;
+  }
+
+  // Show error state
+  if (timetableError && timetableData.southbound.length === 0) {
+    listEl.innerHTML = `<li class="no-trains">${isZh ? '載入時刻表失敗: ' + timetableError : 'Failed to load timetable: ' + timetableError}</li>`;
     return;
   }
 
@@ -773,14 +964,12 @@ function renderTrainSchedule() {
       <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}">
         <span class="train-time">${train.depTimeStr}</span>
         <span class="train-number">${train.trainNo}</span>
-        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${isFirstUpcoming ? ` <span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}</span>
-        <span class="train-meta">
-          <span class="train-platform">${train.platform}${isZh ? '月台' : ''}</span>
+        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}</span>
+        <span class="train-info">
           <span class="train-duration">${durationStr}</span>
           <span class="train-fare">$${train.fare}</span>
+          <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" title="${isZh ? '時刻表' : 'Timetable'}">▼</button>
         </span>
-        <span class="train-status ${statusClass}">${statusText}</span>
-        <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" title="${isZh ? '時刻表' : 'Timetable'}">▼</button>
         <div class="train-timetable" id="timetable-${train.trainNo}"></div>
       </li>
     `;
@@ -805,8 +994,8 @@ function toggleTimetable(trainNo) {
     el.textContent = '▼';
   });
 
-  // Find train data
-  const schedule = currentDirection === 'south' ? TRAIN_SCHEDULE_BASE.southbound : TRAIN_SCHEDULE_BASE.northbound;
+  // Find train data from real timetable
+  const schedule = currentDirection === 'south' ? timetableData.southbound : timetableData.northbound;
   const train = schedule.find(t => t.trainNo === trainNo);
   if (!train) return;
 
@@ -815,14 +1004,15 @@ function toggleTimetable(trainNo) {
 
   // Build station list with times
   let stationsToShow = [];
-  if (currentDirection === 'south') {
-    for (let i = 0; i < STATIONS.length; i++) {
-      stationsToShow.push({ station: STATIONS[i], index: i, time: train.times[i] });
+  for (let i = 0; i < STATIONS.length; i++) {
+    const time = train.times[i];
+    if (time !== null && time !== undefined) {
+      stationsToShow.push({ station: STATIONS[i], index: i, time: time });
     }
-  } else {
-    for (let i = 0; i < STATIONS.length; i++) {
-      stationsToShow.push({ station: STATIONS[i], index: i, time: train.times[STATIONS.length - 1 - i] });
-    }
+  }
+
+  // Sort stations based on direction
+  if (currentDirection === 'north') {
     stationsToShow.reverse();
   }
 
@@ -995,22 +1185,27 @@ async function initialize() {
   const savedLang = localStorage.getItem('ubike-lang');
   if (savedLang) isZh = savedLang === 'zh';
 
-  // Get user location
+  // Get user location (non-blocking)
   if ('geolocation' in navigator) {
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-      });
-      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      console.log('[THSR] User location:', userLocation);
-    } catch (e) {
-      console.warn('[THSR] Could not get location');
-    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        console.log('[THSR] User location:', userLocation);
+        renderStationList();
+        updatePopups();
+      },
+      () => console.warn('[THSR] Could not get location'),
+      { timeout: 10000 }
+    );
   }
 
   setupTabs();
   initMap();
   updateUI();
+
+  // Fetch real timetable from TDX API
+  await fetchTimetable();
+  renderTrainSchedule();
 
   // Search handler
   document.getElementById('search-input').addEventListener('input', renderStationList);
@@ -1021,6 +1216,12 @@ async function initialize() {
       renderTrainSchedule();
     }
   }, 60000);
+
+  // Refresh timetable every hour
+  setInterval(async () => {
+    await fetchTimetable();
+    renderTrainSchedule();
+  }, TIMETABLE_CACHE_TTL);
 
   console.log('[THSR] Initialized');
 }

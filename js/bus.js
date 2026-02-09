@@ -11,7 +11,7 @@
 //
 // OPTION 1: Use Cloudflare Worker Proxy (RECOMMENDED - Secure)
 // Deploy the worker from /workers/tdx-proxy.js, then set the URL below:
-const TDX_PROXY_URL = ''; // Disabled - deploy proxy or get TDX credentials first // https://tdx-proxy.owen-ouyang.workers.dev
+const TDX_PROXY_URL = 'https://tdx-proxy.owen-ouyang.workers.dev'; // Disabled - deploy proxy or get TDX credentials first // https://tdx-proxy.owen-ouyang.workers.dev
 //
 // OPTION 2: Direct API (credentials exposed in browser - NOT recommended for production)
 // Register FREE at https://tdx.transportdata.tw/ to get Client ID and Secret
@@ -229,6 +229,10 @@ let routeDirection = 'go';
 let routeSearchQuery = '';
 let selectedOriginStop = null;
 let selectedDestStop = null;
+let fetchedRoutes = {}; // Cache for fetched routes by city
+let fetchedRouteStops = {}; // Cache for fetched route stops
+let isLoadingRoutes = false;
+let isLoadingStops = false;
 
 // Use shared utilities from common.js: deg2rad, getDistanceInMeters, formatDistance, formatTime, getCurrentMinutes, getCountdown
 
@@ -321,11 +325,25 @@ function updateRouteCitySelector() {
     });
 }
 
-function updateRouteSelector() {
+async function updateRouteSelector() {
     const select = document.getElementById('route-select');
     if (!select) return;
 
-    let routes = BUS_ROUTES[currentRouteCity] || [];
+    // Show loading state
+    if (isLoadingRoutes) {
+        select.innerHTML = `<option value="">${isZh ? '載入路線中...' : 'Loading routes...'}</option>`;
+        return;
+    }
+
+    // Fetch routes from TDX (or use cache/demo)
+    let routes = fetchedRoutes[currentRouteCity];
+    if (!routes || routes.length === 0) {
+        isLoadingRoutes = true;
+        select.innerHTML = `<option value="">${isZh ? '載入路線中...' : 'Loading routes...'}</option>`;
+        routes = await fetchRoutes(currentRouteCity);
+        isLoadingRoutes = false;
+    }
+
     const currentValue = select.value;
 
     // Filter by search query
@@ -340,7 +358,10 @@ function updateRouteSelector() {
         );
     }
 
-    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}${routes.length > 0 ? ` (${routes.length})` : ''}</option>`;
+    const isRealData = fetchedRoutes[currentRouteCity]?.length > 20;
+    const countLabel = routes.length > 0 ? ` (${routes.length}${isRealData ? '' : ' demo'})` : '';
+
+    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}${countLabel}</option>`;
     routes.forEach(route => {
         const name = isZh ? route.name.zh : route.name.en;
         const terminals = isZh ? route.terminals.zh : route.terminals.en;
@@ -356,25 +377,42 @@ function updateRouteSelector() {
     updateRouteCitySelector();
 }
 
-function onRouteSearch() {
+async function onRouteSearch() {
     const input = document.getElementById('route-search-input');
     routeSearchQuery = input ? input.value.trim() : '';
-    updateRouteSelector();
+    await updateRouteSelector();
 }
 
-function onRouteCityChange() {
+async function onRouteCityChange() {
     const select = document.getElementById('route-city-select');
     currentRouteCity = select.value;
     currentRoute = '';
-    updateRouteSelector();
+    selectedOriginStop = null;
+    selectedDestStop = null;
+    await updateRouteSelector();
     renderRouteSchedule();
 }
 
-function onRouteChange() {
+async function onRouteChange() {
     const select = document.getElementById('route-select');
     currentRoute = select.value;
     selectedOriginStop = null;
     selectedDestStop = null;
+
+    if (currentRoute) {
+        // Show loading state
+        isLoadingStops = true;
+        renderRouteSchedule(); // Show loading indicator
+
+        // Fetch stops for both directions
+        await Promise.all([
+            fetchRouteStopsFromTDX(currentRouteCity, currentRoute, 'go'),
+            fetchRouteStopsFromTDX(currentRouteCity, currentRoute, 'back')
+        ]);
+
+        isLoadingStops = false;
+    }
+
     updateStopSelectors();
     renderRouteSchedule();
 }
@@ -455,7 +493,7 @@ function onStopSelectorChange() {
     renderRouteSchedule();
 }
 
-function setRouteDirection(dir) {
+async function setRouteDirection(dir) {
     routeDirection = dir;
     document.querySelectorAll('.direction-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.dir === dir);
@@ -463,11 +501,30 @@ function setRouteDirection(dir) {
     // Reset stop selections when direction changes
     selectedOriginStop = null;
     selectedDestStop = null;
+
+    // Fetch stops for new direction if not cached
+    if (currentRoute) {
+        const cacheKey = `${currentRouteCity}_${currentRoute}_${dir}`;
+        if (!fetchedRouteStops[cacheKey]) {
+            isLoadingStops = true;
+            renderRouteSchedule();
+            await fetchRouteStopsFromTDX(currentRouteCity, currentRoute, dir);
+            isLoadingStops = false;
+        }
+    }
+
     updateStopSelectors();
     renderRouteSchedule();
 }
 
 function getRouteStops(routeId, direction) {
+    // Try to get fetched TDX data first
+    const cacheKey = `${currentRouteCity}_${routeId}_${direction}`;
+    if (fetchedRouteStops[cacheKey]) {
+        return fetchedRouteStops[cacheKey];
+    }
+
+    // Fall back to demo data
     const routeData = ROUTE_STOPS[routeId] || ROUTE_STOPS._default;
     return routeData[direction] || routeData.go;
 }
@@ -547,6 +604,11 @@ function renderRouteSchedule() {
 
     if (!currentRoute) {
         listEl.innerHTML = `<li class="no-schedule">${isZh ? '請選擇路線查看站點' : 'Select a route to view stops'}</li>`;
+        return;
+    }
+
+    if (isLoadingStops) {
+        listEl.innerHTML = `<li class="no-schedule"><div class="loading-spinner"></div>${isZh ? '載入站點資料...' : 'Loading stops...'}</li>`;
         return;
     }
 
@@ -853,6 +915,134 @@ async function fetchArrivals(stopIds) {
         console.error('[Bus] Error fetching arrivals:', error);
         return generateDemoArrivals(stopIds);
     }
+}
+
+// Fetch bus routes for a city from TDX
+async function fetchRoutes(city) {
+    // Return cached routes if available
+    if (fetchedRoutes[city] && fetchedRoutes[city].length > 0) {
+        return fetchedRoutes[city];
+    }
+
+    const token = await getAccessToken();
+    if (!token) {
+        console.log('[Bus] No token, using demo routes');
+        return BUS_ROUTES[city] || [];
+    }
+
+    try {
+        const apiPath = `/v2/Bus/Route/City/${city}?$top=500&$format=JSON`;
+
+        let response;
+        if (useProxy()) {
+            response = await fetch(TDX_PROXY_URL + apiPath);
+        } else {
+            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        }
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const routes = data.map(route => ({
+            id: route.RouteName.Zh_tw,
+            name: {
+                en: route.RouteName.En || route.RouteName.Zh_tw,
+                zh: route.RouteName.Zh_tw
+            },
+            terminals: {
+                en: `${route.DepartureStopNameEn || route.DepartureStopNameZh || ''} - ${route.DestinationStopNameEn || route.DestinationStopNameZh || ''}`,
+                zh: `${route.DepartureStopNameZh || ''} - ${route.DestinationStopNameZh || ''}`
+            },
+            subRouteId: route.SubRoutes?.[0]?.SubRouteUID || route.RouteUID,
+            routeUID: route.RouteUID
+        }));
+
+        // Sort routes: numbers first, then by name
+        routes.sort((a, b) => {
+            const aNum = parseInt(a.id);
+            const bNum = parseInt(b.id);
+            if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+            if (!isNaN(aNum)) return -1;
+            if (!isNaN(bNum)) return 1;
+            return a.id.localeCompare(b.id, 'zh-TW');
+        });
+
+        fetchedRoutes[city] = routes;
+        console.log(`[Bus] Fetched ${routes.length} routes for ${city}`);
+        return routes;
+    } catch (error) {
+        console.error('[Bus] Error fetching routes:', error);
+        return BUS_ROUTES[city] || [];
+    }
+}
+
+// Fetch stops for a specific route from TDX
+async function fetchRouteStopsFromTDX(city, routeName, direction) {
+    const cacheKey = `${city}_${routeName}_${direction}`;
+    if (fetchedRouteStops[cacheKey]) {
+        return fetchedRouteStops[cacheKey];
+    }
+
+    const token = await getAccessToken();
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const encodedRouteName = encodeURIComponent(routeName);
+        const apiPath = `/v2/Bus/StopOfRoute/City/${city}/${encodedRouteName}?$format=JSON`;
+
+        let response;
+        if (useProxy()) {
+            response = await fetch(TDX_PROXY_URL + apiPath);
+        } else {
+            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        }
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        // Find the correct direction (0 = outbound/go, 1 = return/back)
+        const dirCode = direction === 'go' ? 0 : 1;
+        const routeData = data.find(r => r.Direction === dirCode) || data[0];
+
+        if (!routeData || !routeData.Stops) {
+            return null;
+        }
+
+        const stops = routeData.Stops.map((stop, idx) => ({
+            name: {
+                en: stop.StopName.En || stop.StopName.Zh_tw,
+                zh: stop.StopName.Zh_tw
+            },
+            stopUID: stop.StopUID,
+            sequence: stop.StopSequence || idx + 1,
+            // Estimate time based on sequence (3 min per stop as rough estimate)
+            time: calculateEstimatedTime(idx)
+        }));
+
+        fetchedRouteStops[cacheKey] = stops;
+        console.log(`[Bus] Fetched ${stops.length} stops for ${routeName} (${direction})`);
+        return stops;
+    } catch (error) {
+        console.error('[Bus] Error fetching route stops:', error);
+        return null;
+    }
+}
+
+// Calculate estimated time for a stop based on its sequence
+function calculateEstimatedTime(index) {
+    const baseHour = 6;
+    const minutesPerStop = 3;
+    const totalMinutes = baseHour * 60 + index * minutesPerStop;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 // Generate demo data when API is not available
@@ -1188,8 +1378,10 @@ async function init() {
 
     updateUI();
 
-    // Initialize route schedule
-    updateRouteSelector();
+    // Initialize route schedule (async - will update when ready)
+    updateRouteSelector().then(() => {
+        console.log('[Bus] Routes loaded for', currentRouteCity);
+    });
     renderRouteSchedule();
 
     // Initialize map

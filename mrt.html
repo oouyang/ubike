@@ -212,9 +212,47 @@
       50% { background: #e3f2fd; }
     }
     @media (max-width: 768px) {
+      header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.2em;
+        width: 100%;
+      }
+      .header-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn, .lang-toggle {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
       .container { flex-direction: column; }
-      #panel { width: 100%; height: 40%; }
-      #map-canvas { height: 60%; }
+      #panel { width: 100%; height: 50%; }
+      #map-canvas { height: 50%; }
+      .search-box {
+        padding: 8px;
+      }
+      .search-box input[type="text"],
+      .search-box select {
+        padding: 6px;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .station-item {
+        padding: 10px 12px;
+      }
+      .station-name {
+        font-size: 0.95em;
+      }
+      .station-info {
+        font-size: 0.8em;
+      }
     }
   </style>
 </head>
