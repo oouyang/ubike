@@ -415,6 +415,7 @@ async function onRouteChange() {
 
     updateStopSelectors();
     renderRouteSchedule();
+    updateRouteMapMarkers();
 }
 
 function updateStopSelectors() {
@@ -515,6 +516,7 @@ async function setRouteDirection(dir) {
 
     updateStopSelectors();
     renderRouteSchedule();
+    updateRouteMapMarkers();
 }
 
 function getRouteStops(routeId, direction) {
@@ -1022,6 +1024,9 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
             },
             stopUID: stop.StopUID,
             sequence: stop.StopSequence || idx + 1,
+            // Include position data for map markers
+            lat: stop.StopPosition?.PositionLat || null,
+            lng: stop.StopPosition?.PositionLon || null,
             // Estimate time based on sequence (3 min per stop as rough estimate)
             time: calculateEstimatedTime(idx)
         }));
@@ -1270,6 +1275,75 @@ function updateMarkers() {
         marker.addTo(map);
         markers[stop.id] = marker;
     });
+}
+
+// Route line for showing bus route on map
+let routeLine = null;
+
+function updateRouteMapMarkers() {
+    clearMarkers();
+    if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+    }
+
+    if (!currentRoute) return;
+
+    const stops = getRouteStops(currentRoute, routeDirection);
+    if (!stops || stops.length === 0) return;
+
+    // Filter stops with valid coordinates
+    const stopsWithCoords = stops.filter(s => s.lat && s.lng);
+    if (stopsWithCoords.length === 0) {
+        console.warn('[Bus] No stops with coordinates for route', currentRoute);
+        return;
+    }
+
+    // Create markers for each stop
+    stopsWithCoords.forEach((stop, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === stopsWithCoords.length - 1;
+        const stopName = isZh ? stop.name.zh : stop.name.en;
+
+        const marker = L.marker([stop.lat, stop.lng], {
+            icon: L.divIcon({
+                className: '',
+                html: `<div class="marker-icon" style="width:24px;height:24px;font-size:10px;background:${isFirst ? '#2E7D32' : isLast ? '#c62828' : '#1565C0'};">${idx + 1}</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            })
+        });
+
+        marker.bindPopup(`
+            <div style="text-align:center;">
+                <strong>${stopName}</strong><br>
+                <small>${isZh ? '站序' : 'Stop'} ${idx + 1}</small>
+                ${isFirst ? `<br><span style="color:#2E7D32;">${isZh ? '起站' : 'First Stop'}</span>` : ''}
+                ${isLast ? `<br><span style="color:#c62828;">${isZh ? '終點' : 'Last Stop'}</span>` : ''}
+            </div>
+        `);
+        marker.addTo(map);
+        markers[stop.stopUID || `route_${idx}`] = marker;
+    });
+
+    // Draw route line
+    const lineCoords = stopsWithCoords.map(s => [s.lat, s.lng]);
+    if (lineCoords.length >= 2) {
+        routeLine = L.polyline(lineCoords, {
+            color: '#1565C0',
+            weight: 4,
+            opacity: 0.7
+        }).addTo(map);
+    }
+
+    // Fit map to show all stops
+    if (stopsWithCoords.length > 0) {
+        const bounds = L.latLngBounds(stopsWithCoords.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [30, 30] });
+    }
+
+    console.log('[Bus] Updated map with', stopsWithCoords.length, 'stops for route', currentRoute);
 }
 
 async function loadNearbyStops() {
