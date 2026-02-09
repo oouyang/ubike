@@ -47,15 +47,6 @@
     .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
     .nav-btn.home { background: #FF9800; border-color: #FF9800; }
     .nav-btn.home:hover { background: #F57C00; }
-    .lang-toggle {
-      padding: 6px 12px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .lang-toggle:hover { background: rgba(255,255,255,0.3); }
     .container {
       display: flex;
       height: calc(100vh - 52px);
@@ -352,26 +343,36 @@
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    .locate-btn {
-      position: absolute;
+    /* Floating buttons */
+    .float-btn-container {
+      position: fixed;
       bottom: 20px;
       right: 10px;
-      width: 40px;
-      height: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .float-btn {
+      width: 44px;
+      height: 44px;
       background: white;
       border: 2px solid rgba(0,0,0,0.2);
       border-radius: 4px;
       cursor: pointer;
-      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 12px;
+      font-weight: bold;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       transition: background 0.2s;
     }
-    .locate-btn:hover { background: #f4f4f4; }
-    .locate-btn:active { background: #e0e0e0; }
+    .float-btn:hover { background: #f4f4f4; }
+    .float-btn:active { background: #e0e0e0; }
+    .locate-btn {
+      font-size: 20px;
+    }
     .locate-btn.locating { animation: pulse-locate 1s infinite; }
     @keyframes pulse-locate {
       0%, 100% { background: white; }
@@ -437,7 +438,6 @@
       <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
       <a href="thsr.html" class="nav-btn active" data-en="THSR" data-zh="高鐵">THSR</a>
       <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
     </div>
   </header>
   <div class="container">
@@ -503,7 +503,10 @@
       </div>
     </div>
     <div id="map-canvas"></div>
-    <button class="locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+    <div class="float-btn-container">
+      <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+      <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+    </div>
   </div>
   <script src="js/common.js"></script>
   <script>
@@ -746,6 +749,12 @@ function updateUI() {
   document.querySelectorAll('[data-en]').forEach(el => {
     el.textContent = isZh ? el.dataset.zh : el.dataset.en;
   });
+
+  // Update language button text
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) {
+    langBtn.textContent = isZh ? '中' : 'EN';
+  }
 
   // Update station selector
   updateStationSelector();

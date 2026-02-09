@@ -296,6 +296,12 @@ function updateUI() {
     if (locateBtn) {
         locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
     }
+
+    // Update language button text
+    const langBtn = document.getElementById('lang-btn');
+    if (langBtn) {
+        langBtn.textContent = isZh ? '中' : 'EN';
+    }
 }
 
 // ===== Tab Management =====
