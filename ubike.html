@@ -116,18 +116,6 @@
       font-weight: bold;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    .lang-toggle {
-      padding: 6px 12px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .lang-toggle:hover {
-      background: rgba(255,255,255,0.3);
-    }
-
     /* Main content */
     .main-content {
       flex: 1;
@@ -258,29 +246,35 @@
       z-index: 1001;
       display: none;
     }
-    .locate-btn {
+    /* Floating buttons */
+    .float-btn-container {
       position: absolute;
       bottom: 20px;
       right: 10px;
-      width: 40px;
-      height: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .float-btn {
+      width: 44px;
+      height: 44px;
       background: white;
       border: 2px solid rgba(0,0,0,0.2);
       border-radius: 4px;
       cursor: pointer;
-      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 12px;
+      font-weight: bold;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       transition: background 0.2s;
     }
-    .locate-btn:hover {
-      background: #f4f4f4;
-    }
-    .locate-btn:active {
-      background: #e0e0e0;
+    .float-btn:hover { background: #f4f4f4; }
+    .float-btn:active { background: #e0e0e0; }
+    .locate-btn {
+      font-size: 20px;
     }
     .locate-btn.locating {
       animation: pulse-locate 1s infinite;
@@ -443,7 +437,6 @@
         <option value="pingtung">Pingtung</option>
         <option value="taitung">Taitung</option>
       </select>
-      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
     </div>
   </header>
 
@@ -460,7 +453,10 @@
         <ul id="station-list" class="station-list"></ul>
       </div>
       <div id="map-canvas"></div>
-      <button class="locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+      <div class="float-btn-container">
+        <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+        <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+      </div>
     </div>
 
     <!-- List View -->
