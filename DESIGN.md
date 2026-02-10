@@ -133,7 +133,16 @@ ubike/
 │   │   ├── Nearby stops       # Geolocation-based
 │   │   └── Real-time arrivals # Live countdown
 │   │
+│   ├── bottom-sheet.js        # Mobile bottom sheet (210 lines)
+│   │   ├── BottomSheet class  # Draggable panel component
+│   │   ├── Touch/mouse events # Drag gesture handling
+│   │   ├── Snap point logic   # collapsed/half/full states
+│   │   └── Velocity detection # Swipe momentum calculation
+│   │
 │   └── util.js                # Legacy utilities
+│
+├── css/
+│   └── bottom-sheet.css       # Bottom sheet styles (mobile-only)
 │
 ├── tdx/
 │   ├── index.html             # TDX data hub
@@ -918,7 +927,74 @@ header {
 }
 ```
 
-### 9.6 Responsive Breakpoints
+### 9.6 Mobile Bottom Sheet
+
+A Google Maps-style draggable bottom sheet replaces the traditional side panel on mobile devices (≤768px).
+
+#### Snap Points
+
+| State | Transform | Height | Content Visible |
+|-------|-----------|--------|-----------------|
+| Collapsed | `translateY(calc(100% - 56px))` | 56px | Handle + summary only |
+| Half | `translateY(50%)` | 50vh | Handle + filters + partial list |
+| Full | `translateY(10%)` | 90vh | Handle + filters + full scrollable list |
+
+#### Summary Line (Collapsed State)
+
+Each page shows contextual summary when collapsed:
+
+| Page | Summary Example |
+|------|-----------------|
+| YouBike | 🚲 Taipei • 400 stations |
+| MRT | 🚇 Taipei Metro • 131 stations |
+| Rail | 🚃 Western Line • 45 stations |
+| THSR | 🚄 12 stations |
+| Bus | 🚌 Route 307 • 25 stops |
+| TDX Air | ✈️ International • 4 airports |
+| TDX Bus | 🚌 Northern • 15 terminals |
+
+#### HTML Structure
+
+```html
+<div id="panel">
+  <div class="sheet-handle">
+    <div class="sheet-pill"></div>
+    <div class="sheet-summary" id="sheet-summary">Summary text</div>
+  </div>
+  <div class="sheet-content">
+    <!-- filters and list content -->
+  </div>
+</div>
+```
+
+#### CSS Classes
+
+```css
+#panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+#panel.snap-half { transform: translateY(50%); }
+#panel.snap-full { transform: translateY(10%); }
+#panel.dragging { transition: none; }  /* During drag */
+```
+
+#### JavaScript Initialization
+
+```javascript
+// Initialize on mobile only
+if (typeof BottomSheet !== 'undefined') {
+  bottomSheet = new BottomSheet(document.getElementById('panel'), {
+    initialSnap: 'collapsed',
+    onSnapChange: (snap) => console.log('Snap:', snap)
+  });
+}
+```
+
+#### Gesture Handling
+
+- **Velocity-based**: Fast swipe (>0.5 px/ms) snaps in swipe direction
+- **Distance-based**: Slow drag (>50px) snaps based on drag direction
+- **Content scrolling**: List scrolls inside `.sheet-content` without triggering drag
+
+### 9.7 Responsive Breakpoints
 
 ```css
 /* Mobile First */
@@ -927,19 +1003,37 @@ header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+    /* Total height: ~74px when nav wraps to 2 rows */
   }
 
-  .container {
-    flex-direction: column;
-  }
-
-  #panel {
-    width: 100%;
-    height: 45%;
-  }
-
+  /* Map behind bottom sheet */
   #map-canvas {
-    height: 55%;
+    position: fixed;
+    top: 74px;  /* Match header height */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+  }
+
+  /* Panel becomes bottom sheet */
+  #panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Floating buttons above collapsed sheet */
+  .float-btn-container {
+    bottom: 70px;
+    z-index: 1001;
   }
 }
 
@@ -1167,6 +1261,8 @@ async function getUserLocation() {
 - Touch-friendly targets (44px minimum)
 - Thumb-reachable UI elements
 - Progressive enhancement for larger screens
+- Mobile: Bottom sheet with drag gestures
+- Desktop: Traditional side panel (380px)
 
 #### 3. Zero Build Complexity
 > No build tools, transpilers, or bundlers

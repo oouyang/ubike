@@ -81,7 +81,10 @@ ubike/
 │   ├── common.js       # Shared utilities (CITIES, distance, language)
 │   ├── ubike.js        # YouBike page logic
 │   ├── bus.js          # Bus page logic
+│   ├── bottom-sheet.js # Mobile bottom sheet component
 │   └── util.js         # Legacy utilities
+├── css/
+│   └── bottom-sheet.css # Bottom sheet styles (mobile-only)
 ├── tdx/
 │   ├── index.html      # TDX static data hub
 │   ├── thsr.html       # THSR stations (static)
@@ -140,6 +143,14 @@ ubike/
 - **Language Toggle**: EN/中文 button
 - **Locate Button**: 📍 button at bottom-right of all maps
 - **Responsive Design**: Mobile-friendly layouts
+- **Mobile Bottom Sheet**: Draggable panel with snap points (collapsed/half/full)
+
+### Mobile UI (≤768px)
+- **Bottom Sheet**: Panel slides up from bottom with drag handle
+- **Snap Points**: Collapsed (56px), Half (50vh), Full (90vh)
+- **Summary Line**: Shows context when collapsed (e.g., "🚲 Taipei • 400 stations")
+- **Header Height**: 74px (wraps to 2 rows on mobile)
+- **Map Position**: Fixed, top: 74px to avoid header overlap
 
 ## MRT Systems & Lines
 
@@ -216,6 +227,45 @@ getNextBusTime()         // Calculate next departure
 loadNearbyStops()        // Fetch from TDX or demo
 fetchArrivals(stopIds)   // Real-time arrival data
 centerToUserLocation()   // Locate button handler
+```
+
+### `js/bottom-sheet.js` - Mobile Bottom Sheet
+Draggable bottom sheet component for mobile (≤768px). Google Maps-style UI with three snap points.
+
+```javascript
+// Constructor
+new BottomSheet(element, {
+  initialSnap: 'collapsed',  // 'collapsed' | 'half' | 'full'
+  onSnapChange: (snap) => {} // Callback when snap changes
+})
+
+// Snap Points
+collapsed  // 56px - Handle + summary only
+half       // 50vh - Handle + filters + partial list
+full       // 90vh - Handle + filters + full scrollable list
+
+// Methods
+snapTo(snap, animate)    // Programmatic snap
+destroy()                // Remove event listeners
+
+// CSS Classes (auto-managed)
+snap-collapsed           // translateY(calc(100% - 56px))
+snap-half                // translateY(50%)
+snap-full                // translateY(10%)
+dragging                 // Disables transition during drag
+```
+
+**Required HTML structure:**
+```html
+<div id="panel">
+  <div class="sheet-handle">
+    <div class="sheet-pill"></div>
+    <div class="sheet-summary" id="sheet-summary">Summary text</div>
+  </div>
+  <div class="sheet-content">
+    <!-- filters and list content -->
+  </div>
+</div>
 ```
 
 ## Service Worker Caching Strategies
