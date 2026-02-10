@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#1976d2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="Taiwan Transport PWA - YouBike, MRT, TRA Rail, and Bus information">
     <title>Taiwan Transport Hub</title>
     <link rel="manifest" href="manifest.webapp">
-    <link rel="icon" type="image/png" href="img/icon-128.png">
+    <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="apple-touch-icon" href="img/icon-180.png">
     <style>
       * { box-sizing: border-box; }
@@ -17,42 +17,44 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         margin: 0;
         padding: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
         min-height: 100vh;
       }
       header {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
         color: white;
-        padding: 20px;
-        text-align: center;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         position: sticky;
         top: 0;
         z-index: 100;
       }
       h1 {
-        margin: 0 0 8px 0;
-        font-size: 2em;
-        font-weight: 700;
+        margin: 0;
+        font-size: 1.5em;
+        font-weight: 600;
       }
-      .subtitle {
-        opacity: 0.9;
-        font-size: 1em;
+      .header-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
       }
-      .lang-toggle {
-        position: absolute;
-        top: 20px;
-        right: 20px;
+      .nav-btn {
+        padding: 6px 10px;
         background: rgba(255,255,255,0.2);
         border: 1px solid rgba(255,255,255,0.3);
-        color: white;
-        padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
       }
-      .lang-toggle:hover {
-        background: rgba(255,255,255,0.3);
-      }
+      .nav-btn:hover { background: rgba(255,255,255,0.3); }
+      .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+      .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+      .nav-btn.home:hover { background: #F57C00; }
       .container {
         max-width: 1400px;
         margin: 0 auto;
@@ -173,7 +175,7 @@
         padding: 16px 24px;
         background: #f8f9fa;
         font-weight: 600;
-        color: #667eea;
+        color: #1976d2;
       }
       .card-action-arrow {
         font-size: 1.2em;
@@ -219,13 +221,50 @@
         color: rgba(255,255,255,0.9);
       }
 
+      /* Floating button */
+      .float-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+        background: white;
+        border: 2px solid rgba(0,0,0,0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        z-index: 1000;
+        transition: background 0.2s;
+      }
+      .float-btn:hover { background: #f4f4f4; }
+      .float-btn:active { background: #e0e0e0; }
+
       @media (max-width: 768px) {
-        h1 { font-size: 1.5em; }
-        .lang-toggle {
-          position: static;
-          margin-top: 12px;
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
         }
-        header { text-align: center; }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
         .grid {
           grid-template-columns: 1fr;
         }
@@ -234,9 +273,15 @@
   </head>
   <body>
     <header>
-      <h1 id="page-title">🚀 Taiwan Transport Hub</h1>
-      <div class="subtitle" id="page-subtitle">Real-time transit information across Taiwan</div>
-      <button class="lang-toggle" onclick="toggleLang()">EN/中文</button>
+      <h1 id="page-title">Taiwan Transport</h1>
+      <div class="header-controls">
+        <a href="index.html" class="nav-btn home active" data-en="Home" data-zh="首頁">Home</a>
+        <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
+        <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+        <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+        <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      </div>
     </header>
 
     <div class="container">
@@ -571,6 +616,8 @@
       </p>
     </footer>
 
+    <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+
     <script>
     'use strict';
 
@@ -584,15 +631,12 @@
 
     function updateLang() {
       // Browser title
-      document.title = isZh ? '台灣交通資訊站' : 'Taiwan Transport Hub';
+      document.title = isZh ? '台灣交通' : 'Taiwan Transport';
 
       // Page header
       document.getElementById('page-title').textContent = isZh
-        ? '🚀 台灣交通資訊站'
-        : '🚀 Taiwan Transport Hub';
-      document.getElementById('page-subtitle').textContent = isZh
-        ? '全台即時交通資訊查詢'
-        : 'Real-time transit information across Taiwan';
+        ? '台灣交通'
+        : 'Taiwan Transport';
 
       // Data note
       document.getElementById('data-note').innerHTML = isZh
@@ -613,6 +657,12 @@
       document.querySelectorAll('[data-en]').forEach(el => {
         el.textContent = isZh ? el.dataset.zh : el.dataset.en;
       });
+
+      // Update language button
+      const langBtn = document.getElementById('lang-btn');
+      if (langBtn) {
+        langBtn.textContent = isZh ? '中' : 'EN';
+      }
     }
 
     // Register Service Worker

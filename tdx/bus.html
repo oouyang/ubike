@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1976d2">
+    <link rel="icon" type="image/png" href="../favicon.ico">
     <title>Taiwan Intercity Bus Terminals</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -14,35 +16,17 @@
         padding: 0;
       }
       header {
-        background: linear-gradient(135deg, #7b1fa2, #4a148c);
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
         color: white;
         padding: 12px 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
       }
-      h1 { margin: 0; font-size: 1.4em; }
-      .header-right {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-      }
-      .back-link {
-        color: white;
-        text-decoration: none;
-        opacity: 0.9;
-      }
-      .filter-select {
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.3);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-      }
+      h1 { margin: 0; font-size: 1.5em; }
       /* Floating buttons */
       .float-btn-container {
-        position: absolute;
+        position: fixed;
         bottom: 20px;
         right: 10px;
         display: flex;
@@ -67,7 +51,6 @@
       }
       .float-btn:hover { background: #f4f4f4; }
       .float-btn:active { background: #e0e0e0; }
-      .filter-select option { color: #333; }
       .container {
         display: flex;
         height: calc(100vh - 52px);
@@ -84,20 +67,42 @@
         flex: 1;
         height: 100%;
       }
-      .search-box {
-        padding: 10px 15px;
-        background: #fff;
-        border-bottom: 1px solid #ddd;
+      /* Filter controls in panel */
+      .filter-controls {
+        padding: 10px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        gap: 8px;
+        align-items: center;
         position: sticky;
         top: 0;
         z-index: 10;
       }
-      .search-box input {
-        width: 100%;
-        padding: 8px 12px;
+      #region-filter {
+        flex: 1;
+        padding: 8px 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        background: white;
+        color: #333;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      #region-filter:focus {
+        outline: none;
+        border-color: #7b1fa2;
+      }
+      #search-input {
+        flex: 2;
+        padding: 8px 10px;
         border: 1px solid #ddd;
         border-radius: 4px;
-        font-size: 14px;
+        font-size: 13px;
+      }
+      #search-input:focus {
+        outline: none;
+        border-color: #7b1fa2;
       }
       .info-box {
         padding: 10px 15px;
@@ -163,7 +168,7 @@
         justify-content: center;
         font-size: 14px;
       }
-      .header-nav {
+      .header-controls {
         display: flex;
         gap: 8px;
         align-items: center;
@@ -183,35 +188,54 @@
       .nav-btn.home { background: #FF9800; border-color: #FF9800; }
       .nav-btn.home:hover { background: #F57C00; }
       @media (max-width: 768px) {
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
         .container { flex-direction: column; }
         #panel { width: 100%; height: 45%; }
         #map-canvas { height: 55%; }
-        header { flex-wrap: wrap; gap: 8px; }
       }
     </style>
   </head>
   <body>
     <header>
-      <h1 id="page-title">🚌 Intercity Bus Terminals</h1>
-      <nav class="header-nav">
+      <h1 id="page-title">Intercity Bus Terminals</h1>
+      <div class="header-controls">
         <a href="../index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
         <a href="../ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
         <a href="../mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
         <a href="../rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
         <a href="../thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
         <a href="../bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-        <select id="region-filter" class="filter-select" onchange="filterTerminals()">
-          <option value="all" id="opt-all">All Regions</option>
-          <option value="north" id="opt-north">Northern</option>
-          <option value="central" id="opt-central">Central</option>
-          <option value="south" id="opt-south">Southern</option>
-          <option value="east" id="opt-east">Eastern</option>
-        </select>
-      </nav>
+      </div>
     </header>
     <div class="container">
       <div id="panel">
-        <div class="search-box">
+        <div class="filter-controls">
+          <select id="region-filter" onchange="filterTerminals()">
+            <option value="all" id="opt-all">All Regions</option>
+            <option value="north" id="opt-north">Northern</option>
+            <option value="central" id="opt-central">Central</option>
+            <option value="south" id="opt-south">Southern</option>
+            <option value="east" id="opt-east">Eastern</option>
+          </select>
           <input type="text" id="search-input" placeholder="Search terminals...">
         </div>
         <div class="info-box" id="info-box">

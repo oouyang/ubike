@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
-  <meta name="theme-color" content="#0d47a1">
+  <meta name="theme-color" content="#1976d2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Taiwan Rail Stations</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="icon" type="image/png" href="favicon.ico">
   <link rel="manifest" href="manifest.webapp">
   <link rel="apple-touch-icon" href="img/icon-180.png">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -23,7 +24,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 10px 15px;
-      background: #0d47a1;
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
       color: white;
     }
     h1 {
@@ -1147,7 +1148,9 @@ async function fetchTrainDelays() {
   if (isLoadingDelays) return;
 
   isLoadingDelays = true;
+  delayDataSource = 'loading';
   updateDelayRefreshButton(true);
+  renderTrainSchedule(); // Update UI to show loading state
   console.log('[Rail] Fetching train delays from TDX...');
 
   try {
@@ -1244,12 +1247,15 @@ function getDelayStatusIndicator() {
     const ageStr = age < 60
       ? (isZh ? `${age}秒前` : `${age}s ago`)
       : (isZh ? `${Math.floor(age/60)}分鐘前` : `${Math.floor(age/60)}m ago`);
-    return { class: 'live', text: isZh ? `即時 (${ageStr})` : `Live (${ageStr})` };
+    return { class: 'live', text: isZh ? `即時誤點 (${ageStr})` : `Live delays (${ageStr})` };
   }
   if (delayDataSource === 'error') {
     return { class: 'error', text: isZh ? '無法取得即時資料' : 'Live data unavailable' };
   }
-  return { class: '', text: isZh ? '示範資料' : 'Demo data' };
+  if (delayDataSource === 'loading') {
+    return { class: 'loading', text: isZh ? '載入中...' : 'Loading...' };
+  }
+  return { class: '', text: isZh ? '標準時刻表' : 'Scheduled times' };
 }
 
 function startDelayRefresh() {

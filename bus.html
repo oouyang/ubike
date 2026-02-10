@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Taiwan Bus - Nearby Stops & Arrivals</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="icon" type="image/png" href="favicon.ico">
     <link rel="manifest" href="manifest.webapp">
     <link rel="apple-touch-icon" href="img/icon-180.png">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -26,7 +27,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        h1 { margin: 0; font-size: 1.3em; }
+        h1 { margin: 0; font-size: 1.5em; }
         .header-controls {
             display: flex;
             gap: 8px;
@@ -526,10 +527,29 @@
             50% { background: #e3f2fd; }
         }
         @media (max-width: 768px) {
+            header {
+                padding: 8px 10px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            h1 {
+                font-size: 1.2em;
+                width: 100%;
+            }
+            .header-controls {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 4px;
+                justify-content: flex-start;
+            }
+            .nav-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
             .container { flex-direction: column; }
             #panel { width: 100%; height: 50%; }
             #map-canvas { height: 50%; }
-            .header-controls { flex-wrap: wrap; }
         }
     </style>
 </head>

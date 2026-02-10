@@ -9,177 +9,17 @@
 // TDX API Configuration
 // ===========================================
 //
-// OPTION 1: Use Cloudflare Worker Proxy (RECOMMENDED - Secure)
-// Deploy the worker from /workers/tdx-proxy.js, then set the URL below:
-const TDX_PROXY_URL = 'https://tdx-proxy.owen-ouyang.workers.dev'; // Disabled - deploy proxy or get TDX credentials first // https://tdx-proxy.owen-ouyang.workers.dev
+// Using Cloudflare Worker Proxy (handles TDX authentication)
+const TDX_PROXY_URL = 'https://tdx-proxy.owen-ouyang.workers.dev';
 //
-// OPTION 2: Direct API (credentials exposed in browser - NOT recommended for production)
-// Register FREE at https://tdx.transportdata.tw/ to get Client ID and Secret
+// Direct API credentials (not used when proxy is configured)
 const TDX_CONFIG = {
-    clientId: '', // Your TDX Client ID (free registration)
-    clientSecret: '', // Your TDX Client Secret
+    clientId: '',
+    clientSecret: '',
     authUrl: 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token',
     apiUrl: 'https://tdx.transportdata.tw/api/basic'
 };
-//
-// If neither is configured, demo mode will be used
 // ===========================================
-
-// Demo bus routes with stops and schedule (for Route Schedule tab)
-const BUS_ROUTES = {
-    Taipei: [
-        { id: '307', name: { en: '307', zh: '307' }, terminals: { en: 'Banqiao - MRT Gongguan', zh: '板橋－捷運公館站' } },
-        { id: '299', name: { en: '299', zh: '299' }, terminals: { en: 'Yonghe - MRT Taipei 101', zh: '永和－捷運台北101' } },
-        { id: '信義幹線', name: { en: 'Xinyi', zh: '信義幹線' }, terminals: { en: 'Songshan Station - Yongchun', zh: '松山車站－永春' } },
-        { id: '藍27', name: { en: 'Blue 27', zh: '藍27' }, terminals: { en: 'Neihu - Nangang', zh: '內湖－南港' } },
-        { id: '紅5', name: { en: 'Red 5', zh: '紅5' }, terminals: { en: 'Taipei Main - Yangmingshan', zh: '台北車站－陽明山' } },
-        { id: '綠1', name: { en: 'Green 1', zh: '綠1' }, terminals: { en: 'Xinyi - Taipei Zoo', zh: '信義－台北動物園' } },
-    ],
-    NewTaipei: [
-        { id: '275', name: { en: '275', zh: '275' }, terminals: { en: 'Sanchong - Taipei', zh: '三重－台北' } },
-        { id: '橘12', name: { en: 'Orange 12', zh: '橘12' }, terminals: { en: 'Zhonghe - Taipei', zh: '中和－台北' } },
-        { id: '藍38', name: { en: 'Blue 38', zh: '藍38' }, terminals: { en: 'Tucheng - Banqiao', zh: '土城－板橋' } },
-    ],
-    Taoyuan: [
-        { id: '206', name: { en: '206', zh: '206' }, terminals: { en: 'Taoyuan Station - Airport', zh: '桃園車站－機場' } },
-        { id: '501', name: { en: '501', zh: '501' }, terminals: { en: 'Zhongli - HSR Station', zh: '中壢－高鐵站' } },
-    ],
-    Taichung: [
-        { id: '300', name: { en: '300', zh: '300' }, terminals: { en: 'Taichung Station - HSR', zh: '台中車站－高鐵站' } },
-        { id: '301', name: { en: '301', zh: '301' }, terminals: { en: 'Xinmin - Taichung Station', zh: '新民－台中車站' } },
-        { id: '藍1', name: { en: 'Blue 1', zh: '藍1' }, terminals: { en: 'Taichung Port - Station', zh: '台中港－台中車站' } },
-    ],
-    Tainan: [
-        { id: '2', name: { en: '2', zh: '2' }, terminals: { en: 'Tainan Station - Anping', zh: '台南車站－安平' } },
-        { id: '紅幹線', name: { en: 'Red Line', zh: '紅幹線' }, terminals: { en: 'Tainan - Shanhua', zh: '台南－善化' } },
-    ],
-    Kaohsiung: [
-        { id: '紅27', name: { en: 'Red 27', zh: '紅27' }, terminals: { en: 'HSR Zuoying - Siaogang', zh: '高鐵左營－小港' } },
-        { id: '橘8', name: { en: 'Orange 8', zh: '橘8' }, terminals: { en: 'Zuoying - Fongshan', zh: '左營－鳳山' } },
-        { id: '205', name: { en: '205', zh: '205' }, terminals: { en: 'Kaohsiung Station - MRT', zh: '高雄車站－捷運' } },
-    ]
-};
-
-// Demo route stops data
-const ROUTE_STOPS = {
-    '307': {
-        go: [
-            { name: { en: 'Banqiao Station', zh: '板橋車站' }, time: '06:00' },
-            { name: { en: 'Fuzhong', zh: '府中' }, time: '06:05' },
-            { name: { en: 'Jiangzicui', zh: '江子翠' }, time: '06:10' },
-            { name: { en: 'Longshan Temple', zh: '龍山寺' }, time: '06:18' },
-            { name: { en: 'Ximen', zh: '西門' }, time: '06:23' },
-            { name: { en: 'Taipei Main Station', zh: '台北車站' }, time: '06:30' },
-            { name: { en: 'Zhongxiao Xinsheng', zh: '忠孝新生' }, time: '06:38' },
-            { name: { en: 'Guting', zh: '古亭' }, time: '06:45' },
-            { name: { en: 'Taipower Building', zh: '台電大樓' }, time: '06:50' },
-            { name: { en: 'MRT Gongguan', zh: '捷運公館站' }, time: '06:55' },
-        ],
-        back: [
-            { name: { en: 'MRT Gongguan', zh: '捷運公館站' }, time: '07:00' },
-            { name: { en: 'Taipower Building', zh: '台電大樓' }, time: '07:05' },
-            { name: { en: 'Guting', zh: '古亭' }, time: '07:10' },
-            { name: { en: 'Zhongxiao Xinsheng', zh: '忠孝新生' }, time: '07:17' },
-            { name: { en: 'Taipei Main Station', zh: '台北車站' }, time: '07:25' },
-            { name: { en: 'Ximen', zh: '西門' }, time: '07:32' },
-            { name: { en: 'Longshan Temple', zh: '龍山寺' }, time: '07:37' },
-            { name: { en: 'Jiangzicui', zh: '江子翠' }, time: '07:45' },
-            { name: { en: 'Fuzhong', zh: '府中' }, time: '07:50' },
-            { name: { en: 'Banqiao Station', zh: '板橋車站' }, time: '07:55' },
-        ]
-    },
-    '299': {
-        go: [
-            { name: { en: 'Yonghe', zh: '永和' }, time: '06:00' },
-            { name: { en: 'Dingxi', zh: '頂溪' }, time: '06:06' },
-            { name: { en: 'Guting', zh: '古亭' }, time: '06:14' },
-            { name: { en: 'Dongmen', zh: '東門' }, time: '06:20' },
-            { name: { en: 'Zhongxiao Fuxing', zh: '忠孝復興' }, time: '06:28' },
-            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '06:38' },
-            { name: { en: 'MRT Taipei 101', zh: '捷運台北101' }, time: '06:45' },
-        ],
-        back: [
-            { name: { en: 'MRT Taipei 101', zh: '捷運台北101' }, time: '07:00' },
-            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '07:07' },
-            { name: { en: 'Zhongxiao Fuxing', zh: '忠孝復興' }, time: '07:17' },
-            { name: { en: 'Dongmen', zh: '東門' }, time: '07:25' },
-            { name: { en: 'Guting', zh: '古亭' }, time: '07:31' },
-            { name: { en: 'Dingxi', zh: '頂溪' }, time: '07:39' },
-            { name: { en: 'Yonghe', zh: '永和' }, time: '07:45' },
-        ]
-    },
-    '信義幹線': {
-        go: [
-            { name: { en: 'Songshan Station', zh: '松山車站' }, time: '06:10' },
-            { name: { en: 'Songshan', zh: '松山' }, time: '06:14' },
-            { name: { en: 'Nanjing Sanmin', zh: '南京三民' }, time: '06:19' },
-            { name: { en: 'Taipei Arena', zh: '小巨蛋' }, time: '06:25' },
-            { name: { en: 'Zhongxiao Dunhua', zh: '忠孝敦化' }, time: '06:32' },
-            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '06:40' },
-            { name: { en: 'Yongchun', zh: '永春' }, time: '06:48' },
-        ],
-        back: [
-            { name: { en: 'Yongchun', zh: '永春' }, time: '07:00' },
-            { name: { en: 'Taipei City Hall', zh: '市政府' }, time: '07:08' },
-            { name: { en: 'Zhongxiao Dunhua', zh: '忠孝敦化' }, time: '07:16' },
-            { name: { en: 'Taipei Arena', zh: '小巨蛋' }, time: '07:23' },
-            { name: { en: 'Nanjing Sanmin', zh: '南京三民' }, time: '07:29' },
-            { name: { en: 'Songshan', zh: '松山' }, time: '07:34' },
-            { name: { en: 'Songshan Station', zh: '松山車站' }, time: '07:38' },
-        ]
-    },
-    // Default route data for routes without detailed stops
-    _default: {
-        go: [
-            { name: { en: 'Terminal A', zh: '起點站' }, time: '06:00' },
-            { name: { en: 'Stop 1', zh: '站點1' }, time: '06:08' },
-            { name: { en: 'Stop 2', zh: '站點2' }, time: '06:16' },
-            { name: { en: 'Stop 3', zh: '站點3' }, time: '06:24' },
-            { name: { en: 'Stop 4', zh: '站點4' }, time: '06:32' },
-            { name: { en: 'Terminal B', zh: '終點站' }, time: '06:40' },
-        ],
-        back: [
-            { name: { en: 'Terminal B', zh: '終點站' }, time: '07:00' },
-            { name: { en: 'Stop 4', zh: '站點4' }, time: '07:08' },
-            { name: { en: 'Stop 3', zh: '站點3' }, time: '07:16' },
-            { name: { en: 'Stop 2', zh: '站點2' }, time: '07:24' },
-            { name: { en: 'Stop 1', zh: '站點1' }, time: '07:32' },
-            { name: { en: 'Terminal A', zh: '起點站' }, time: '07:40' },
-        ]
-    }
-};
-
-// Schedule intervals (first/last bus times and frequency)
-const ROUTE_SCHEDULE = {
-    '307': { firstBus: '05:30', lastBus: '23:30', peakInterval: 8, offPeakInterval: 15 },
-    '299': { firstBus: '05:40', lastBus: '23:00', peakInterval: 10, offPeakInterval: 20 },
-    '信義幹線': { firstBus: '06:00', lastBus: '22:30', peakInterval: 10, offPeakInterval: 15 },
-    _default: { firstBus: '06:00', lastBus: '22:00', peakInterval: 15, offPeakInterval: 20 }
-};
-
-// Route fares (section-based fares in NTD)
-const ROUTE_FARES = {
-    '307': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '299': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '信義幹線': { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true },
-    '藍27': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '紅5': { baseFare: 15, sections: 3, totalFare: 45, transferDiscount: false },
-    '綠1': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '275': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '橘12': { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true },
-    '藍38': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '206': { baseFare: 15, sections: 3, totalFare: 45, transferDiscount: true },
-    '501': { baseFare: 15, sections: 2, totalFare: 30, transferDiscount: true },
-    '300': { baseFare: 20, sections: 2, totalFare: 40, transferDiscount: true },
-    '301': { baseFare: 20, sections: 1, totalFare: 20, transferDiscount: true },
-    '藍1': { baseFare: 20, sections: 2, totalFare: 40, transferDiscount: true },
-    '2': { baseFare: 18, sections: 1, totalFare: 18, transferDiscount: true },
-    '紅幹線': { baseFare: 18, sections: 2, totalFare: 36, transferDiscount: true },
-    '紅27': { baseFare: 12, sections: 2, totalFare: 24, transferDiscount: true },
-    '橘8': { baseFare: 12, sections: 1, totalFare: 12, transferDiscount: true },
-    '205': { baseFare: 12, sections: 1, totalFare: 12, transferDiscount: true },
-    _default: { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true }
-};
 
 // City configurations
 const BUS_CITIES = {
@@ -308,11 +148,42 @@ function updateUI() {
 
 function setupTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+
+            // Update map markers based on active tab
+            if (btn.dataset.tab === 'schedule') {
+                // Remove user marker when on schedule tab
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                    userMarker = null;
+                }
+                updateRouteMapMarkers();
+            } else if (btn.dataset.tab === 'nearby') {
+                // Load nearby stops if not loaded yet
+                if (busStops.length === 0) {
+                    await loadNearbyStops();
+                } else {
+                    updateMarkers();
+                }
+                // Add user marker if we have location
+                if (userLocation && !userMarker) {
+                    userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                        icon: createMarkerIcon(true)
+                    }).addTo(map);
+                    userMarker.bindPopup(isZh ? '您的位置' : 'Your Location');
+                }
+                // Center on user location or city
+                if (userLocation) {
+                    map.setView([userLocation.lat, userLocation.lng], 16);
+                } else {
+                    const cityData = BUS_CITIES[currentCity];
+                    if (cityData) map.setView(cityData.center, 14);
+                }
+            }
         });
     });
 }
@@ -341,9 +212,9 @@ async function updateRouteSelector() {
         return;
     }
 
-    // Fetch routes from TDX (or use cache/demo)
+    // Fetch routes from TDX (or use cache)
     let routes = fetchedRoutes[currentRouteCity];
-    if (!routes || routes.length === 0) {
+    if (!routes) {
         isLoadingRoutes = true;
         select.innerHTML = `<option value="">${isZh ? '載入路線中...' : 'Loading routes...'}</option>`;
         routes = await fetchRoutes(currentRouteCity);
@@ -353,9 +224,10 @@ async function updateRouteSelector() {
     const currentValue = select.value;
 
     // Filter by search query
+    let filteredRoutes = routes;
     if (routeSearchQuery) {
         const q = routeSearchQuery.toLowerCase();
-        routes = routes.filter(route =>
+        filteredRoutes = routes.filter(route =>
             route.id.toLowerCase().includes(q) ||
             route.name.en.toLowerCase().includes(q) ||
             route.name.zh.includes(q) ||
@@ -364,18 +236,24 @@ async function updateRouteSelector() {
         );
     }
 
-    const isRealData = fetchedRoutes[currentRouteCity]?.length > 20;
-    const countLabel = routes.length > 0 ? ` (${routes.length}${isRealData ? '' : ' demo'})` : '';
+    // Show count
+    const countLabel = filteredRoutes.length > 0 ? ` (${filteredRoutes.length})` : '';
 
-    select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}${countLabel}</option>`;
-    routes.forEach(route => {
-        const name = isZh ? route.name.zh : route.name.en;
-        const terminals = isZh ? route.terminals.zh : route.terminals.en;
-        select.innerHTML += `<option value="${route.id}">${name} (${terminals})</option>`;
-    });
+    if (routes.length === 0) {
+        select.innerHTML = `<option value="">${isZh ? '無法載入路線' : 'Could not load routes'}</option>`;
+    } else if (filteredRoutes.length === 0) {
+        select.innerHTML = `<option value="">${isZh ? '找不到路線' : 'No routes found'}</option>`;
+    } else {
+        select.innerHTML = `<option value="">${isZh ? '-- 選擇路線 --' : '-- Select Route --'}${countLabel}</option>`;
+        filteredRoutes.forEach(route => {
+            const name = isZh ? route.name.zh : route.name.en;
+            const terminals = isZh ? route.terminals.zh : route.terminals.en;
+            select.innerHTML += `<option value="${route.id}">${name} (${terminals})</option>`;
+        });
+    }
 
     // Restore selection if still valid
-    if (routes.some(r => r.id === currentValue)) {
+    if (filteredRoutes.some(r => r.id === currentValue)) {
         select.value = currentValue;
     }
 
@@ -395,6 +273,22 @@ async function onRouteCityChange() {
     currentRoute = '';
     selectedOriginStop = null;
     selectedDestStop = null;
+    routeSearchQuery = ''; // Clear search
+
+    // Clear search input
+    const searchInput = document.getElementById('route-search-input');
+    if (searchInput) searchInput.value = '';
+
+    // Clear route stops cache for this city to force fresh fetch
+    Object.keys(fetchedRouteStops).forEach(key => {
+        if (key.startsWith(currentRouteCity + '_')) {
+            delete fetchedRouteStops[key];
+        }
+    });
+
+    // Clear map markers
+    updateRouteMapMarkers();
+
     await updateRouteSelector();
     renderRouteSchedule();
 }
@@ -498,6 +392,7 @@ function onStopSelectorChange() {
     }
 
     renderRouteSchedule();
+    updateRouteMapMarkers(); // Update map to highlight selected stops
 }
 
 async function setRouteDirection(dir) {
@@ -526,23 +421,19 @@ async function setRouteDirection(dir) {
 }
 
 function getRouteStops(routeId, direction) {
-    // Try to get fetched TDX data first
+    // Get fetched TDX data from cache
     const cacheKey = `${currentRouteCity}_${routeId}_${direction}`;
-    if (fetchedRouteStops[cacheKey]) {
-        return fetchedRouteStops[cacheKey];
-    }
-
-    // Fall back to demo data
-    const routeData = ROUTE_STOPS[routeId] || ROUTE_STOPS._default;
-    return routeData[direction] || routeData.go;
+    return fetchedRouteStops[cacheKey] || [];
 }
 
 function getRouteScheduleInfo(routeId) {
-    return ROUTE_SCHEDULE[routeId] || ROUTE_SCHEDULE._default;
+    // Default schedule info (TDX doesn't provide detailed schedule intervals)
+    return { firstBus: '06:00', lastBus: '22:00', peakInterval: 10, offPeakInterval: 15 };
 }
 
 function getRouteFareInfo(routeId) {
-    return ROUTE_FARES[routeId] || ROUTE_FARES._default;
+    // Default fare info (TDX provides fare info separately if needed)
+    return { baseFare: 15, sections: 1, totalFare: 15, transferDiscount: true };
 }
 
 function calculateTotalJourneyTime(stops) {
@@ -627,7 +518,8 @@ function renderRouteSchedule() {
     const totalJourneyTime = calculateTotalJourneyTime(stops);
 
     // Route summary card (fare, total time, etc.)
-    const routeData = (BUS_ROUTES[currentRouteCity] || []).find(r => r.id === currentRoute);
+    const routes = fetchedRoutes[currentRouteCity] || [];
+    const routeData = routes.find(r => r.id === currentRoute);
     const routeTerminals = routeData ? (isZh ? routeData.terminals.zh : routeData.terminals.en) : '';
 
     // Calculate trip-specific info if origin and destination are selected
@@ -807,7 +699,7 @@ async function getAccessToken() {
     }
 
     if (!useDirectApi()) {
-        console.warn('[Bus] TDX not configured, using demo mode');
+        console.warn('[Bus] TDX not configured - please configure TDX_PROXY_URL or TDX credentials');
         return null;
     }
 
@@ -842,8 +734,8 @@ async function fetchNearbyStops(lat, lng, radius = 500) {
     const token = await getAccessToken();
 
     if (!token) {
-        // Demo mode - generate sample stops
-        return generateDemoStops(lat, lng);
+        console.warn('[Bus] No TDX token available for nearby stops');
+        return [];
     }
 
     try {
@@ -863,6 +755,7 @@ async function fetchNearbyStops(lat, lng, radius = 500) {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
+        console.log(`[Bus] Fetched ${data.length} nearby stops from TDX`);
         return data.map(stop => ({
             id: stop.StopUID,
             name: { en: stop.StopName.En || stop.StopName.Zh_tw, zh: stop.StopName.Zh_tw },
@@ -872,8 +765,8 @@ async function fetchNearbyStops(lat, lng, radius = 500) {
             city: currentCity
         }));
     } catch (error) {
-        console.error('[Bus] Error fetching stops:', error);
-        return generateDemoStops(lat, lng);
+        console.error('[Bus] Error fetching nearby stops from TDX:', error);
+        return [];
     }
 }
 
@@ -881,8 +774,8 @@ async function fetchNearbyStops(lat, lng, radius = 500) {
 async function fetchArrivals(stopIds) {
     const token = await getAccessToken();
 
-    if (!token) {
-        return generateDemoArrivals(stopIds);
+    if (!token || stopIds.length === 0) {
+        return {};
     }
 
     try {
@@ -918,10 +811,11 @@ async function fetchArrivals(stopIds) {
             });
         });
 
+        console.log(`[Bus] Fetched arrivals for ${Object.keys(arrivals).length} stops from TDX`);
         return arrivals;
     } catch (error) {
-        console.error('[Bus] Error fetching arrivals:', error);
-        return generateDemoArrivals(stopIds);
+        console.error('[Bus] Error fetching arrivals from TDX:', error);
+        return {};
     }
 }
 
@@ -934,8 +828,8 @@ async function fetchRoutes(city) {
 
     const token = await getAccessToken();
     if (!token) {
-        console.log('[Bus] No token, using demo routes');
-        return BUS_ROUTES[city] || [];
+        console.warn('[Bus] No TDX token available');
+        return [];
     }
 
     try {
@@ -978,11 +872,11 @@ async function fetchRoutes(city) {
         });
 
         fetchedRoutes[city] = routes;
-        console.log(`[Bus] Fetched ${routes.length} routes for ${city}`);
+        console.log(`[Bus] Fetched ${routes.length} routes for ${city} from TDX`);
         return routes;
     } catch (error) {
-        console.error('[Bus] Error fetching routes:', error);
-        return BUS_ROUTES[city] || [];
+        console.error('[Bus] Error fetching routes from TDX:', error);
+        return [];
     }
 }
 
@@ -1000,7 +894,8 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
 
     try {
         const encodedRouteName = encodeURIComponent(routeName);
-        const apiPath = `/v2/Bus/StopOfRoute/City/${city}/${encodedRouteName}?$format=JSON`;
+        // Use DisplayStopOfRoute which includes more reliable position data
+        const apiPath = `/v2/Bus/DisplayStopOfRoute/City/${city}/${encodedRouteName}?$format=JSON`;
 
         let response;
         if (useProxy()) {
@@ -1011,7 +906,19 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
             });
         }
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            // Fallback to regular StopOfRoute API
+            console.log('[Bus] DisplayStopOfRoute failed, trying StopOfRoute');
+            const fallbackPath = `/v2/Bus/StopOfRoute/City/${city}/${encodedRouteName}?$format=JSON`;
+            if (useProxy()) {
+                response = await fetch(TDX_PROXY_URL + fallbackPath);
+            } else {
+                response = await fetch(TDX_CONFIG.apiUrl + fallbackPath, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        }
 
         const data = await response.json();
 
@@ -1025,8 +932,8 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
 
         const stops = routeData.Stops.map((stop, idx) => ({
             name: {
-                en: stop.StopName.En || stop.StopName.Zh_tw,
-                zh: stop.StopName.Zh_tw
+                en: stop.StopName?.En || stop.StopName?.Zh_tw || `Stop ${idx + 1}`,
+                zh: stop.StopName?.Zh_tw || `站點 ${idx + 1}`
             },
             stopUID: stop.StopUID,
             sequence: stop.StopSequence || idx + 1,
@@ -1037,8 +944,11 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
             time: calculateEstimatedTime(idx)
         }));
 
+        // Log how many stops have coordinates
+        const stopsWithCoords = stops.filter(s => s.lat && s.lng).length;
+        console.log(`[Bus] Fetched ${stops.length} stops for ${routeName} (${direction}), ${stopsWithCoords} with coordinates`);
+
         fetchedRouteStops[cacheKey] = stops;
-        console.log(`[Bus] Fetched ${stops.length} stops for ${routeName} (${direction})`);
         return stops;
     } catch (error) {
         console.error('[Bus] Error fetching route stops:', error);
@@ -1054,55 +964,6 @@ function calculateEstimatedTime(index) {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-}
-
-// Generate demo data when API is not available
-function generateDemoStops(lat, lng) {
-    const demoStops = [
-        { offset: [0.001, 0.001], name: { en: 'City Hall', zh: '市政府站' } },
-        { offset: [-0.001, 0.002], name: { en: 'Main Station', zh: '火車站' } },
-        { offset: [0.002, -0.001], name: { en: 'Park Entrance', zh: '公園入口' } },
-        { offset: [-0.002, -0.002], name: { en: 'Hospital', zh: '醫院站' } },
-        { offset: [0.0015, 0.0015], name: { en: 'School', zh: '學校站' } },
-        { offset: [-0.0015, 0.001], name: { en: 'Market', zh: '市場站' } },
-        { offset: [0.001, -0.002], name: { en: 'Library', zh: '圖書館' } },
-        { offset: [-0.001, -0.001], name: { en: 'Sports Center', zh: '運動中心' } }
-    ];
-
-    return demoStops.map((stop, i) => ({
-        id: `DEMO_${i}`,
-        name: stop.name,
-        lat: lat + stop.offset[0],
-        lng: lng + stop.offset[1],
-        address: isZh ? '示範地址' : 'Demo Address',
-        city: currentCity,
-        isDemo: true
-    }));
-}
-
-function generateDemoArrivals(stopIds) {
-    const routes = ['307', '299', '信義幹線', '藍27', '紅5', '綠1', '棕9', '橘12'];
-    const arrivals = {};
-
-    stopIds.forEach(id => {
-        const numRoutes = Math.floor(Math.random() * 4) + 1;
-        arrivals[id] = [];
-
-        for (let i = 0; i < numRoutes; i++) {
-            const route = routes[Math.floor(Math.random() * routes.length)];
-            const time = Math.floor(Math.random() * 20) * 60; // 0-20 minutes
-
-            arrivals[id].push({
-                route: route,
-                routeEn: route,
-                estimateTime: time,
-                stopStatus: time === 0 ? 1 : 0,
-                direction: Math.floor(Math.random() * 2)
-            });
-        }
-    });
-
-    return arrivals;
 }
 
 function getStopName(stop) {
@@ -1150,26 +1011,18 @@ function renderStopList() {
     }
 
     if (filteredStops.length === 0) {
-        listEl.innerHTML = `<li class="loading">${isZh ? '找不到站牌' : 'No stops found'}</li>`;
+        const msg = busStops.length === 0
+            ? (isZh ? '無法載入附近站牌' : 'Could not load nearby stops')
+            : (isZh ? '找不到站牌' : 'No stops found');
+        listEl.innerHTML = `<li class="loading">${msg}</li>`;
+        document.getElementById('info-bar').innerHTML = msg;
         return;
     }
 
     // Update info bar
-    const demoMode = busStops.some(s => s.isDemo);
-    let infoText;
-    if (demoMode) {
-        infoText = isZh
-            ? '示範模式 - 部署 <a href="workers/DEPLOY.md" style="color:#1565C0;">Cloudflare Worker</a> 或 <a href="https://tdx.transportdata.tw/" target="_blank" style="color:#1565C0;">免費註冊 TDX</a> 以獲取即時資料'
-            : 'Demo mode - Deploy <a href="workers/DEPLOY.md" style="color:#1565C0;">Cloudflare Worker</a> or <a href="https://tdx.transportdata.tw/" target="_blank" style="color:#1565C0;">register TDX FREE</a> for real-time data';
-    } else if (useProxy()) {
-        infoText = isZh
-            ? `顯示 ${filteredStops.length} 個站牌 (即時資料 via Proxy)`
-            : `Showing ${filteredStops.length} stops (real-time via Proxy)`;
-    } else {
-        infoText = isZh
-            ? `顯示 ${filteredStops.length} 個站牌 (即時資料)`
-            : `Showing ${filteredStops.length} stops (real-time)`;
-    }
+    const infoText = isZh
+        ? `顯示 ${filteredStops.length} 個站牌 (TDX 即時資料)`
+        : `Showing ${filteredStops.length} stops (TDX real-time)`;
     document.getElementById('info-bar').innerHTML = infoText;
 
     listEl.innerHTML = filteredStops.map(stop => {
@@ -1298,35 +1151,69 @@ function updateRouteMapMarkers() {
     const stops = getRouteStops(currentRoute, routeDirection);
     if (!stops || stops.length === 0) return;
 
-    // Filter stops with valid coordinates
-    const stopsWithCoords = stops.filter(s => s.lat && s.lng);
+    // Get selected indices
+    const originIdx = selectedOriginStop !== null ? parseInt(selectedOriginStop) : -1;
+    const destIdx = selectedDestStop !== null ? parseInt(selectedDestStop) : -1;
+
+    // Filter stops with valid coordinates, but keep track of original index
+    const stopsWithCoords = stops.map((s, idx) => ({ ...s, originalIndex: idx }))
+        .filter(s => s.lat && s.lng);
+
     if (stopsWithCoords.length === 0) {
         console.warn('[Bus] No stops with coordinates for route', currentRoute);
+        // Center map on city if no stop coordinates
+        const cityData = BUS_CITIES[currentRouteCity];
+        if (cityData) {
+            map.setView(cityData.center, 14);
+        }
         return;
     }
 
     // Create markers for each stop
-    stopsWithCoords.forEach((stop, idx) => {
+    stopsWithCoords.forEach((stop) => {
+        const idx = stop.originalIndex;
         const isFirst = idx === 0;
-        const isLast = idx === stopsWithCoords.length - 1;
+        const isLast = idx === stops.length - 1;
+        const isOrigin = idx === originIdx;
+        const isDestination = idx === destIdx;
+        const isInTrip = originIdx >= 0 && destIdx >= 0 && idx >= originIdx && idx <= destIdx;
         const stopName = isZh ? stop.name.zh : stop.name.en;
+
+        // Determine marker color based on selection state
+        let markerColor = '#1565C0'; // Default blue
+        if (isOrigin) {
+            markerColor = '#2E7D32'; // Green for origin
+        } else if (isDestination) {
+            markerColor = '#c62828'; // Red for destination
+        } else if (isInTrip) {
+            markerColor = '#FFC107'; // Yellow for in-trip
+        } else if (isFirst) {
+            markerColor = '#2E7D32'; // Green for first stop
+        } else if (isLast) {
+            markerColor = '#c62828'; // Red for last stop
+        }
 
         const marker = L.marker([stop.lat, stop.lng], {
             icon: L.divIcon({
                 className: '',
-                html: `<div class="marker-icon" style="width:24px;height:24px;font-size:10px;background:${isFirst ? '#2E7D32' : isLast ? '#c62828' : '#1565C0'};">${idx + 1}</div>`,
+                html: `<div class="marker-icon" style="width:24px;height:24px;font-size:10px;background:${markerColor};">${idx + 1}</div>`,
                 iconSize: [24, 24],
                 iconAnchor: [12, 12],
                 popupAnchor: [0, -12]
             })
         });
 
+        let labelText = '';
+        if (isOrigin) labelText = `<br><span style="color:#2E7D32;">${isZh ? '上車站' : 'Board here'}</span>`;
+        else if (isDestination) labelText = `<br><span style="color:#c62828;">${isZh ? '下車站' : 'Alight here'}</span>`;
+        else if (isFirst) labelText = `<br><span style="color:#2E7D32;">${isZh ? '起站' : 'First Stop'}</span>`;
+        else if (isLast) labelText = `<br><span style="color:#c62828;">${isZh ? '終點' : 'Last Stop'}</span>`;
+
         marker.bindPopup(`
             <div style="text-align:center;">
                 <strong>${stopName}</strong><br>
                 <small>${isZh ? '站序' : 'Stop'} ${idx + 1}</small>
-                ${isFirst ? `<br><span style="color:#2E7D32;">${isZh ? '起站' : 'First Stop'}</span>` : ''}
-                ${isLast ? `<br><span style="color:#c62828;">${isZh ? '終點' : 'Last Stop'}</span>` : ''}
+                ${labelText}
             </div>
         `);
         marker.addTo(map);
@@ -1343,8 +1230,15 @@ function updateRouteMapMarkers() {
         }).addTo(map);
     }
 
-    // Fit map to show all stops
-    if (stopsWithCoords.length > 0) {
+    // Fit map to show all stops, or just origin/dest if selected
+    if (originIdx >= 0 && destIdx >= 0) {
+        // Zoom to show trip segment
+        const tripStops = stopsWithCoords.filter(s => s.originalIndex >= originIdx && s.originalIndex <= destIdx);
+        if (tripStops.length > 0) {
+            const bounds = L.latLngBounds(tripStops.map(s => [s.lat, s.lng]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    } else if (stopsWithCoords.length > 0) {
         const bounds = L.latLngBounds(stopsWithCoords.map(s => [s.lat, s.lng]));
         map.fitBounds(bounds, { padding: [30, 30] });
     }
@@ -1371,6 +1265,14 @@ async function loadNearbyStops() {
     }
 
     updateMarkers();
+
+    // Add user marker if we have location and it doesn't exist
+    if (userLocation && !userMarker && map) {
+        userMarker = L.marker([userLocation.lat, userLocation.lng], {
+            icon: createMarkerIcon(true)
+        }).addTo(map);
+        userMarker.bindPopup(isZh ? '您的位置' : 'Your Location');
+    }
 
     // Fetch arrival times
     if (busStops.length > 0) {
@@ -1472,10 +1374,13 @@ async function init() {
         maxZoom: 19
     }).addTo(map);
 
-    // Get user location
+    // Get user location (but don't add marker yet - will be added when nearby tab is active)
     if ('geolocation' in navigator) {
         try {
-            document.getElementById('loading-text').textContent = isZh ? '取得您的位置...' : 'Getting your location...';
+            const loadingText = document.getElementById('loading-text');
+            if (loadingText) {
+                loadingText.textContent = isZh ? '取得您的位置...' : 'Getting your location...';
+            }
 
             const position = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
@@ -1483,28 +1388,29 @@ async function init() {
 
             userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
             console.log('[Bus] User location:', userLocation);
-
-            // Add user marker
-            userMarker = L.marker([userLocation.lat, userLocation.lng], {
-                icon: createMarkerIcon(true)
-            }).addTo(map);
-            userMarker.bindPopup(isZh ? '您的位置' : 'Your Location');
-
-            map.setView([userLocation.lat, userLocation.lng], 16);
         } catch (error) {
             console.warn('[Bus] Could not get location:', error.message);
         }
     }
 
-    // Load nearby stops
-    await loadNearbyStops();
+    // Check which tab is active - only load nearby stops if nearby tab is active
+    const scheduleTabActive = document.querySelector('.tab-btn[data-tab="schedule"]')?.classList.contains('active');
+    if (!scheduleTabActive) {
+        // Load nearby stops only if nearby tab is active
+        await loadNearbyStops();
+    } else {
+        // Clear the stop list loading indicator for schedule tab (it's not visible anyway)
+        const stopList = document.getElementById('stop-list');
+        if (stopList) stopList.innerHTML = '';
+    }
 
     // Setup search
     document.getElementById('search-input').addEventListener('input', handleSearch);
 
-    // Auto-refresh arrivals every 30 seconds
+    // Auto-refresh arrivals every 30 seconds (only when nearby tab has stops)
     refreshTimer = setInterval(async () => {
-        if (busStops.length > 0) {
+        const nearbyTabActive = document.querySelector('.tab-btn[data-tab="nearby"]')?.classList.contains('active');
+        if (nearbyTabActive && busStops.length > 0) {
             const stopIds = busStops.map(s => s.id);
             arrivalData = await fetchArrivals(stopIds);
             renderStopList();

@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
-  <meta name="theme-color" content="#4CAF50">
+  <meta name="theme-color" content="#1976d2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>YouBike Station Locator</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="icon" type="image/png" href="favicon.ico">
   <link rel="manifest" href="manifest.webapp">
   <link rel="apple-touch-icon" href="img/icon-180.png">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -28,13 +29,13 @@
       justify-content: space-between;
       align-items: center;
       padding: 10px 15px;
-      background: #4CAF50;
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
       color: white;
       flex-shrink: 0;
     }
     h1 {
       margin: 0;
-      font-size: 1.4em;
+      font-size: 1.5em;
     }
     .header-controls {
       display: flex;
@@ -50,7 +51,7 @@
       cursor: pointer;
       text-decoration: none;
       color: white;
-      font-size: 13px;
+      font-size: 12px;
     }
     .nav-btn:hover {
       background: rgba(255,255,255,0.3);
@@ -66,31 +67,32 @@
     .nav-btn.home:hover {
       background: #F57C00;
     }
-    .nav-group {
+    /* Filter controls in panel */
+    .filter-controls {
+      padding: 10px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #eee;
       display: flex;
+      gap: 8px;
       align-items: center;
-      gap: 4px;
-    }
-    .nav-group .nav-btn.active {
-      background: rgba(255,255,255,0.25);
-      border-color: rgba(255,255,255,0.4);
     }
     #city-select {
-      padding: 6px 10px;
+      flex: 1;
+      padding: 8px 10px;
       border-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.2);
-      color: white;
+      border: 1px solid #ddd;
+      background: white;
+      color: #333;
       font-size: 13px;
       cursor: pointer;
     }
-    #city-select option {
-      background: #4CAF50;
-      color: white;
+    #city-select:focus {
+      outline: none;
+      border-color: #1976d2;
     }
     .view-toggle {
       display: flex;
-      background: rgba(0,0,0,0.3);
+      background: #e0e0e0;
       border-radius: 4px;
       overflow: hidden;
       padding: 2px;
@@ -100,19 +102,19 @@
       padding: 6px 12px;
       border: none;
       background: transparent;
-      color: rgba(255,255,255,0.7);
+      color: #666;
       cursor: pointer;
       font-size: 13px;
       border-radius: 3px;
       transition: all 0.2s;
     }
     .view-btn:hover {
-      background: rgba(255,255,255,0.15);
-      color: white;
+      background: rgba(0,0,0,0.1);
+      color: #333;
     }
     .view-btn.active {
-      background: white;
-      color: #2e7d32;
+      background: #1976d2;
+      color: white;
       font-weight: bold;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
@@ -153,11 +155,14 @@
       overflow: hidden;
     }
     #search-panel.collapsed {
-      max-height: 50px;
+      max-height: 95px;
     }
     #search-panel.collapsed .station-list,
     #search-panel.collapsed .result-count {
       display: none;
+    }
+    #search-panel.collapsed .search-header {
+      border-bottom: none;
     }
     .search-header {
       padding: 10px;
@@ -248,7 +253,7 @@
     }
     /* Floating buttons */
     .float-btn-container {
-      position: absolute;
+      position: fixed;
       bottom: 20px;
       right: 10px;
       display: flex;
@@ -289,6 +294,26 @@
       flex-direction: column;
       background: #f5f5f5;
     }
+    .list-filter-bar {
+      padding: 10px 15px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .list-filter-bar select {
+      flex: 1;
+      max-width: 200px;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      background: white;
+      font-size: 13px;
+    }
+    .list-filter-bar .view-toggle {
+      margin-left: auto;
+    }
     #list-status {
       padding: 12px 15px;
       background: white;
@@ -307,7 +332,7 @@
       font-size: 14px;
     }
     table thead {
-      background: linear-gradient(135deg, #4CAF50, #43a047);
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
       color: white;
       position: sticky;
       top: 0;
@@ -387,13 +412,24 @@
     }
     @media (max-width: 768px) {
       header {
+        padding: 8px 10px;
         flex-direction: column;
-        gap: 10px;
-        padding: 10px;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.2em;
+        width: 100%;
       }
       .header-controls {
         width: 100%;
-        justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn {
+        padding: 4px 8px;
+        font-size: 11px;
       }
       #search-panel {
         width: calc(100% - 20px);
@@ -410,33 +446,11 @@
     <h1 id="page-title">YouBike</h1>
     <div class="header-controls">
       <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
-      <div class="nav-group">
-        <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="微笑單車">UBike</a>
-        <div class="view-toggle">
-          <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
-          <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
-        </div>
-      </div>
+      <a href="ubike.html" class="nav-btn active" data-en="UBike" data-zh="微笑單車">UBike</a>
       <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
       <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
       <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
       <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-      <select id="city-select" onchange="changeCity()">
-        <option value="all">All Cities</option>
-        <option value="taipei" selected>Taipei</option>
-        <option value="newtaipei">New Taipei</option>
-        <option value="taoyuan">Taoyuan</option>
-        <option value="hsinchu">Hsinchu City</option>
-        <option value="hsinchuCounty">Hsinchu County</option>
-        <option value="miaoli">Miaoli</option>
-        <option value="taichung">Taichung</option>
-        <option value="chiayi">Chiayi City</option>
-        <option value="chiayiCounty">Chiayi County</option>
-        <option value="tainan">Tainan</option>
-        <option value="kaohsiung">Kaohsiung</option>
-        <option value="pingtung">Pingtung</option>
-        <option value="taitung">Taitung</option>
-      </select>
     </div>
   </header>
 
@@ -445,6 +459,28 @@
     <div id="map-view" class="view active">
       <div id="loading">Loading...</div>
       <div id="search-panel">
+        <div class="filter-controls">
+          <select id="city-select" onchange="changeCity()">
+            <option value="all">All Cities</option>
+            <option value="taipei" selected>Taipei</option>
+            <option value="newtaipei">New Taipei</option>
+            <option value="taoyuan">Taoyuan</option>
+            <option value="hsinchu">Hsinchu City</option>
+            <option value="hsinchuCounty">Hsinchu County</option>
+            <option value="miaoli">Miaoli</option>
+            <option value="taichung">Taichung</option>
+            <option value="chiayi">Chiayi City</option>
+            <option value="chiayiCounty">Chiayi County</option>
+            <option value="tainan">Tainan</option>
+            <option value="kaohsiung">Kaohsiung</option>
+            <option value="pingtung">Pingtung</option>
+            <option value="taitung">Taitung</option>
+          </select>
+          <div class="view-toggle">
+            <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
+            <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
+          </div>
+        </div>
         <div class="search-header">
           <input type="text" id="search-input" placeholder="Search stations...">
           <button id="toggle-panel-btn" onclick="toggleSearchPanel()">−</button>
@@ -461,6 +497,28 @@
 
     <!-- List View -->
     <div id="list-view" class="view">
+      <div class="list-filter-bar">
+        <select id="list-city-select" onchange="changeCity(this.value)">
+          <option value="all">All Cities</option>
+          <option value="taipei" selected>Taipei</option>
+          <option value="newtaipei">New Taipei</option>
+          <option value="taoyuan">Taoyuan</option>
+          <option value="hsinchu">Hsinchu City</option>
+          <option value="hsinchuCounty">Hsinchu County</option>
+          <option value="miaoli">Miaoli</option>
+          <option value="taichung">Taichung</option>
+          <option value="chiayi">Chiayi City</option>
+          <option value="chiayiCounty">Chiayi County</option>
+          <option value="tainan">Tainan</option>
+          <option value="kaohsiung">Kaohsiung</option>
+          <option value="pingtung">Pingtung</option>
+          <option value="taitung">Taitung</option>
+        </select>
+        <div class="view-toggle">
+          <button class="view-btn" id="list-map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
+          <button class="view-btn active" id="list-list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
+        </div>
+      </div>
       <div id="list-status"></div>
       <div id="table-container"></div>
     </div>

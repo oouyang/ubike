@@ -69,9 +69,16 @@ function setView(view) {
   currentView = view;
   localStorage.setItem('ubike-view', view);
 
-  // Update view buttons
-  document.getElementById('map-view-btn').classList.toggle('active', view === 'map');
-  document.getElementById('list-view-btn').classList.toggle('active', view === 'list');
+  // Update all view buttons (in both map panel and list filter bar)
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    const isMapBtn = btn.id.includes('map-view');
+    const isListBtn = btn.id.includes('list-view') || btn.id.includes('list-list');
+    if (view === 'map') {
+      btn.classList.toggle('active', isMapBtn);
+    } else {
+      btn.classList.toggle('active', isListBtn);
+    }
+  });
 
   // Update view containers
   document.getElementById('map-view').classList.toggle('active', view === 'map');
@@ -148,16 +155,19 @@ function updateUI() {
 }
 
 function updateCitySelector() {
-  const select = document.getElementById('city-select');
-  Array.from(select.options).forEach(option => {
-    if (option.value === 'all') {
-      option.textContent = isZh ? '所有城市' : 'All Cities';
-    } else {
-      const city = CITIES[option.value];
-      if (city) {
-        option.textContent = isZh ? city.name.zh : city.name.en;
+  // Update both city selectors (map panel and list filter bar)
+  document.querySelectorAll('#city-select, #list-city-select').forEach(select => {
+    if (!select) return;
+    Array.from(select.options).forEach(option => {
+      if (option.value === 'all') {
+        option.textContent = isZh ? '所有城市' : 'All Cities';
+      } else {
+        const city = CITIES[option.value];
+        if (city) {
+          option.textContent = isZh ? city.name.zh : city.name.en;
+        }
       }
-    }
+    });
   });
 }
 
@@ -565,11 +575,23 @@ function renderTable(stations) {
 // CITY CHANGE
 // ============================================================
 
-function changeCity() {
-  const select = document.getElementById('city-select');
-  currentCity = select.value;
+function changeCity(value) {
+  // Get value from parameter or from the map panel selector
+  if (value) {
+    currentCity = value;
+  } else {
+    const select = document.getElementById('city-select');
+    currentCity = select.value;
+  }
+
   localStorage.setItem('ubike-city', currentCity);
   console.log(`[UBike] City changed to: ${currentCity}`);
+
+  // Sync both city selectors
+  const mapSelect = document.getElementById('city-select');
+  const listSelect = document.getElementById('list-city-select');
+  if (mapSelect) mapSelect.value = currentCity;
+  if (listSelect) listSelect.value = currentCity;
 
   // Pan to city center
   if (currentCity !== 'all' && CITIES[currentCity] && map) {
@@ -710,10 +732,14 @@ async function init() {
 
   // Restore saved city
   const savedCity = localStorage.getItem(STORAGE_KEYS.CITY);
-  if (savedCity && CITIES[savedCity]) {
+  if (savedCity && (CITIES[savedCity] || savedCity === 'all')) {
     currentCity = savedCity;
-    document.getElementById('city-select').value = currentCity;
   }
+  // Sync both city selectors
+  const mapCitySelect = document.getElementById('city-select');
+  const listCitySelect = document.getElementById('list-city-select');
+  if (mapCitySelect) mapCitySelect.value = currentCity;
+  if (listCitySelect) listCitySelect.value = currentCity;
 
   // Restore saved view
   const savedView = localStorage.getItem('ubike-view');

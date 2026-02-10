@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1976d2">
+    <link rel="icon" type="image/png" href="../favicon.ico">
     <title>Taiwan Transport Data</title>
     <style>
       * { box-sizing: border-box; }
@@ -15,11 +17,53 @@
       header {
         background: linear-gradient(135deg, #1976d2, #0d47a1);
         color: white;
-        padding: 20px;
-        text-align: center;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
       }
-      h1 { margin: 0 0 8px 0; }
-      .subtitle { opacity: 0.9; font-size: 0.9em; }
+      h1 { margin: 0; font-size: 1.5em; }
+      .header-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+      }
+      .nav-btn:hover { background: rgba(255,255,255,0.3); }
+      .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+      .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+      .nav-btn.home:hover { background: #F57C00; }
+      @media (max-width: 768px) {
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
+      }
       .container {
         max-width: 1200px;
         margin: 0 auto;
@@ -95,9 +139,8 @@
         right: 20px;
         width: 44px;
         height: 44px;
-        background: #1976d2;
-        color: white;
-        border: none;
+        background: white;
+        border: 2px solid rgba(0,0,0,0.2);
         border-radius: 4px;
         cursor: pointer;
         display: flex;
@@ -109,8 +152,8 @@
         z-index: 1000;
         transition: background 0.2s;
       }
-      .float-btn:hover { background: #1565c0; }
-      .float-btn:active { background: #0d47a1; }
+      .float-btn:hover { background: #f4f4f4; }
+      .float-btn:active { background: #e0e0e0; }
       .note {
         background: #fff3cd;
         border: 1px solid #ffc107;
@@ -149,16 +192,15 @@
   </head>
   <body>
     <header>
-      <h1 id="page-title">Taiwan Transport Data</h1>
-      <div class="subtitle" id="page-subtitle">TDX Static Data Hub</div>
-      <nav class="header-nav">
+      <h1 id="page-title">TDX Data Hub</h1>
+      <div class="header-controls">
         <a href="../index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
         <a href="../ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
         <a href="../mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
         <a href="../rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
         <a href="../thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
         <a href="../bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-      </nav>
+      </div>
     </header>
     <div class="container">
       <div class="note">
@@ -290,8 +332,7 @@
     function updateLang() {
       // Update page title
       document.title = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
-      document.getElementById('page-title').textContent = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
-      document.getElementById('page-subtitle').textContent = isZh ? 'TDX 靜態資料中心' : 'TDX Static Data Hub';
+      document.getElementById('page-title').textContent = isZh ? 'TDX 資料中心' : 'TDX Data Hub';
       document.getElementById('note-title').textContent = isZh ? '關於 TDX' : 'About TDX';
       document.getElementById('note-text').innerHTML = isZh
         ? '本站使用靜態資料顯示較少變動的站點與路線資訊。如需即時資料（到站時間、可用數量），可至 <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a> 申請免費 API 金鑰。'
