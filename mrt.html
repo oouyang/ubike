@@ -271,7 +271,6 @@
   <div class="container" style="position:relative;">
     <div id="panel">
       <div class="search-box">
-        <input type="text" id="search-input" placeholder="Search stations...">
         <select id="system-select" onchange="changeSystem()">
           <option value="all">All Systems</option>
           <option value="TRTC" selected>Taipei Metro</option>
@@ -282,6 +281,7 @@
         <select id="line-select" onchange="changeLine()">
           <option value="all">All Lines</option>
         </select>
+        <input type="text" id="search-input" placeholder="Search stations...">
       </div>
       <div id="result-count" class="result-count"></div>
       <ul id="station-list" class="station-list"></ul>
@@ -896,6 +896,21 @@ function updateLineSelect() {
   const lineSelect = document.getElementById('line-select');
   const isZh = isChineseLocale();
 
+  // Check if system has only one line
+  if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {
+    const system = MRT_SYSTEMS[currentSystem];
+    const lineEntries = Object.entries(system.lines);
+
+    if (lineEntries.length === 1) {
+      // Only one line - hide selector and auto-select it
+      lineSelect.style.display = 'none';
+      currentLine = lineEntries[0][0];
+      return;
+    }
+  }
+
+  // Multiple lines - show selector
+  lineSelect.style.display = '';
   let options = '<option value="all">' + (isZh ? '所有路線' : 'All Lines') + '</option>';
 
   if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {

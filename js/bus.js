@@ -21,6 +21,102 @@ const TDX_CONFIG = {
 };
 // ===========================================
 
+// ===========================================
+// Rate Limiting & Caching Configuration
+// ===========================================
+const ROUTE_CACHE_KEY = 'bus-routes-cache';
+const ROUTE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const DEBOUNCE_DELAY = 300; // 300ms debounce for city changes
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+// Debounce utility
+function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// Fetch with retry and exponential backoff
+async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
+    let lastError;
+    let lastResponse;
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (response.status === 429) {
+                // Rate limited - wait and retry with exponential backoff
+                lastResponse = response;
+                const delay = INITIAL_RETRY_DELAY * Math.pow(2, i);
+                console.warn(`[Bus] Rate limited (429), retrying in ${delay}ms... (attempt ${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+            return response;
+        } catch (error) {
+            lastError = error;
+            if (i < retries - 1) {
+                const delay = INITIAL_RETRY_DELAY * Math.pow(2, i);
+                console.warn(`[Bus] Request failed, retrying in ${delay}ms... (attempt ${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    // If we exhausted all retries due to 429, return the last 429 response
+    // so the caller can handle it gracefully
+    if (lastResponse) {
+        console.warn('[Bus] All retries exhausted for 429 rate limiting');
+        return lastResponse;
+    }
+    throw lastError || new Error('Max retries exceeded');
+}
+
+// Load routes from localStorage cache
+function loadRoutesFromCache(city) {
+    try {
+        const cacheStr = localStorage.getItem(ROUTE_CACHE_KEY);
+        if (!cacheStr) return null;
+
+        const cache = JSON.parse(cacheStr);
+        const cityCache = cache[city];
+
+        if (!cityCache) return null;
+
+        // Check if cache is expired
+        if (Date.now() - cityCache.timestamp > ROUTE_CACHE_TTL) {
+            console.log(`[Bus] Cache expired for ${city}`);
+            return null;
+        }
+
+        console.log(`[Bus] Loaded ${cityCache.routes.length} routes from cache for ${city}`);
+        return cityCache.routes;
+    } catch (error) {
+        console.warn('[Bus] Error loading routes from cache:', error);
+        return null;
+    }
+}
+
+// Save routes to localStorage cache
+function saveRoutesToCache(city, routes) {
+    try {
+        const cacheStr = localStorage.getItem(ROUTE_CACHE_KEY);
+        const cache = cacheStr ? JSON.parse(cacheStr) : {};
+
+        cache[city] = {
+            routes: routes,
+            timestamp: Date.now()
+        };
+
+        localStorage.setItem(ROUTE_CACHE_KEY, JSON.stringify(cache));
+        console.log(`[Bus] Cached ${routes.length} routes for ${city}`);
+    } catch (error) {
+        console.warn('[Bus] Error saving routes to cache:', error);
+    }
+}
+// ===========================================
+
 // City configurations
 const BUS_CITIES = {
     Taipei: { name: { en: 'Taipei', zh: '台北市' }, center: [25.0330, 121.5654] },
@@ -267,7 +363,7 @@ async function onRouteSearch() {
     await updateRouteSelector();
 }
 
-async function onRouteCityChange() {
+async function _onRouteCityChangeImpl() {
     const select = document.getElementById('route-city-select');
     currentRouteCity = select.value;
     currentRoute = '';
@@ -292,6 +388,9 @@ async function onRouteCityChange() {
     await updateRouteSelector();
     renderRouteSchedule();
 }
+
+// Debounced version to prevent rapid API calls
+const onRouteCityChange = debounce(_onRouteCityChangeImpl, DEBOUNCE_DELAY);
 
 async function onRouteChange() {
     const select = document.getElementById('route-select');
@@ -744,10 +843,10 @@ async function fetchNearbyStops(lat, lng, radius = 500) {
         let response;
         if (useProxy()) {
             // Use proxy - no auth header needed
-            response = await fetch(TDX_PROXY_URL + apiPath);
+            response = await fetchWithRetry(TDX_PROXY_URL + apiPath);
         } else {
             // Direct API call
-            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+            response = await fetchWithRetry(TDX_CONFIG.apiUrl + apiPath, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
         }
@@ -785,10 +884,10 @@ async function fetchArrivals(stopIds) {
         let response;
         if (useProxy()) {
             // Use proxy - no auth header needed
-            response = await fetch(TDX_PROXY_URL + apiPath);
+            response = await fetchWithRetry(TDX_PROXY_URL + apiPath);
         } else {
             // Direct API call
-            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+            response = await fetchWithRetry(TDX_CONFIG.apiUrl + apiPath, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
         }
@@ -821,9 +920,16 @@ async function fetchArrivals(stopIds) {
 
 // Fetch bus routes for a city from TDX
 async function fetchRoutes(city) {
-    // Return cached routes if available
+    // Return memory-cached routes if available
     if (fetchedRoutes[city] && fetchedRoutes[city].length > 0) {
         return fetchedRoutes[city];
+    }
+
+    // Check localStorage cache first
+    const cachedRoutes = loadRoutesFromCache(city);
+    if (cachedRoutes) {
+        fetchedRoutes[city] = cachedRoutes;
+        return cachedRoutes;
     }
 
     const token = await getAccessToken();
@@ -837,9 +943,9 @@ async function fetchRoutes(city) {
 
         let response;
         if (useProxy()) {
-            response = await fetch(TDX_PROXY_URL + apiPath);
+            response = await fetchWithRetry(TDX_PROXY_URL + apiPath);
         } else {
-            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+            response = await fetchWithRetry(TDX_CONFIG.apiUrl + apiPath, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
         }
@@ -871,7 +977,10 @@ async function fetchRoutes(city) {
             return a.id.localeCompare(b.id, 'zh-TW');
         });
 
+        // Save to both memory and localStorage cache
         fetchedRoutes[city] = routes;
+        saveRoutesToCache(city, routes);
+
         console.log(`[Bus] Fetched ${routes.length} routes for ${city} from TDX`);
         return routes;
     } catch (error) {
@@ -899,9 +1008,9 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
 
         let response;
         if (useProxy()) {
-            response = await fetch(TDX_PROXY_URL + apiPath);
+            response = await fetchWithRetry(TDX_PROXY_URL + apiPath);
         } else {
-            response = await fetch(TDX_CONFIG.apiUrl + apiPath, {
+            response = await fetchWithRetry(TDX_CONFIG.apiUrl + apiPath, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
         }
@@ -911,9 +1020,9 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
             console.log('[Bus] DisplayStopOfRoute failed, trying StopOfRoute');
             const fallbackPath = `/v2/Bus/StopOfRoute/City/${city}/${encodedRouteName}?$format=JSON`;
             if (useProxy()) {
-                response = await fetch(TDX_PROXY_URL + fallbackPath);
+                response = await fetchWithRetry(TDX_PROXY_URL + fallbackPath);
             } else {
-                response = await fetch(TDX_CONFIG.apiUrl + fallbackPath, {
+                response = await fetchWithRetry(TDX_CONFIG.apiUrl + fallbackPath, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
             }
