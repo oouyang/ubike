@@ -169,6 +169,36 @@ let fetchedRoutes = {}; // Cache for fetched routes by city
 let fetchedRouteStops = {}; // Cache for fetched route stops
 let isLoadingRoutes = false;
 let isLoadingStops = false;
+let bottomSheet = null;
+
+// ============================================================
+// BOTTOM SHEET SUMMARY
+// ============================================================
+
+function updateSheetSummary() {
+    const summaryEl = document.getElementById('sheet-summary');
+    if (!summaryEl) return;
+
+    const activeTab = document.querySelector('.tab-btn.active');
+    const tabName = activeTab?.dataset.tab || 'schedule';
+
+    if (tabName === 'schedule') {
+        // Route schedule tab: "🚌 Route 307 • 25 stops"
+        if (currentRoute) {
+            const stopCount = document.querySelectorAll('.route-stop-item').length;
+            const directionText = routeDirection === 'go'
+                ? (isZh ? '去程' : 'Outbound')
+                : (isZh ? '返程' : 'Return');
+            summaryEl.textContent = `🚌 ${currentRoute} · ${directionText} · ${stopCount} ${isZh ? '站' : 'stops'}`;
+        } else {
+            summaryEl.textContent = isZh ? '🚌 選擇路線' : '🚌 Select route';
+        }
+    } else {
+        // Nearby stops tab: "🚌 Nearby • 8 stops"
+        const stopCount = busStops.length;
+        summaryEl.textContent = `🚌 ${isZh ? '附近' : 'Nearby'} · ${stopCount} ${isZh ? '站' : 'stops'}`;
+    }
+}
 
 // Use shared utilities from common.js: deg2rad, getDistanceInMeters, formatDistance, formatTime, getCurrentMinutes, getCountdown
 
@@ -280,6 +310,9 @@ function setupTabs() {
                     if (cityData) map.setView(cityData.center, 14);
                 }
             }
+
+            // Update sheet summary when tab changes
+            updateSheetSummary();
         });
     });
 }
@@ -777,6 +810,9 @@ function renderRouteSchedule() {
     }).join('');
 
     listEl.innerHTML = summaryHtml + headerHtml + stopsHtml;
+
+    // Update sheet summary
+    updateSheetSummary();
 }
 
 // Check if proxy is configured
@@ -1169,6 +1205,9 @@ function renderStopList() {
     listEl.querySelectorAll('.stop-item').forEach(item => {
         item.addEventListener('click', () => selectStop(item.dataset.id));
     });
+
+    // Update sheet summary
+    updateSheetSummary();
 }
 
 function selectStop(id) {
@@ -1534,6 +1573,20 @@ async function init() {
             renderRouteSchedule();
         }
     }, 60000);
+
+    // Initialize bottom sheet (mobile only)
+    const panel = document.getElementById('panel');
+    if (panel && typeof BottomSheet !== 'undefined') {
+        bottomSheet = new BottomSheet(panel, {
+            initialSnap: 'collapsed',
+            onSnapChange: (snap) => {
+                console.log('[Bus] Sheet snap:', snap);
+            }
+        });
+    }
+
+    // Update sheet summary
+    updateSheetSummary();
 
     console.log('[Bus] Initialization complete');
 }

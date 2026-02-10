@@ -18,6 +18,9 @@
       font-family: sans-serif;
       margin: 0;
       padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
     header {
       display: flex;
@@ -26,6 +29,7 @@
       padding: 10px 15px;
       background: linear-gradient(135deg, #1976d2, #0d47a1);
       color: white;
+      flex-shrink: 0;
     }
     h1 {
       margin: 0;
@@ -50,36 +54,36 @@
     .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
     .nav-btn.home { background: #FF9800; border-color: #FF9800; }
     .nav-btn.home:hover { background: #F57C00; }
-    .station-distance {
-      font-size: 0.75em;
-      color: #666;
-      background: #f0f0f0;
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-left: auto;
-    }
-    .container {
+
+    /* Main container */
+    .main-content {
+      flex: 1;
       display: flex;
-      height: calc(100vh - 52px);
+      position: relative;
+      overflow: hidden;
     }
+
+    /* Side Panel (Desktop) / Bottom Sheet (Mobile) */
     #panel {
       width: 380px;
       height: 100%;
-      overflow-y: auto;
-      border-right: 1px solid #ccc;
       background: #f9f9f9;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    #map-canvas {
-      flex: 1;
-      height: 100%;
+
+    /* Sheet handle - hidden on desktop */
+    .sheet-handle {
+      display: none;
     }
+
     .search-box {
       padding: 10px;
       background: #fff;
       border-bottom: 1px solid #ddd;
-      position: sticky;
-      top: 0;
-      z-index: 100;
     }
     .search-box input[type="text"] {
       width: 100%;
@@ -98,6 +102,8 @@
       margin-bottom: 8px;
     }
     .station-list {
+      flex: 1;
+      overflow-y: auto;
       padding: 0;
       margin: 0;
       list-style: none;
@@ -133,6 +139,14 @@
       color: #666;
       margin-bottom: 4px;
     }
+    .station-distance {
+      font-size: 0.75em;
+      color: #666;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
+    }
     .line-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -148,6 +162,17 @@
       font-size: 0.85em;
       color: #666;
     }
+
+    /* Map container */
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
     /* Line colors */
     .line-BR { background-color: #c48c31; }
     .line-R { background-color: #e3002c; }
@@ -156,14 +181,12 @@
     .line-BL { background-color: #0070bd; }
     .line-Y { background-color: #ffdb00; color: #333; }
     .line-LG { background-color: #a1d884; color: #333; }
-    /* Kaohsiung */
     .line-KR { background-color: #e20a17; }
     .line-KO { background-color: #faa73e; }
     .line-KC { background-color: #92d050; color: #333; }
-    /* Taoyuan */
     .line-A { background-color: #7b5bb3; }
-    /* Taichung */
     .line-TG { background-color: #0aa06e; }
+
     /* Markers */
     .marker-icon {
       border-radius: 50%;
@@ -176,6 +199,7 @@
       font-weight: bold;
       color: white;
     }
+
     /* Floating buttons */
     .float-btn-container {
       position: fixed;
@@ -203,14 +227,14 @@
     }
     .float-btn:hover { background: #f4f4f4; }
     .float-btn:active { background: #e0e0e0; }
-    .locate-btn {
-      font-size: 20px;
-    }
+    .locate-btn { font-size: 20px; }
     .locate-btn.locating { animation: pulse-locate 1s infinite; }
     @keyframes pulse-locate {
       0%, 100% { background: white; }
       50% { background: #e3f2fd; }
     }
+
+    /* ===== MOBILE: Bottom Sheet ===== */
     @media (max-width: 768px) {
       header {
         padding: 8px 10px;
@@ -232,9 +256,94 @@
         padding: 4px 8px;
         font-size: 11px;
       }
-      .container { flex-direction: column; }
-      #panel { width: 100%; height: 50%; }
-      #map-canvas { height: 50%; }
+
+      /* Main content stacks vertically on mobile */
+      .main-content {
+        flex-direction: column;
+      }
+
+      /* Map takes full screen behind sheet */
+      #map-container {
+        position: fixed;
+        top: 74px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+      }
+
+      /* Panel becomes bottom sheet */
+      #panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: auto;
+        max-height: 90vh;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+      }
+
+      #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+      #panel.snap-half { transform: translateY(50%); }
+      #panel.snap-full { transform: translateY(10%); }
+      #panel.dragging { transition: none; }
+      #panel.no-transition { transition: none; }
+
+      /* Show drag handle on mobile */
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 56px;
+        padding: 8px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        background: white;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .sheet-pill {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+      }
+
+      .sheet-summary {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+
+      .sheet-content {
+        height: calc(90vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Adjust station list for mobile sheet */
+      .station-list {
+        flex: 1;
+        min-height: 0;
+      }
+
       .search-box {
         padding: 8px;
       }
@@ -250,8 +359,11 @@
       .station-name {
         font-size: 0.95em;
       }
-      .station-info {
-        font-size: 0.8em;
+
+      /* Floating buttons above collapsed sheet */
+      .float-btn-container {
+        bottom: 70px;
+        z-index: 1001;
       }
     }
   </style>
@@ -268,30 +380,46 @@
       <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
     </div>
   </header>
-  <div class="container" style="position:relative;">
+
+  <div class="main-content">
+    <!-- Side Panel (Desktop) / Bottom Sheet (Mobile) -->
     <div id="panel">
-      <div class="search-box">
-        <select id="system-select" onchange="changeSystem()">
-          <option value="all">All Systems</option>
-          <option value="TRTC" selected>Taipei Metro</option>
-          <option value="KRTC">Kaohsiung Metro</option>
-          <option value="TYMC">Taoyuan Metro</option>
-          <option value="TMRT">Taichung Metro</option>
-        </select>
-        <select id="line-select" onchange="changeLine()">
-          <option value="all">All Lines</option>
-        </select>
-        <input type="text" id="search-input" placeholder="Search stations...">
+      <div class="sheet-handle">
+        <div class="sheet-pill"></div>
+        <div class="sheet-summary" id="sheet-summary">Loading...</div>
       </div>
-      <div id="result-count" class="result-count"></div>
-      <ul id="station-list" class="station-list"></ul>
+      <div class="sheet-content">
+        <div class="search-box">
+          <select id="system-select" onchange="changeSystem()">
+            <option value="all">All Systems</option>
+            <option value="TRTC" selected>Taipei Metro</option>
+            <option value="KRTC">Kaohsiung Metro</option>
+            <option value="TYMC">Taoyuan Metro</option>
+            <option value="TMRT">Taichung Metro</option>
+          </select>
+          <select id="line-select" onchange="changeLine()">
+            <option value="all">All Lines</option>
+          </select>
+          <input type="text" id="search-input" placeholder="Search stations...">
+        </div>
+        <div id="result-count" class="result-count"></div>
+        <ul id="station-list" class="station-list"></ul>
+      </div>
     </div>
-    <div id="map-canvas"></div>
+
+    <!-- Map Container -->
+    <div id="map-container">
+      <div id="map-canvas"></div>
+    </div>
+
+    <!-- Floating Buttons -->
     <div class="float-btn-container">
       <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
       <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
     </div>
   </div>
+
+  <script src="js/bottom-sheet.js"></script>
   <script>
 'use strict';
 
@@ -418,7 +546,7 @@ const STATIONS = [
   { id: 'BL22', name: { en: 'Nangang', zh: '南港' }, line: 'BL', system: 'TRTC', lat: 25.0529, lng: 121.6069, address: '台北市南港區南港路一段' },
   { id: 'BL23', name: { en: 'Nangang Exhibition Center', zh: '南港展覽館' }, line: 'BL', system: 'TRTC', lat: 25.0553, lng: 121.6178, address: '台北市南港區經貿二路' },
 
-  // Songshan-Xindian Line (G)
+  // Songshan-Xindian Line (G) - shortened for brevity
   { id: 'G01', name: { en: 'Songshan', zh: '松山' }, line: 'G', system: 'TRTC', lat: 25.0495, lng: 121.5780, address: '台北市信義區松山路' },
   { id: 'G03', name: { en: 'Nanjing Sanmin', zh: '南京三民' }, line: 'G', system: 'TRTC', lat: 25.0514, lng: 121.5573, address: '台北市松山區南京東路五段' },
   { id: 'G04', name: { en: 'Taipei Arena', zh: '台北小巨蛋' }, line: 'G', system: 'TRTC', lat: 25.0514, lng: 121.5505, address: '台北市松山區南京東路四段' },
@@ -439,7 +567,7 @@ const STATIONS = [
   { id: 'G19', name: { en: 'Xindian City Hall', zh: '新店區公所' }, line: 'G', system: 'TRTC', lat: 24.9680, lng: 121.5416, address: '新北市新店區北新路一段' },
   { id: 'G20', name: { en: 'Xindian', zh: '新店' }, line: 'G', system: 'TRTC', lat: 24.9580, lng: 121.5378, address: '新北市新店區新店路' },
 
-  // Zhonghe-Xinlu Line (O)
+  // Zhonghe-Xinlu Line (O) - shortened for brevity
   { id: 'O01', name: { en: 'Nanshijiao', zh: '南勢角' }, line: 'O', system: 'TRTC', lat: 24.9903, lng: 121.5087, address: '新北市中和區捷運路' },
   { id: 'O02', name: { en: 'Jingan', zh: '景安' }, line: 'O', system: 'TRTC', lat: 24.9934, lng: 121.5046, address: '新北市中和區景平路' },
   { id: 'O03', name: { en: 'Yongan Market', zh: '永安市場' }, line: 'O', system: 'TRTC', lat: 25.0008, lng: 121.5091, address: '新北市中和區中和路' },
@@ -452,7 +580,7 @@ const STATIONS = [
   { id: 'O10', name: { en: 'Zhongshan Elementary School', zh: '中山國小' }, line: 'O', system: 'TRTC', lat: 25.0629, lng: 121.5261, address: '台北市中山區民權東路一段' },
   { id: 'O11', name: { en: 'Minquan W. Rd.', zh: '民權西路' }, line: 'O', system: 'TRTC', lat: 25.0625, lng: 121.5194, address: '台北市大同區民權西路' },
   { id: 'O12', name: { en: 'Daqiaotou', zh: '大橋頭' }, line: 'O', system: 'TRTC', lat: 25.0630, lng: 121.5125, address: '台北市大同區民權西路' },
-  { id: 'O13', name: { en: 'Taishan', zh: '台北橋' }, line: 'O', system: 'TRTC', lat: 25.0634, lng: 121.5002, address: '新北市三重區重新路一段' },
+  { id: 'O13', name: { en: 'Taipei Bridge', zh: '台北橋' }, line: 'O', system: 'TRTC', lat: 25.0634, lng: 121.5002, address: '新北市三重區重新路一段' },
   { id: 'O15', name: { en: 'Cailiao', zh: '菜寮' }, line: 'O', system: 'TRTC', lat: 25.0605, lng: 121.4891, address: '新北市三重區重新路三段' },
   { id: 'O16', name: { en: 'Sanchong', zh: '三重' }, line: 'O', system: 'TRTC', lat: 25.0556, lng: 121.4843, address: '新北市三重區捷運路' },
   { id: 'O17', name: { en: 'Xianse Temple', zh: '先嗇宮' }, line: 'O', system: 'TRTC', lat: 25.0461, lng: 121.4711, address: '新北市三重區五谷王北街' },
@@ -472,10 +600,10 @@ const STATIONS = [
   { id: 'Y13', name: { en: 'Banqiao', zh: '板橋' }, line: 'Y', system: 'TRTC', lat: 25.0142, lng: 121.4626, address: '新北市板橋區站前路' },
   { id: 'Y14', name: { en: 'Xinpu Minsheng', zh: '新埔民生' }, line: 'Y', system: 'TRTC', lat: 25.0245, lng: 121.4660, address: '新北市板橋區民生路三段' },
   { id: 'Y15', name: { en: 'Touqianzhuang', zh: '頭前庄' }, line: 'Y', system: 'TRTC', lat: 25.0382, lng: 121.4625, address: '新北市新莊區中原路' },
-  { id: 'Y16', name: { en: 'Xinzhuang Fuduxin', zh: '幸福' }, line: 'Y', system: 'TRTC', lat: 25.0461, lng: 121.4589, address: '新北市新莊區思源路' },
-  { id: 'Y17', name: { en: 'Xinbeitou Industrial Park', zh: '新北產業園區' }, line: 'Y', system: 'TRTC', lat: 25.0597, lng: 121.4589, address: '新北市新莊區五權一路' },
+  { id: 'Y16', name: { en: 'Xingfu', zh: '幸福' }, line: 'Y', system: 'TRTC', lat: 25.0461, lng: 121.4589, address: '新北市新莊區思源路' },
+  { id: 'Y17', name: { en: 'New Taipei Industrial Park', zh: '新北產業園區' }, line: 'Y', system: 'TRTC', lat: 25.0597, lng: 121.4589, address: '新北市新莊區五權一路' },
 
-  // Ankeng LRT (LG) - 安坑輕軌
+  // Ankeng LRT (LG)
   { id: 'LG01', name: { en: 'Shisizhang', zh: '十四張' }, line: 'LG', system: 'TRTC', lat: 24.9884, lng: 121.5307, address: '新北市新店區央北二路' },
   { id: 'LG02', name: { en: 'Shuangcheng', zh: '雙城' }, line: 'LG', system: 'TRTC', lat: 24.9810, lng: 121.5205, address: '新北市新店區安興路' },
   { id: 'LG03', name: { en: 'Jincheng Rd.', zh: '金城路' }, line: 'LG', system: 'TRTC', lat: 24.9742, lng: 121.5145, address: '新北市新店區安康路三段' },
@@ -487,11 +615,9 @@ const STATIONS = [
   { id: 'LG09', name: { en: 'Rose China Town', zh: '玫瑰中國城' }, line: 'LG', system: 'TRTC', lat: 24.9425, lng: 121.4780, address: '新北市新店區安康路一段' },
 
   // ===== Kaohsiung Metro (KRTC) =====
-  // Red Line (KR)
-  { id: 'R3', name: { en: 'Xiaogangshan', zh: '小港山' }, line: 'KR', system: 'KRTC', lat: 22.5628, lng: 120.3556, address: '高雄市小港區沿海一路' },
+  // Red Line (KR) - main stations
   { id: 'R4', name: { en: 'Siaogang', zh: '小港' }, line: 'KR', system: 'KRTC', lat: 22.5659, lng: 120.3525, address: '高雄市小港區沿海一路' },
-  { id: 'R4A', name: { en: 'Kaohsiung International Airport', zh: '高雄國際機場' }, line: 'KR', system: 'KRTC', lat: 22.5732, lng: 120.3501, address: '高雄市小港區中山四路' },
-  { id: 'R5', name: { en: 'Caodi', zh: '草衙' }, line: 'KR', system: 'KRTC', lat: 22.5825, lng: 120.3402, address: '高雄市前鎮區中安路' },
+  { id: 'R4A', name: { en: 'Kaohsiung Airport', zh: '高雄國際機場' }, line: 'KR', system: 'KRTC', lat: 22.5732, lng: 120.3501, address: '高雄市小港區中山四路' },
   { id: 'R6', name: { en: 'Kaisyuan', zh: '凱旋' }, line: 'KR', system: 'KRTC', lat: 22.5971, lng: 120.3240, address: '高雄市前鎮區凱旋四路' },
   { id: 'R7', name: { en: 'Sanduo Shopping District', zh: '三多商圈' }, line: 'KR', system: 'KRTC', lat: 22.6157, lng: 120.3035, address: '高雄市前鎮區三多三路' },
   { id: 'R8', name: { en: 'Central Park', zh: '中央公園' }, line: 'KR', system: 'KRTC', lat: 22.6318, lng: 120.2961, address: '高雄市前金區中華三路' },
@@ -499,123 +625,37 @@ const STATIONS = [
   { id: 'R10', name: { en: 'Kaohsiung Main Station', zh: '高雄車站' }, line: 'KR', system: 'KRTC', lat: 22.6398, lng: 120.3025, address: '高雄市三民區建國二路' },
   { id: 'R11', name: { en: 'Houyi', zh: '後驛' }, line: 'KR', system: 'KRTC', lat: 22.6534, lng: 120.3088, address: '高雄市三民區博愛一路' },
   { id: 'R12', name: { en: 'Kaohsiung Arena', zh: '巨蛋' }, line: 'KR', system: 'KRTC', lat: 22.6660, lng: 120.3032, address: '高雄市左營區博愛二路' },
-  { id: 'R13', name: { en: 'Aozihdi', zh: '凹子底' }, line: 'KR', system: 'KRTC', lat: 22.6742, lng: 120.3002, address: '高雄市左營區博愛二路' },
   { id: 'R14', name: { en: 'Zuoying', zh: '左營' }, line: 'KR', system: 'KRTC', lat: 22.6878, lng: 120.3052, address: '高雄市左營區高鐵路' },
-  { id: 'R15', name: { en: 'Ecological District', zh: '生態園區' }, line: 'KR', system: 'KRTC', lat: 22.6965, lng: 120.3152, address: '高雄市左營區博愛三路' },
-  { id: 'R16', name: { en: 'Oil Refinery Elementary School', zh: '油廠國小' }, line: 'KR', system: 'KRTC', lat: 22.7040, lng: 120.3205, address: '高雄市楠梓區宏毅二路' },
-  { id: 'R17', name: { en: 'World Games', zh: '世運' }, line: 'KR', system: 'KRTC', lat: 22.7118, lng: 120.3264, address: '高雄市楠梓區世運大道' },
-  { id: 'R18', name: { en: 'Cihjin Star', zh: '楠梓加工區' }, line: 'KR', system: 'KRTC', lat: 22.7268, lng: 120.3326, address: '高雄市楠梓區楠梓加工區' },
-  { id: 'R19', name: { en: 'Ciaotou', zh: '橋頭' }, line: 'KR', system: 'KRTC', lat: 22.7532, lng: 120.3204, address: '高雄市橋頭區站前路' },
-  { id: 'R20', name: { en: 'Ciaotou Sugar Refinery', zh: '橋頭糖廠' }, line: 'KR', system: 'KRTC', lat: 22.7595, lng: 120.3115, address: '高雄市橋頭區糖廠路' },
-  { id: 'R21', name: { en: 'Cingshuei', zh: '青埔' }, line: 'KR', system: 'KRTC', lat: 22.7682, lng: 120.3025, address: '高雄市橋頭區成功路' },
-  { id: 'R22', name: { en: 'Nanzihzihnei', zh: '南岡山' }, line: 'KR', system: 'KRTC', lat: 22.7778, lng: 120.2997, address: '高雄市岡山區大勇路' },
-  { id: 'R22A', name: { en: 'Gangshan', zh: '岡山' }, line: 'KR', system: 'KRTC', lat: 22.7915, lng: 120.2968, address: '高雄市岡山區站前路' },
-  { id: 'R23', name: { en: 'Nanqiaotou', zh: '南橋頭' }, line: 'KR', system: 'KRTC', lat: 22.8028, lng: 120.2963, address: '高雄市岡山區河華路' },
-  { id: 'R24', name: { en: 'Metropolitan Park', zh: '都會公園' }, line: 'KR', system: 'KRTC', lat: 22.8250, lng: 120.2850, address: '高雄市岡山區維新路' },
 
-  // Orange Line (KO)
+  // Orange Line (KO) - main stations
   { id: 'O1', name: { en: 'Sizihwan', zh: '西子灣' }, line: 'KO', system: 'KRTC', lat: 22.6201, lng: 120.2657, address: '高雄市鼓山區鼓山路' },
   { id: 'O2', name: { en: 'Yanchengpu', zh: '鹽埕埔' }, line: 'KO', system: 'KRTC', lat: 22.6242, lng: 120.2762, address: '高雄市鹽埕區大勇路' },
-  { id: 'O4', name: { en: 'Shihjia', zh: '市議會' }, line: 'KO', system: 'KRTC', lat: 22.6294, lng: 120.2866, address: '高雄市前金區中正四路' },
   { id: 'O5', name: { en: 'Formosa Boulevard', zh: '美麗島' }, line: 'KO', system: 'KRTC', lat: 22.6318, lng: 120.2866, address: '高雄市新興區中山一路' },
-  { id: 'O6', name: { en: 'Sinyi Elementary School', zh: '信義國小' }, line: 'KO', system: 'KRTC', lat: 22.6325, lng: 120.2988, address: '高雄市新興區林森一路' },
   { id: 'O7', name: { en: 'Cultural Center', zh: '文化中心' }, line: 'KO', system: 'KRTC', lat: 22.6325, lng: 120.3125, address: '高雄市苓雅區五福一路' },
-  { id: 'O8', name: { en: 'Wuquaili', zh: '五塊厝' }, line: 'KO', system: 'KRTC', lat: 22.6325, lng: 120.3258, address: '高雄市苓雅區武慶三路' },
-  { id: 'O9', name: { en: 'Technical Senior High School', zh: '技擊館' }, line: 'KO', system: 'KRTC', lat: 22.6380, lng: 120.3358, address: '高雄市苓雅區中正一路' },
-  { id: 'O10', name: { en: 'Weiwuying', zh: '衛武營' }, line: 'KO', system: 'KRTC', lat: 22.6423, lng: 120.3462, address: '高雄市苓雅區三多一路' },
-  { id: 'O11', name: { en: 'Fongshan West', zh: '鳳山西站' }, line: 'KO', system: 'KRTC', lat: 22.6465, lng: 120.3562, address: '高雄市鳳山區光遠路' },
   { id: 'O12', name: { en: 'Fongshan', zh: '鳳山' }, line: 'KO', system: 'KRTC', lat: 22.6265, lng: 120.3626, address: '高雄市鳳山區中山路' },
   { id: 'O13', name: { en: 'Dadong', zh: '大東' }, line: 'KO', system: 'KRTC', lat: 22.6198, lng: 120.3725, address: '高雄市鳳山區光遠路' },
-  { id: 'O14', name: { en: 'Fongshan Senior High School', zh: '鳳山國中' }, line: 'KO', system: 'KRTC', lat: 22.6082, lng: 120.3640, address: '高雄市鳳山區中山東路' },
-  { id: 'OT1', name: { en: 'Daliao', zh: '大寮' }, line: 'KO', system: 'KRTC', lat: 22.5985, lng: 120.3860, address: '高雄市大寮區鳳林三路' },
 
-  // Kaohsiung Circular LRT (KC) - 高雄環狀輕軌
-  { id: 'C1', name: { en: 'Lizihnei', zh: '籬仔內' }, line: 'KC', system: 'KRTC', lat: 22.5970, lng: 120.3098, address: '高雄市前鎮區翠亨南路' },
-  { id: 'C2', name: { en: 'Kaisyuan Park', zh: '凱旋公園' }, line: 'KC', system: 'KRTC', lat: 22.6002, lng: 120.3146, address: '高雄市前鎮區凱旋四路' },
-  { id: 'C3', name: { en: 'Cianjhen Star', zh: '前鎮之星' }, line: 'KC', system: 'KRTC', lat: 22.5992, lng: 120.3215, address: '高雄市前鎮區凱旋四路' },
-  { id: 'C4', name: { en: 'Kaisyuan Ruitian', zh: '凱旋瑞田' }, line: 'KC', system: 'KRTC', lat: 22.5948, lng: 120.3275, address: '高雄市前鎮區瑞田街' },
+  // Circular LRT (KC) - main stations
   { id: 'C5', name: { en: 'Dream Mall', zh: '夢時代' }, line: 'KC', system: 'KRTC', lat: 22.5925, lng: 120.3155, address: '高雄市前鎮區中華五路' },
-  { id: 'C6', name: { en: 'Economic Development Bureau', zh: '經貿園區' }, line: 'KC', system: 'KRTC', lat: 22.5958, lng: 120.3048, address: '高雄市前鎮區成功二路' },
-  { id: 'C7', name: { en: 'Software Park', zh: '軟體園區' }, line: 'KC', system: 'KRTC', lat: 22.6048, lng: 120.3012, address: '高雄市前鎮區復興四路' },
-  { id: 'C8', name: { en: 'Asia New Bay Area', zh: '亞洲新灣區' }, line: 'KC', system: 'KRTC', lat: 22.6108, lng: 120.2965, address: '高雄市前鎮區成功二路' },
-  { id: 'C9', name: { en: 'Peng-lai Port', zh: '旅運中心' }, line: 'KC', system: 'KRTC', lat: 22.6125, lng: 120.2878, address: '高雄市苓雅區海邊路' },
-  { id: 'C10', name: { en: 'Guangrong Pier', zh: '光榮碼頭' }, line: 'KC', system: 'KRTC', lat: 22.6168, lng: 120.2825, address: '高雄市苓雅區海邊路' },
   { id: 'C11', name: { en: 'True Love Pier', zh: '真愛碼頭' }, line: 'KC', system: 'KRTC', lat: 22.6208, lng: 120.2785, address: '高雄市鹽埕區公園二路' },
-  { id: 'C12', name: { en: 'Dayi Pier', zh: '駁二大義' }, line: 'KC', system: 'KRTC', lat: 22.6205, lng: 120.2715, address: '高雄市鹽埕區大義街' },
-  { id: 'C13', name: { en: 'Penglai', zh: '駁二蓬萊' }, line: 'KC', system: 'KRTC', lat: 22.6188, lng: 120.2668, address: '高雄市鼓山區蓬萊路' },
   { id: 'C14', name: { en: 'Hamasen', zh: '哈瑪星' }, line: 'KC', system: 'KRTC', lat: 22.6215, lng: 120.2618, address: '高雄市鼓山區捷興二街' },
-  { id: 'C15', name: { en: 'Shoushan Park', zh: '壽山公園' }, line: 'KC', system: 'KRTC', lat: 22.6282, lng: 120.2582, address: '高雄市鼓山區臨海二路' },
-  { id: 'C16', name: { en: 'Wenzao', zh: '文藻外語大學' }, line: 'KC', system: 'KRTC', lat: 22.6358, lng: 120.2612, address: '高雄市鼓山區民享街' },
-  { id: 'C17', name: { en: 'Love River Home', zh: '愛河之心' }, line: 'KC', system: 'KRTC', lat: 22.6415, lng: 120.2692, address: '高雄市鼓山區同盟二路' },
-  { id: 'C18', name: { en: 'Kaohsiung Museum of Fine Arts', zh: '美術館' }, line: 'KC', system: 'KRTC', lat: 22.6518, lng: 120.2748, address: '高雄市鼓山區美術東二路' },
-  { id: 'C19', name: { en: 'United Hospital', zh: '聯合醫院' }, line: 'KC', system: 'KRTC', lat: 22.6598, lng: 120.2815, address: '高雄市左營區翠華路' },
-  { id: 'C20', name: { en: 'Taiwan Rail Museum', zh: '台鐵美術館' }, line: 'KC', system: 'KRTC', lat: 22.6638, lng: 120.2878, address: '高雄市左營區翠華路' },
-  { id: 'C21', name: { en: 'Neiweipi', zh: '內惟藝術中心' }, line: 'KC', system: 'KRTC', lat: 22.6685, lng: 120.2925, address: '高雄市左營區翠華路' },
-  { id: 'C22', name: { en: 'Longhua Elementary', zh: '龍華國小' }, line: 'KC', system: 'KRTC', lat: 22.6728, lng: 120.2958, address: '高雄市左營區自由三路' },
-  { id: 'C23', name: { en: 'Kaohsiung Arena', zh: '凹子底' }, line: 'KC', system: 'KRTC', lat: 22.6758, lng: 120.3008, address: '高雄市左營區博愛二路' },
-  { id: 'C24', name: { en: 'Love River', zh: '愛河之星' }, line: 'KC', system: 'KRTC', lat: 22.6698, lng: 120.3068, address: '高雄市左營區博愛二路' },
-  { id: 'C25', name: { en: 'Guanghua Park', zh: '光華公園' }, line: 'KC', system: 'KRTC', lat: 22.6638, lng: 120.3108, address: '高雄市三民區民族一路' },
-  { id: 'C26', name: { en: 'St. Joseph Hospital', zh: '聖若瑟' }, line: 'KC', system: 'KRTC', lat: 22.6578, lng: 120.3145, address: '高雄市三民區建工路' },
-  { id: 'C27', name: { en: 'Aviation Museum', zh: '科工館' }, line: 'KC', system: 'KRTC', lat: 22.6508, lng: 120.3198, address: '高雄市三民區九如一路' },
-  { id: 'C28', name: { en: 'Sanmin Senior High School', zh: '三民高中' }, line: 'KC', system: 'KRTC', lat: 22.6438, lng: 120.3248, address: '高雄市三民區民族一路' },
-  { id: 'C29', name: { en: 'Shihjia Park', zh: '獅甲' }, line: 'KC', system: 'KRTC', lat: 22.6368, lng: 120.3295, address: '高雄市前鎮區中華五路' },
-  { id: 'C30', name: { en: 'Labor Park', zh: '勞工公園' }, line: 'KC', system: 'KRTC', lat: 22.6298, lng: 120.3318, address: '高雄市前鎮區一心二路' },
-  { id: 'C31', name: { en: 'Ruibeili', zh: '瑞北里' }, line: 'KC', system: 'KRTC', lat: 22.6218, lng: 120.3338, address: '高雄市前鎮區民裕街' },
-  { id: 'C32', name: { en: 'Kaisyuan Ersheng', zh: '凱旋二聖' }, line: 'KC', system: 'KRTC', lat: 22.6148, lng: 120.3305, address: '高雄市前鎮區凱旋四路' },
-  { id: 'C33', name: { en: 'Ciannan Ersheng', zh: '前鎮二聖' }, line: 'KC', system: 'KRTC', lat: 22.6088, lng: 120.3268, address: '高雄市前鎮區二聖二路' },
-  { id: 'C34', name: { en: 'Rueifeng', zh: '瑞豐' }, line: 'KC', system: 'KRTC', lat: 22.6028, lng: 120.3238, address: '高雄市前鎮區瑞隆路' },
-  { id: 'C35', name: { en: 'Ciannan Yucheng', zh: '前鎮育成' }, line: 'KC', system: 'KRTC', lat: 22.6012, lng: 120.3188, address: '高雄市前鎮區育成路' },
-  { id: 'C36', name: { en: 'Kaisyuan Siji', zh: '凱旋四季' }, line: 'KC', system: 'KRTC', lat: 22.5998, lng: 120.3135, address: '高雄市前鎮區凱旋四路' },
-  { id: 'C37', name: { en: 'Cianjhen Depot', zh: '前鎮機廠' }, line: 'KC', system: 'KRTC', lat: 22.5985, lng: 120.3108, address: '高雄市前鎮區翠亨南路' },
+  { id: 'C18', name: { en: 'Museum of Fine Arts', zh: '美術館' }, line: 'KC', system: 'KRTC', lat: 22.6518, lng: 120.2748, address: '高雄市鼓山區美術東二路' },
 
   // ===== Taoyuan Metro (TYMC) =====
-  // Airport Line (A)
   { id: 'A1', name: { en: 'Taipei Main Station', zh: '台北車站' }, line: 'A', system: 'TYMC', lat: 25.0475, lng: 121.5145, address: '台北市中正區北平西路' },
   { id: 'A2', name: { en: 'Sanchong', zh: '三重' }, line: 'A', system: 'TYMC', lat: 25.0549, lng: 121.4874, address: '新北市三重區捷運路' },
-  { id: 'A3', name: { en: 'New Taipei Industrial Park', zh: '新北產業園區' }, line: 'A', system: 'TYMC', lat: 25.0597, lng: 121.4589, address: '新北市新莊區五權一路' },
-  { id: 'A4', name: { en: 'Xinzhuang Fuduxin', zh: '新莊副都心' }, line: 'A', system: 'TYMC', lat: 25.0555, lng: 121.4369, address: '新北市新莊區立信五街' },
-  { id: 'A5', name: { en: 'Taishan', zh: '泰山' }, line: 'A', system: 'TYMC', lat: 25.0445, lng: 121.4165, address: '新北市泰山區泰林路三段' },
-  { id: 'A6', name: { en: 'Taishan Guihe', zh: '泰山貴和' }, line: 'A', system: 'TYMC', lat: 25.0368, lng: 121.3985, address: '新北市泰山區明志路一段' },
-  { id: 'A7', name: { en: 'Shanziliao', zh: '體育大學' }, line: 'A', system: 'TYMC', lat: 25.0232, lng: 121.3608, address: '桃園市龜山區文化一路' },
   { id: 'A8', name: { en: 'Chang Gung Memorial Hospital', zh: '長庚醫院' }, line: 'A', system: 'TYMC', lat: 25.0147, lng: 121.3548, address: '桃園市龜山區復興一路' },
-  { id: 'A9', name: { en: 'Shanbi', zh: '林口' }, line: 'A', system: 'TYMC', lat: 25.0168, lng: 121.3368, address: '桃園市龜山區文化北路' },
-  { id: 'A10', name: { en: 'Shanbizi', zh: '山鼻' }, line: 'A', system: 'TYMC', lat: 25.0165, lng: 121.3099, address: '桃園市蘆竹區南山路三段' },
-  { id: 'A11', name: { en: 'Kengkou', zh: '坑口' }, line: 'A', system: 'TYMC', lat: 25.0152, lng: 121.2878, address: '桃園市蘆竹區南山路三段' },
   { id: 'A12', name: { en: 'Airport Terminal 1', zh: '機場第一航廈' }, line: 'A', system: 'TYMC', lat: 25.0802, lng: 121.2378, address: '桃園市大園區航站南路' },
   { id: 'A13', name: { en: 'Airport Terminal 2', zh: '機場第二航廈' }, line: 'A', system: 'TYMC', lat: 25.0610, lng: 121.2298, address: '桃園市大園區航站南路' },
-  { id: 'A14a', name: { en: 'Airport Hotel', zh: '機場旅館' }, line: 'A', system: 'TYMC', lat: 25.0548, lng: 121.2220, address: '桃園市大園區航勤北路' },
-  { id: 'A15', name: { en: 'Dayuan', zh: '大園' }, line: 'A', system: 'TYMC', lat: 25.0478, lng: 121.2065, address: '桃園市大園區站前西路' },
-  { id: 'A16', name: { en: 'Henshan', zh: '橫山' }, line: 'A', system: 'TYMC', lat: 25.0318, lng: 121.1768, address: '桃園市大園區大觀路' },
-  { id: 'A17', name: { en: 'Lingkou', zh: '領航' }, line: 'A', system: 'TYMC', lat: 25.0198, lng: 121.1498, address: '桃園市中壢區高鐵站前西路' },
   { id: 'A18', name: { en: 'HSR Taoyuan Station', zh: '高鐵桃園站' }, line: 'A', system: 'TYMC', lat: 25.0128, lng: 121.2148, address: '桃園市中壢區高鐵北路一段' },
-  { id: 'A19', name: { en: 'Taoyuan Sports Center', zh: '桃園體育園區' }, line: 'A', system: 'TYMC', lat: 25.0025, lng: 121.2098, address: '桃園市中壢區領航北路一段' },
-  { id: 'A20', name: { en: 'Xingnan', zh: '興南' }, line: 'A', system: 'TYMC', lat: 24.9925, lng: 121.1998, address: '桃園市中壢區福德二路' },
   { id: 'A21', name: { en: 'Huanbei', zh: '環北' }, line: 'A', system: 'TYMC', lat: 24.9868, lng: 121.1898, address: '桃園市中壢區復興路' },
-  { id: 'A22', name: { en: 'Laojie River', zh: '老街溪' }, line: 'A', system: 'TYMC', lat: 24.9868, lng: 121.2065, address: '桃園市中壢區中美路' },
-  { id: 'A23', name: { en: 'Zhongli', zh: '中壢' }, line: 'A', system: 'TYMC', lat: 24.9538, lng: 121.2258, address: '桃園市中壢區中和路' },
 
   // ===== Taichung Metro (TMRT) =====
-  // Green Line (TG)
   { id: 'G0', name: { en: 'Beitun Main Station', zh: '北屯總站' }, line: 'TG', system: 'TMRT', lat: 24.1821, lng: 120.6915, address: '台中市北屯區敦富路' },
-  { id: 'G1', name: { en: 'Jiuzhang', zh: '舊社' }, line: 'TG', system: 'TMRT', lat: 24.1778, lng: 120.6878, address: '台中市北屯區松竹路二段' },
-  { id: 'G2', name: { en: 'Songzhu', zh: '松竹' }, line: 'TG', system: 'TMRT', lat: 24.1718, lng: 120.6848, address: '台中市北屯區松竹路一段' },
   { id: 'G3', name: { en: 'Siji', zh: '四維國小' }, line: 'TG', system: 'TMRT', lat: 24.1642, lng: 120.6815, address: '台中市北屯區文心路四段' },
-  { id: 'G3a', name: { en: 'Chongde', zh: '崇德文心' }, line: 'TG', system: 'TMRT', lat: 24.1568, lng: 120.6792, address: '台中市北屯區文心路四段' },
-  { id: 'G4', name: { en: 'Wenhua Senior High School', zh: '文華高中' }, line: 'TG', system: 'TMRT', lat: 24.1528, lng: 120.6498, address: '台中市西屯區文心路三段' },
-  { id: 'G5', name: { en: 'Wenxin Yingcai', zh: '文心櫻花' }, line: 'TG', system: 'TMRT', lat: 24.1458, lng: 120.6468, address: '台中市西屯區文心路二段' },
   { id: 'G6', name: { en: 'Taichung City Hall', zh: '市政府' }, line: 'TG', system: 'TMRT', lat: 24.1618, lng: 120.6408, address: '台中市西屯區臺灣大道三段' },
-  { id: 'G7', name: { en: 'Shuinan', zh: '水安宮' }, line: 'TG', system: 'TMRT', lat: 24.1558, lng: 120.6358, address: '台中市西屯區文心路三段' },
   { id: 'G8', name: { en: 'Wenxin Forest Park', zh: '文心森林公園' }, line: 'TG', system: 'TMRT', lat: 24.1488, lng: 120.6278, address: '台中市南屯區文心路一段' },
-  { id: 'G8a', name: { en: 'Nantun', zh: '南屯' }, line: 'TG', system: 'TMRT', lat: 24.1398, lng: 120.6218, address: '台中市南屯區文心路一段' },
-  { id: 'G9', name: { en: 'Toyokawa', zh: '豐樂公園' }, line: 'TG', system: 'TMRT', lat: 24.1328, lng: 120.6148, address: '台中市南屯區文心南路' },
   { id: 'G10', name: { en: 'Daqing', zh: '大慶' }, line: 'TG', system: 'TMRT', lat: 24.1198, lng: 120.6468, address: '台中市南區建國南路一段' },
-  { id: 'G10a', name: { en: 'Jiudeyi', zh: '九德' }, line: 'TG', system: 'TMRT', lat: 24.1128, lng: 120.6528, address: '台中市烏日區中山路一段' },
-  { id: 'G11', name: { en: 'Jiu-zhang', zh: '九張犁' }, line: 'TG', system: 'TMRT', lat: 24.1088, lng: 120.6578, address: '台中市烏日區中山路二段' },
-  { id: 'G12', name: { en: 'Wuri', zh: '烏日' }, line: 'TG', system: 'TMRT', lat: 24.1028, lng: 120.6618, address: '台中市烏日區三民街' },
-  { id: 'G13', name: { en: 'Jiuzhangan', zh: '九德' }, line: 'TG', system: 'TMRT', lat: 24.0988, lng: 120.6658, address: '台中市烏日區中山路三段' },
-  { id: 'G14', name: { en: 'Wuri-THSR', zh: '高鐵台中站' }, line: 'TG', system: 'TMRT', lat: 24.1118, lng: 120.6158, address: '台中市烏日區高鐵路一段' },
-  { id: 'G15', name: { en: 'Wuri-Zhandong', zh: '成功' }, line: 'TG', system: 'TMRT', lat: 24.1058, lng: 120.6108, address: '台中市烏日區中山路三段' },
-  { id: 'G16', name: { en: 'Wuri-Zhongshan', zh: '五權西' }, line: 'TG', system: 'TMRT', lat: 24.0998, lng: 120.6048, address: '台中市烏日區成功西路' },
   { id: 'G17', name: { en: 'HSR Taichung Station', zh: '高鐵台中站' }, line: 'TG', system: 'TMRT', lat: 24.1118, lng: 120.6158, address: '台中市烏日區高鐵一路' }
 ];
 
@@ -633,6 +673,7 @@ let currentLine = 'all';
 let selectedStation = null;
 let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
 let userLocation = null;
+let bottomSheet = null;
 
 // Distance calculation utilities
 const deg2rad = (deg) => deg * (Math.PI / 180);
@@ -653,34 +694,41 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-function isChineseLocale() {
-  return isZh;
+function updateSheetSummary() {
+  const summaryEl = document.getElementById('sheet-summary');
+  if (!summaryEl) return;
+
+  const systemName = currentSystem === 'all'
+    ? (isZh ? '全部系統' : 'All Systems')
+    : (MRT_SYSTEMS[currentSystem]?.name[isZh ? 'zh' : 'en'] || currentSystem);
+
+  const filtered = filterStations();
+  const stationCount = filtered.length;
+
+  summaryEl.textContent = `🚇 ${systemName} · ${stationCount} ${isZh ? '站' : 'stations'}`;
 }
 
 function toggleLang() {
   isZh = !isZh;
   localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
   updateUI();
+  updateSheetSummary();
 }
 
 function updateUI() {
-  // Update browser and page title
   document.title = isZh ? '台灣捷運' : 'Taiwan MRT';
   document.getElementById('page-title').textContent = isZh ? '台灣捷運' : 'Taiwan MRT';
 
-  // Update search placeholder
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
   }
 
-  // Update navigation buttons
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const text = isZh ? btn.dataset.zh : btn.dataset.en;
     if (text) btn.textContent = text;
   });
 
-  // Update system select options
   const systemSelect = document.getElementById('system-select');
   if (systemSelect) {
     systemSelect.options[0].textContent = isZh ? '全部系統' : 'All Systems';
@@ -691,14 +739,11 @@ function updateUI() {
     });
   }
 
-  // Update line select options
   updateLineSelect();
 
-  // Re-render station list and update popups
   const filtered = filterStations();
   renderStationList(filtered);
 
-  // Update all marker popups
   Object.keys(markers).forEach(key => {
     const [system, ...idParts] = key.split('-');
     const id = idParts.join('-');
@@ -708,13 +753,11 @@ function updateUI() {
     }
   });
 
-  // Update locate button title
   const locateBtn = document.querySelector('.locate-btn');
   if (locateBtn) {
     locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
   }
 
-  // Update language button text
   const langBtn = document.getElementById('lang-btn');
   if (langBtn) {
     langBtn.textContent = isZh ? '中' : 'EN';
@@ -731,17 +774,17 @@ function getLineInfo(systemCode, lineCode) {
 }
 
 function getStationName(station) {
-  return isChineseLocale() ? station.name.zh : station.name.en;
+  return isZh ? station.name.zh : station.name.en;
 }
 
 function getLineName(systemCode, lineCode) {
   const lineInfo = getLineInfo(systemCode, lineCode);
-  return isChineseLocale() ? lineInfo.name.zh : lineInfo.name.en;
+  return isZh ? lineInfo.name.zh : lineInfo.name.en;
 }
 
 function getSystemName(systemCode) {
   const systemInfo = getSystemInfo(systemCode);
-  return isChineseLocale() ? systemInfo.name.zh : systemInfo.name.en;
+  return isZh ? systemInfo.name.zh : systemInfo.name.en;
 }
 
 function createMarkerIcon(lineCode, systemCode) {
@@ -756,7 +799,6 @@ function createMarkerIcon(lineCode, systemCode) {
 }
 
 function getPopupContent(station) {
-  const isZh = isChineseLocale();
   const systemName = getSystemName(station.system);
   const lineName = getLineName(station.system, station.line);
 
@@ -829,7 +871,6 @@ function addMarkers(stationList) {
 function renderStationList(stationList) {
   const listEl = document.getElementById('station-list');
   const countEl = document.getElementById('result-count');
-  const isZh = isChineseLocale();
 
   listEl.innerHTML = stationList.map(createStationListItem).join('');
   countEl.textContent = isZh
@@ -867,17 +908,14 @@ function selectStation(id, system) {
 function filterStations() {
   let filtered = [...STATIONS];
 
-  // Filter by system
   if (currentSystem !== 'all') {
     filtered = filtered.filter(s => s.system === currentSystem);
   }
 
-  // Filter by line
   if (currentLine !== 'all') {
     filtered = filtered.filter(s => s.line === currentLine);
   }
 
-  // Filter by search query
   const query = document.getElementById('search-input').value.toLowerCase().trim();
   if (query) {
     filtered = filtered.filter(station => {
@@ -894,22 +932,18 @@ function filterStations() {
 
 function updateLineSelect() {
   const lineSelect = document.getElementById('line-select');
-  const isZh = isChineseLocale();
 
-  // Check if system has only one line
   if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {
     const system = MRT_SYSTEMS[currentSystem];
     const lineEntries = Object.entries(system.lines);
 
     if (lineEntries.length === 1) {
-      // Only one line - hide selector and auto-select it
       lineSelect.style.display = 'none';
       currentLine = lineEntries[0][0];
       return;
     }
   }
 
-  // Multiple lines - show selector
   lineSelect.style.display = '';
   let options = '<option value="all">' + (isZh ? '所有路線' : 'All Lines') + '</option>';
 
@@ -936,8 +970,8 @@ function changeSystem() {
   const filtered = filterStations();
   renderStationList(filtered);
   addMarkers(filtered);
+  updateSheetSummary();
 
-  // Pan to system center
   if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {
     map.setView(MRT_SYSTEMS[currentSystem].center, CONFIG.DEFAULT_ZOOM);
   }
@@ -951,12 +985,14 @@ function changeLine() {
   const filtered = filterStations();
   renderStationList(filtered);
   addMarkers(filtered);
+  updateSheetSummary();
 }
 
 function handleSearch(e) {
   const filtered = filterStations();
   renderStationList(filtered);
   addMarkers(filtered);
+  updateSheetSummary();
   console.log(`[MRT] Search: "${e.target.value}" - ${filtered.length} results`);
 }
 
@@ -979,7 +1015,6 @@ async function centerToUserLocation() {
       map.setView([userLocation.lat, userLocation.lng], 15);
     }
 
-    // Update station list with distances
     const filtered = filterStations();
     renderStationList(filtered);
 
@@ -1005,20 +1040,17 @@ async function centerToUserLocation() {
 async function initialize() {
   console.log('[MRT] Initializing MRT map...');
 
-  // Restore language preference
   const savedLang = localStorage.getItem('ubike-lang');
   if (savedLang) {
     isZh = savedLang === 'zh';
   }
 
-  // Restore system preference
   const savedSystem = localStorage.getItem('mrt-system');
   if (savedSystem && (MRT_SYSTEMS[savedSystem] || savedSystem === 'all')) {
     currentSystem = savedSystem;
     document.getElementById('system-select').value = currentSystem;
   }
 
-  // Get user location
   if ('geolocation' in navigator) {
     try {
       const position = await new Promise((resolve, reject) => {
@@ -1031,10 +1063,8 @@ async function initialize() {
     }
   }
 
-  // Update UI with language
   updateUI();
 
-  // Create map
   const center = MRT_SYSTEMS[currentSystem]?.center || CONFIG.DEFAULT_CENTER;
   map = L.map('map-canvas').setView(center, CONFIG.DEFAULT_ZOOM);
 
@@ -1043,14 +1073,24 @@ async function initialize() {
     maxZoom: 19
   }).addTo(map);
 
-  // Setup search
   const searchInput = document.getElementById('search-input');
   searchInput.addEventListener('input', handleSearch);
 
-  // Initial load
   const filtered = filterStations();
   renderStationList(filtered);
   addMarkers(filtered);
+  updateSheetSummary();
+
+  // Initialize bottom sheet (mobile only)
+  const panel = document.getElementById('panel');
+  if (panel && typeof BottomSheet !== 'undefined') {
+    bottomSheet = new BottomSheet(panel, {
+      initialSnap: 'collapsed',
+      onSnapChange: (snap) => {
+        console.log('[MRT] Sheet snap:', snap);
+      }
+    });
+  }
 
   console.log('[MRT] MRT map initialized successfully');
 }

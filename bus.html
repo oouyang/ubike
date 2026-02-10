@@ -526,6 +526,11 @@
             0%, 100% { background: white; }
             50% { background: #e3f2fd; }
         }
+
+        /* Sheet handle - hidden on desktop */
+        .sheet-handle { display: none; }
+        .sheet-content { display: contents; }
+
         @media (max-width: 768px) {
             header {
                 padding: 8px 10px;
@@ -547,9 +552,93 @@
                 padding: 4px 8px;
                 font-size: 11px;
             }
+
+            /* Map full screen on mobile */
+            #map-canvas {
+                position: fixed !important;
+                top: 74px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1;
+                height: auto !important;
+            }
+
+            /* Panel becomes bottom sheet */
+            #panel {
+                position: fixed !important;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100% !important;
+                height: auto !important;
+                max-height: 90vh;
+                background: white;
+                border-radius: 16px 16px 0 0;
+                border-right: none !important;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                z-index: 1000;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                will-change: transform;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+            #panel.snap-half { transform: translateY(50%); }
+            #panel.snap-full { transform: translateY(10%); }
+            #panel.dragging { transition: none; }
+            #panel.no-transition { transition: none; }
+
+            .sheet-handle {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 56px;
+                padding: 8px 16px;
+                cursor: grab;
+                touch-action: none;
+                user-select: none;
+                background: white;
+                border-radius: 16px 16px 0 0;
+                flex-shrink: 0;
+            }
+
+            .sheet-pill {
+                width: 40px;
+                height: 4px;
+                background: #ccc;
+                border-radius: 2px;
+                margin-bottom: 8px;
+            }
+
+            .sheet-summary {
+                font-size: 14px;
+                color: #333;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+                text-align: center;
+            }
+
+            .sheet-content {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                min-height: 0;
+            }
+
+            .float-btn-container {
+                bottom: 70px !important;
+                z-index: 1001 !important;
+            }
+
             .container { flex-direction: column; }
-            #panel { width: 100%; height: 50%; }
-            #map-canvas { height: 50%; }
         }
     </style>
 </head>
@@ -567,6 +656,11 @@
     </header>
     <div class="container" style="position:relative;">
         <div id="panel">
+            <div class="sheet-handle">
+                <div class="sheet-pill"></div>
+                <div class="sheet-summary" id="sheet-summary">Loading...</div>
+            </div>
+            <div class="sheet-content">
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="schedule" data-en="Route Schedule" data-zh="路線時刻">Route Schedule</button>
                 <button class="tab-btn" data-tab="nearby" data-en="Nearby Stops" data-zh="附近站牌">Nearby Stops</button>
@@ -655,6 +749,7 @@
                     </li>
                 </ul>
             </div>
+            </div><!-- end .sheet-content -->
         </div>
         <div id="map-canvas"></div>
         <div class="float-btn-container">
@@ -664,6 +759,7 @@
     </div>
 
     <script src="js/common.js"></script>
+    <script src="js/bottom-sheet.js"></script>
     <script src="js/bus.js"></script>
 </body>
 </html>

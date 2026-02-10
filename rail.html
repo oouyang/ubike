@@ -482,7 +482,99 @@
       0%, 100% { background: white; }
       50% { background: #e3f2fd; }
     }
+
+    /* Sheet handle - hidden on desktop */
+    .sheet-handle { display: none; }
+    .sheet-content { display: contents; }
+
     @media (max-width: 768px) {
+      /* Map full screen on mobile */
+      #map-canvas {
+        position: fixed !important;
+        top: 74px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        height: auto !important;
+      }
+
+      /* Panel becomes bottom sheet */
+      #panel {
+        position: fixed !important;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 90vh;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        border-right: none !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+      #panel.snap-half { transform: translateY(50%); }
+      #panel.snap-full { transform: translateY(10%); }
+      #panel.dragging { transition: none; }
+      #panel.no-transition { transition: none; }
+
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 56px;
+        padding: 8px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        flex-shrink: 0;
+      }
+
+      .sheet-pill {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin-bottom: 8px;
+      }
+
+      .sheet-summary {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+
+      .sheet-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        min-height: 0;
+      }
+
+      .float-btn-container {
+        bottom: 70px !important;
+        z-index: 1001 !important;
+      }
+
+      /* Hide view toggle on mobile */
+      .view-toggle { display: none !important; }
       header {
         padding: 8px 10px;
         flex-direction: column;
@@ -597,6 +689,11 @@
   </header>
   <div class="container" style="position:relative;">
     <div id="panel">
+      <div class="sheet-handle">
+        <div class="sheet-pill"></div>
+        <div class="sheet-summary" id="sheet-summary">Loading...</div>
+      </div>
+      <div class="sheet-content">
       <div class="tab-buttons">
         <button class="tab-btn active" data-tab="schedule" data-en="Train Schedule" data-zh="列車時刻">Train Schedule</button>
         <button class="tab-btn" data-tab="stations" data-en="Stations" data-zh="車站列表">Stations</button>
@@ -675,6 +772,7 @@
         <div id="result-count" class="result-count"></div>
         <ul id="station-list" class="station-list"></ul>
       </div>
+      </div><!-- end .sheet-content -->
     </div>
     <div id="map-canvas"></div>
     <div class="float-btn-container">
@@ -683,6 +781,7 @@
     </div>
   </div>
   <script src="js/common.js"></script>
+  <script src="js/bottom-sheet.js"></script>
   <script>
 'use strict';
 
@@ -1321,6 +1420,52 @@ function getTrainTypeClass(type) {
 
 // View mode toggle for mobile
 let currentViewMode = 'split';
+let bottomSheet = null;
+
+// ============================================================
+// BOTTOM SHEET SUMMARY
+// ============================================================
+
+function updateSheetSummary() {
+  const summaryEl = document.getElementById('sheet-summary');
+  if (!summaryEl) return;
+
+  const activeTab = document.querySelector('.tab-btn.active');
+  const tabName = activeTab?.dataset.tab || 'schedule';
+
+  if (tabName === 'schedule') {
+    // Schedule tab: "🚃 Taipei → Kaohsiung • 12 trains"
+    const originSelect = document.getElementById('schedule-station-select');
+    const destSelect = document.getElementById('dest-station-select');
+    const originValue = originSelect?.value;
+    const destValue = destSelect?.value;
+
+    if (originValue && destValue) {
+      const originStation = SCHEDULE_STATIONS[currentScheduleLine]?.find(s => s.id === originValue);
+      const destStation = SCHEDULE_STATIONS[currentScheduleLine]?.find(s => s.id === destValue);
+      const originName = isZh ? originStation?.name?.zh : originStation?.name?.en;
+      const destName = isZh ? destStation?.name?.zh : destStation?.name?.en;
+      const trainCount = document.querySelectorAll('.train-item:not(.departed)').length;
+
+      if (originName && destName) {
+        summaryEl.textContent = `🚃 ${originName} → ${destName} · ${trainCount} ${isZh ? '班車' : 'trains'}`;
+        return;
+      }
+    }
+
+    // Fallback if no destination selected
+    const lineName = RAIL_LINES[currentScheduleLine]?.name[isZh ? 'zh' : 'en'] || currentScheduleLine;
+    summaryEl.textContent = `🚃 ${lineName}`;
+  } else {
+    // Stations tab: "🚃 Western Line • 45 stations"
+    const stationCount = filteredStations.length;
+    const lineName = currentLine === 'all'
+      ? (isZh ? '全部路線' : 'All Lines')
+      : (RAIL_LINES[currentLine]?.name[isZh ? 'zh' : 'en'] || currentLine);
+
+    summaryEl.textContent = `🚃 ${lineName} · ${stationCount} ${isZh ? '站' : 'stations'}`;
+  }
+}
 function setViewMode(mode) {
   currentViewMode = mode;
   const panel = document.getElementById('panel');
@@ -1596,6 +1741,7 @@ function updateDisplay() {
   filteredStations = filtered;
   renderStationList(filtered);
   addMarkers(filtered);
+  updateSheetSummary();
 }
 
 function changeLine() {
@@ -1660,6 +1806,9 @@ function setupTabs() {
       } else {
         stopDelayRefresh();
       }
+
+      // Update sheet summary when tab changes
+      updateSheetSummary();
     });
   });
 }
@@ -1930,6 +2079,9 @@ function renderTrainSchedule() {
 
   // Update delay status indicator
   updateDelayStatusIndicator();
+
+  // Update sheet summary
+  updateSheetSummary();
 }
 
 function updateDelayStatusIndicator() {
@@ -2135,6 +2287,20 @@ async function initialize() {
 
   // Initial load
   updateDisplay();
+
+  // Initialize bottom sheet (mobile only)
+  const panel = document.getElementById('panel');
+  if (panel && typeof BottomSheet !== 'undefined') {
+    bottomSheet = new BottomSheet(panel, {
+      initialSnap: 'collapsed',
+      onSnapChange: (snap) => {
+        console.log('[Rail] Sheet snap:', snap);
+      }
+    });
+  }
+
+  // Update sheet summary
+  updateSheetSummary();
 
   console.log('[Rail] Taiwan Rail map initialized successfully');
 }

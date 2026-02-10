@@ -1,0 +1,132 @@
+/**
+ * Bottom Sheet CSS - Mobile only (≤768px)
+ * Include this file after page-specific styles
+ * Required HTML structure:
+ * <div id="panel">
+ *   <div class="sheet-handle">
+ *     <div class="sheet-pill"></div>
+ *     <div class="sheet-summary" id="sheet-summary">Summary text</div>
+ *   </div>
+ *   <div class="sheet-content">
+ *     <!-- existing panel content -->
+ *   </div>
+ * </div>
+ */
+
+/* Desktop: hide sheet handle */
+.sheet-handle {
+  display: none;
+}
+
+/* ===== MOBILE: Bottom Sheet ===== */
+@media (max-width: 768px) {
+  /* Body and main container setup */
+  body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .container,
+  .main-content {
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Map takes full screen behind sheet */
+  #map-canvas,
+  #map-container {
+    position: fixed !important;
+    top: 74px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Panel becomes bottom sheet */
+  #panel {
+    position: fixed !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 90vh;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    border-right: none !important;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+  #panel.snap-half { transform: translateY(50%); }
+  #panel.snap-full { transform: translateY(10%); }
+  #panel.dragging { transition: none; }
+  #panel.no-transition { transition: none; }
+
+  /* Show drag handle on mobile */
+  .sheet-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 56px;
+    padding: 8px 16px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
+  }
+
+  .sheet-pill {
+    width: 40px;
+    height: 4px;
+    background: #ccc;
+    border-radius: 2px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .sheet-summary {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+  }
+
+  .sheet-content {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Floating buttons above collapsed sheet */
+  .float-btn-container {
+    bottom: 70px !important;
+    z-index: 1001 !important;
+  }
+
+  /* Override any list-only or map-only styles */
+  #panel.list-only,
+  .container.map-only #panel {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}

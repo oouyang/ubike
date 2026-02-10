@@ -67,6 +67,32 @@
     .nav-btn.home:hover {
       background: #F57C00;
     }
+
+    /* Main container - desktop: side panel + map */
+    .main-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Side Panel (Desktop) / Bottom Sheet (Mobile) */
+    #panel {
+      width: 380px;
+      height: 100%;
+      background: #f9f9f9;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* Sheet handle - hidden on desktop */
+    .sheet-handle {
+      display: none;
+    }
+
     /* Filter controls in panel */
     .filter-controls {
       padding: 10px;
@@ -90,88 +116,15 @@
       outline: none;
       border-color: #1976d2;
     }
-    .view-toggle {
-      display: flex;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-      padding: 2px;
-      gap: 2px;
-    }
-    .view-btn {
-      padding: 6px 12px;
-      border: none;
-      background: transparent;
-      color: #666;
-      cursor: pointer;
-      font-size: 13px;
-      border-radius: 3px;
-      transition: all 0.2s;
-    }
-    .view-btn:hover {
-      background: rgba(0,0,0,0.1);
-      color: #333;
-    }
-    .view-btn.active {
-      background: #1976d2;
-      color: white;
-      font-weight: bold;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-    /* Main content */
-    .main-content {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-    }
-    .view {
-      display: none;
-      height: 100%;
-    }
-    .view.active {
-      display: flex;
-    }
 
-    /* Map View */
-    #map-view {
-      position: relative;
-    }
-    #map-canvas {
-      flex: 1;
-      height: 100%;
-    }
-    #search-panel {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      width: 320px;
-      max-height: calc(100% - 20px);
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #search-panel.collapsed {
-      max-height: 95px;
-    }
-    #search-panel.collapsed .station-list,
-    #search-panel.collapsed .result-count {
-      display: none;
-    }
-    #search-panel.collapsed .search-header {
-      border-bottom: none;
-    }
-    .search-header {
+    /* Search section */
+    .search-section {
       padding: 10px;
-      display: flex;
-      gap: 8px;
       border-bottom: 1px solid #eee;
+      background: white;
     }
     #search-input {
-      flex: 1;
+      width: 100%;
       padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
@@ -181,14 +134,8 @@
       outline: none;
       border-color: #4CAF50;
     }
-    #toggle-panel-btn {
-      padding: 8px;
-      border: none;
-      background: #f0f0f0;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
+
+    /* Result count */
     .result-count {
       padding: 8px 12px;
       background: #f9f9f9;
@@ -196,6 +143,8 @@
       color: #666;
       border-bottom: 1px solid #eee;
     }
+
+    /* Station list */
     .station-list {
       flex: 1;
       overflow-y: auto;
@@ -231,14 +180,16 @@
     .slots { color: #2196F3; }
     .no-bikes { color: #FF9800; }
     .no-slots { color: #f44336; }
-    .marker-icon {
-      border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+
+    /* Map container */
+    #map-container {
+      flex: 1;
+      position: relative;
     }
-    .marker-ok { background-color: #80FF00; }
-    .marker-empty { background-color: #FF9E21; }
-    .marker-full { background-color: #FF4D00; }
+    #map-canvas {
+      width: 100%;
+      height: 100%;
+    }
     #loading {
       position: absolute;
       top: 10px;
@@ -251,6 +202,17 @@
       z-index: 1001;
       display: none;
     }
+
+    /* Marker styles */
+    .marker-icon {
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .marker-ok { background-color: #80FF00; }
+    .marker-empty { background-color: #FF9E21; }
+    .marker-full { background-color: #FF4D00; }
+
     /* Floating buttons */
     .float-btn-container {
       position: fixed;
@@ -289,127 +251,7 @@
       50% { background: #e3f2fd; }
     }
 
-    /* List View */
-    #list-view {
-      flex-direction: column;
-      background: #f5f5f5;
-    }
-    .list-filter-bar {
-      padding: 10px 15px;
-      background: #f5f5f5;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .list-filter-bar select {
-      flex: 1;
-      max-width: 200px;
-      padding: 8px 10px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      background: white;
-      font-size: 13px;
-    }
-    .list-filter-bar .view-toggle {
-      margin-left: auto;
-    }
-    #list-status {
-      padding: 12px 15px;
-      background: white;
-      border-bottom: 1px solid #ddd;
-      font-size: 0.9em;
-      color: #666;
-    }
-    #table-container {
-      flex: 1;
-      overflow: auto;
-      background: white;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    table thead {
-      background: linear-gradient(135deg, #1976d2, #0d47a1);
-      color: white;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    table thead th {
-      padding: 14px 12px;
-      text-align: left;
-      font-weight: 600;
-      border: none;
-      white-space: nowrap;
-    }
-    table tbody tr {
-      border-bottom: 1px solid #eee;
-      transition: background 0.15s;
-    }
-    table tbody tr:hover {
-      background: #e8f5e9;
-    }
-    table tbody tr:nth-child(even) {
-      background: #fafafa;
-    }
-    table tbody tr:nth-child(even):hover {
-      background: #e8f5e9;
-    }
-    table tbody td {
-      padding: 12px;
-      color: #333;
-      border: none;
-    }
-    table tbody td:first-child {
-      font-weight: 500;
-      color: #666;
-      text-align: center;
-      width: 50px;
-    }
-    table tbody td:nth-child(2) {
-      font-weight: 500;
-      color: #2e7d32;
-    }
-    table tbody td:nth-child(6),
-    table tbody td:nth-child(7) {
-      text-align: center;
-      font-weight: bold;
-    }
-    table tbody td:nth-child(8) {
-      color: #1976d2;
-      font-weight: 500;
-      text-align: right;
-    }
-    .bikes-high { color: #2e7d32; }
-    .bikes-low { color: #f57c00; }
-    .bikes-empty { color: #c62828; }
-    .sortable-header {
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.2s;
-    }
-    .sortable-header:hover {
-      background: rgba(255,255,255,0.2);
-    }
-    .sort-icon {
-      font-size: 0.75em;
-      margin-left: 6px;
-      opacity: 0.7;
-    }
-    .sortable-header:hover .sort-icon {
-      opacity: 1;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      table th:nth-child(4), table td:nth-child(4),
-      table th:nth-child(5), table td:nth-child(5) {
-        display: none;
-      }
-    }
+    /* ===== MOBILE: Bottom Sheet ===== */
     @media (max-width: 768px) {
       header {
         padding: 8px 10px;
@@ -431,12 +273,100 @@
         padding: 4px 8px;
         font-size: 11px;
       }
-      #search-panel {
-        width: calc(100% - 20px);
-        max-height: 40%;
+
+      /* Main content stacks vertically on mobile */
+      .main-content {
+        flex-direction: column;
       }
-      table th:nth-child(3), table td:nth-child(3) {
-        display: none;
+
+      /* Map takes full screen behind sheet */
+      #map-container {
+        position: fixed;
+        top: 74px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+      }
+
+      /* Panel becomes bottom sheet */
+      #panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 90vh;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+      }
+
+      /* Snap points using vh for consistency with JS calculations */
+      /* Panel is 90vh tall, anchored at bottom:0 */
+      /* translateY pushes down: higher value = more hidden */
+      #panel.snap-collapsed { transform: translateY(calc(90vh - 56px)); }
+      #panel.snap-half { transform: translateY(40vh); }
+      #panel.snap-full { transform: translateY(0); }
+      #panel.dragging { transition: none; }
+      #panel.no-transition { transition: none; }
+
+      /* Show drag handle on mobile */
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 56px;
+        padding: 8px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        background: white;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .sheet-pill {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+      }
+
+      .sheet-summary {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+
+      .sheet-content {
+        height: calc(90vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Adjust station list for mobile sheet */
+      .station-list {
+        flex: 1;
+        min-height: 0;
+      }
+
+      /* Floating buttons above collapsed sheet */
+      .float-btn-container {
+        bottom: 70px;
+        z-index: 1001;
       }
     }
   </style>
@@ -455,10 +385,13 @@
   </header>
 
   <div class="main-content">
-    <!-- Map View -->
-    <div id="map-view" class="view active">
-      <div id="loading">Loading...</div>
-      <div id="search-panel">
+    <!-- Side Panel (Desktop) / Bottom Sheet (Mobile) -->
+    <div id="panel">
+      <div class="sheet-handle">
+        <div class="sheet-pill"></div>
+        <div class="sheet-summary" id="sheet-summary">Loading...</div>
+      </div>
+      <div class="sheet-content">
         <div class="filter-controls">
           <select id="city-select" onchange="changeCity()">
             <option value="all">All Cities</option>
@@ -476,55 +409,30 @@
             <option value="pingtung">Pingtung</option>
             <option value="taitung">Taitung</option>
           </select>
-          <div class="view-toggle">
-            <button class="view-btn active" id="map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
-            <button class="view-btn" id="list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
-          </div>
         </div>
-        <div class="search-header">
+        <div class="search-section">
           <input type="text" id="search-input" placeholder="Search stations...">
-          <button id="toggle-panel-btn" onclick="toggleSearchPanel()">−</button>
         </div>
         <div id="result-count" class="result-count"></div>
         <ul id="station-list" class="station-list"></ul>
       </div>
-      <div id="map-canvas"></div>
-      <div class="float-btn-container">
-        <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
-        <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
-      </div>
     </div>
 
-    <!-- List View -->
-    <div id="list-view" class="view">
-      <div class="list-filter-bar">
-        <select id="list-city-select" onchange="changeCity(this.value)">
-          <option value="all">All Cities</option>
-          <option value="taipei" selected>Taipei</option>
-          <option value="newtaipei">New Taipei</option>
-          <option value="taoyuan">Taoyuan</option>
-          <option value="hsinchu">Hsinchu City</option>
-          <option value="hsinchuCounty">Hsinchu County</option>
-          <option value="miaoli">Miaoli</option>
-          <option value="taichung">Taichung</option>
-          <option value="chiayi">Chiayi City</option>
-          <option value="chiayiCounty">Chiayi County</option>
-          <option value="tainan">Tainan</option>
-          <option value="kaohsiung">Kaohsiung</option>
-          <option value="pingtung">Pingtung</option>
-          <option value="taitung">Taitung</option>
-        </select>
-        <div class="view-toggle">
-          <button class="view-btn" id="list-map-view-btn" onclick="setView('map')" data-en="Map" data-zh="地圖">Map</button>
-          <button class="view-btn active" id="list-list-view-btn" onclick="setView('list')" data-en="List" data-zh="列表">List</button>
-        </div>
-      </div>
-      <div id="list-status"></div>
-      <div id="table-container"></div>
+    <!-- Map Container -->
+    <div id="map-container">
+      <div id="loading">Loading...</div>
+      <div id="map-canvas"></div>
+    </div>
+
+    <!-- Floating Buttons -->
+    <div class="float-btn-container">
+      <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+      <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
     </div>
   </div>
 
   <script src="js/common.js"></script>
+  <script src="js/bottom-sheet.js"></script>
   <script src="js/ubike.js"></script>
 </body>
 </html>

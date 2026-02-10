@@ -17,7 +17,6 @@ const LABELS = {
     showing: 'Showing',
     stations: 'stations',
     searchPlaceholder: 'Search stations...',
-    headers: ['#', 'Station', 'Location', 'Lat', 'Lng', 'Bikes', 'Slots', 'Dist(m)'],
     bikes: 'Bikes',
     slots: 'Slots',
     location: 'Location',
@@ -30,7 +29,6 @@ const LABELS = {
     showing: '顯示',
     stations: '個站點',
     searchPlaceholder: '搜尋站點...',
-    headers: ['#', '站名', '位置', '緯度', '經度', '可借', '可停', '距離(m)'],
     bikes: '可借車輛',
     slots: '可停空位',
     location: '站點位置',
@@ -47,14 +45,12 @@ let markers = [];
 let stationsData = [];
 let allStationsCache = [];
 let currentCity = 'taipei';
-let currentView = 'map';
 let isZh = detectLanguage() === 'zh';
 let userLocation = null;
 let refreshTimer = null;
 let routePath = null;
 let routeCoords = [];
-let sortState = { column: null, direction: null };
-let originalOrder = [];
+let bottomSheet = null;
 
 const CONFIG = {
   REFRESH_INTERVAL: 5 * 60 * 1000,
@@ -62,42 +58,25 @@ const CONFIG = {
 };
 
 // ============================================================
-// VIEW SWITCHING
+// BOTTOM SHEET SUMMARY
 // ============================================================
 
-function setView(view) {
-  currentView = view;
-  localStorage.setItem('ubike-view', view);
+function updateSheetSummary() {
+  const summaryEl = document.getElementById('sheet-summary');
+  if (!summaryEl) return;
 
-  // Update all view buttons (in both map panel and list filter bar)
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    const isMapBtn = btn.id.includes('map-view');
-    const isListBtn = btn.id.includes('list-view') || btn.id.includes('list-list');
-    if (view === 'map') {
-      btn.classList.toggle('active', isMapBtn);
-    } else {
-      btn.classList.toggle('active', isListBtn);
-    }
-  });
+  const cityName = currentCity === 'all'
+    ? (isZh ? '全台' : 'All')
+    : (CITIES[currentCity]?.name[isZh ? 'zh' : 'en'] || currentCity);
 
-  // Update view containers
-  document.getElementById('map-view').classList.toggle('active', view === 'map');
-  document.getElementById('list-view').classList.toggle('active', view === 'list');
+  const stationCount = stationsData.length;
+  const totalBikes = stationsData.reduce((sum, s) => sum + (s.available_rent_bikes || 0), 0);
 
-  // Handle map resize when switching to map view
-  if (view === 'map' && map) {
-    setTimeout(() => map.invalidateSize(), 100);
-    startAutoRefresh();
+  if (isZh) {
+    summaryEl.textContent = `🚲 ${cityName} · ${stationCount} 站 · ${totalBikes.toLocaleString()} 車`;
   } else {
-    stopAutoRefresh();
+    summaryEl.textContent = `🚲 ${cityName} · ${stationCount} stations · ${totalBikes.toLocaleString()} bikes`;
   }
-
-  // Update list view if switching to it
-  if (view === 'list') {
-    renderTable(stationsData);
-  }
-
-  console.log(`[UBike] View switched to: ${view}`);
 }
 
 // ============================================================
@@ -110,9 +89,7 @@ function toggleLang() {
   updateUI();
   updateStationList(stationsData);
   updatePopups();
-  if (currentView === 'list') {
-    renderTable(stationsData);
-  }
+  updateSheetSummary();
 }
 
 function updateUI() {
@@ -132,12 +109,6 @@ function updateUI() {
   // Update navigation buttons
   updateNavButtons(isZh ? 'zh' : 'en');
 
-  // Update view toggle buttons
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    const text = isZh ? btn.dataset.zh : btn.dataset.en;
-    if (text) btn.textContent = text;
-  });
-
   // Update city selector
   updateCitySelector();
 
@@ -155,19 +126,17 @@ function updateUI() {
 }
 
 function updateCitySelector() {
-  // Update both city selectors (map panel and list filter bar)
-  document.querySelectorAll('#city-select, #list-city-select').forEach(select => {
-    if (!select) return;
-    Array.from(select.options).forEach(option => {
-      if (option.value === 'all') {
-        option.textContent = isZh ? '所有城市' : 'All Cities';
-      } else {
-        const city = CITIES[option.value];
-        if (city) {
-          option.textContent = isZh ? city.name.zh : city.name.en;
-        }
+  const select = document.getElementById('city-select');
+  if (!select) return;
+  Array.from(select.options).forEach(option => {
+    if (option.value === 'all') {
+      option.textContent = isZh ? '所有城市' : 'All Cities';
+    } else {
+      const city = CITIES[option.value];
+      if (city) {
+        option.textContent = isZh ? city.name.zh : city.name.en;
       }
-    });
+    }
   });
 }
 
@@ -210,26 +179,22 @@ async function loadStations() {
   showLoading(true);
   try {
     stationsData = await fetchStations();
-    originalOrder = [...stationsData];
 
     // Add distance if user location is known
     if (userLocation) {
       addDistanceToStations();
     }
 
-    // Update both views
+    // Update map and list
     updateMarkers(stationsData);
     updateStationList(stationsData);
-    if (currentView === 'list') {
-      renderTable(stationsData);
-    }
+    updateSheetSummary();
 
     console.log(`[UBike] Loaded ${stationsData.length} stations`);
   } catch (error) {
     console.error('[UBike] Failed to load stations:', error.message);
     const L = LABELS[isZh ? 'zh' : 'en'];
     document.getElementById('result-count').textContent = `${L.error}: ${error.message}`;
-    document.getElementById('list-status').textContent = `${L.error}: ${error.message}`;
   }
   showLoading(false);
 }
@@ -347,15 +312,13 @@ function selectStation(sno) {
 
 function startAutoRefresh() {
   stopAutoRefresh();
-  if (currentView === 'map') {
-    refreshTimer = setTimeout(async () => {
-      console.log('[UBike] Auto-refresh triggered');
-      allStationsCache = []; // Clear cache to get fresh data
-      await loadStations();
-      startAutoRefresh();
-    }, CONFIG.REFRESH_INTERVAL);
-    console.log(`[UBike] Next refresh in ${CONFIG.REFRESH_INTERVAL / 1000}s`);
-  }
+  refreshTimer = setTimeout(async () => {
+    console.log('[UBike] Auto-refresh triggered');
+    allStationsCache = []; // Clear cache to get fresh data
+    await loadStations();
+    startAutoRefresh();
+  }, CONFIG.REFRESH_INTERVAL);
+  console.log(`[UBike] Next refresh in ${CONFIG.REFRESH_INTERVAL / 1000}s`);
 }
 
 function stopAutoRefresh() {
@@ -368,13 +331,6 @@ function stopAutoRefresh() {
 // ============================================================
 // SEARCH PANEL
 // ============================================================
-
-function toggleSearchPanel() {
-  const panel = document.getElementById('search-panel');
-  const btn = document.getElementById('toggle-panel-btn');
-  panel.classList.toggle('collapsed');
-  btn.textContent = panel.classList.contains('collapsed') ? '+' : '−';
-}
 
 function updateStationList(stations) {
   const L = LABELS[isZh ? 'zh' : 'en'];
@@ -428,178 +384,22 @@ function filterStations(query) {
   updateMarkers(filtered);
 }
 
-// ============================================================
-// TABLE (LIST VIEW)
-// ============================================================
-
-function getStationName(station) {
-  return isZh ? station.sna : station.snaen;
-}
-
-function getStationLocation(station) {
-  return isZh
-    ? `${station.sarea} ${station.ar}`
-    : `${station.sareaen} ${station.aren}`;
-}
-
-function buildTableRow(station, index) {
-  const distanceCell = station.distance !== undefined
-    ? `<td>${station.distance.toFixed(0)}</td>`
-    : '';
-
-  const bikes = station.available_rent_bikes;
-  let bikesClass = '';
-  if (bikes === 0) bikesClass = 'bikes-empty';
-  else if (bikes <= 3) bikesClass = 'bikes-low';
-  else bikesClass = 'bikes-high';
-
-  const slots = station.available_return_bikes;
-  let slotsClass = '';
-  if (slots === 0) slotsClass = 'bikes-empty';
-  else if (slots <= 3) slotsClass = 'bikes-low';
-  else slotsClass = 'bikes-high';
-
-  return `<tr>
-    <td>${index + 1}</td>
-    <td>${getStationName(station)}</td>
-    <td>${getStationLocation(station)}</td>
-    <td>${station.latitude.toFixed(4)}</td>
-    <td>${station.longitude.toFixed(4)}</td>
-    <td class="${bikesClass}">${bikes}</td>
-    <td class="${slotsClass}">${slots}</td>
-    ${distanceCell}
-  </tr>`;
-}
-
-function getSortIcon(colIndex) {
-  if (sortState.column !== colIndex) return '⇅';
-  return sortState.direction === 'asc' ? '▲' : '▼';
-}
-
-function sortByColumn(colIndex) {
-  // Toggle sort state: null -> desc -> asc -> null
-  if (sortState.column !== colIndex) {
-    sortState = { column: colIndex, direction: 'desc' };
-  } else if (sortState.direction === 'desc') {
-    sortState.direction = 'asc';
-  } else if (sortState.direction === 'asc') {
-    sortState = { column: null, direction: null };
-  }
-
-  let sortedStations;
-  if (sortState.column === null) {
-    sortedStations = [...originalOrder];
-    console.log('[UBike] Sort reset to original order');
-  } else {
-    sortedStations = [...stationsData].sort((a, b) => {
-      let valA, valB;
-      switch (colIndex) {
-        case 1: // Station name
-          valA = getStationName(a) || '';
-          valB = getStationName(b) || '';
-          return sortState.direction === 'asc'
-            ? valA.localeCompare(valB)
-            : valB.localeCompare(valA);
-        case 2: // Location
-          valA = getStationLocation(a) || '';
-          valB = getStationLocation(b) || '';
-          return sortState.direction === 'asc'
-            ? valA.localeCompare(valB)
-            : valB.localeCompare(valA);
-        case 3: // Lat
-          valA = parseFloat(a.latitude) || 0;
-          valB = parseFloat(b.latitude) || 0;
-          break;
-        case 4: // Lng
-          valA = parseFloat(a.longitude) || 0;
-          valB = parseFloat(b.longitude) || 0;
-          break;
-        case 5: // Bikes
-          valA = parseInt(a.available_rent_bikes) || 0;
-          valB = parseInt(b.available_rent_bikes) || 0;
-          break;
-        case 6: // Slots
-          valA = parseInt(a.available_return_bikes) || 0;
-          valB = parseInt(b.available_return_bikes) || 0;
-          break;
-        case 7: // Distance
-          valA = a.distance || 0;
-          valB = b.distance || 0;
-          break;
-        default:
-          return 0;
-      }
-      return sortState.direction === 'asc' ? valA - valB : valB - valA;
-    });
-    console.log(`[UBike] Sorted by column ${colIndex} (${sortState.direction})`);
-  }
-
-  stationsData = sortedStations;
-  renderTable(stationsData);
-}
-
-function renderTable(stations) {
-  const L = LABELS[isZh ? 'zh' : 'en'];
-  const container = document.getElementById('table-container');
-  const status = document.getElementById('list-status');
-
-  if (!stations || stations.length === 0) {
-    container.innerHTML = `<p style="padding: 20px;">${L.loading}</p>`;
-    return;
-  }
-
-  const hasDistance = stations.length > 0 && stations[0].distance !== undefined;
-  const headers = hasDistance ? L.headers : L.headers.slice(0, 7);
-
-  let html = `<table>
-    <thead>
-      <tr>${headers.map((h, i) => {
-        if (i === 0) return `<th>${h}</th>`;
-        const icon = getSortIcon(i);
-        return `<th class="sortable-header" onclick="sortByColumn(${i})">${h}<span class="sort-icon">${icon}</span></th>`;
-      }).join('')}</tr>
-    </thead>
-    <tbody>`;
-
-  for (let i = 0; i < stations.length; i++) {
-    html += buildTableRow(stations[i], i);
-  }
-
-  html += '</tbody></table>';
-
-  container.innerHTML = html;
-  status.textContent = `${L.showing} ${stations.length} ${L.stations}`;
-}
 
 // ============================================================
 // CITY CHANGE
 // ============================================================
 
-function changeCity(value) {
-  // Get value from parameter or from the map panel selector
-  if (value) {
-    currentCity = value;
-  } else {
-    const select = document.getElementById('city-select');
-    currentCity = select.value;
-  }
+function changeCity() {
+  const select = document.getElementById('city-select');
+  currentCity = select.value;
 
   localStorage.setItem('ubike-city', currentCity);
   console.log(`[UBike] City changed to: ${currentCity}`);
-
-  // Sync both city selectors
-  const mapSelect = document.getElementById('city-select');
-  const listSelect = document.getElementById('list-city-select');
-  if (mapSelect) mapSelect.value = currentCity;
-  if (listSelect) listSelect.value = currentCity;
 
   // Pan to city center
   if (currentCity !== 'all' && CITIES[currentCity] && map) {
     map.setView(CITIES[currentCity].center, CONFIG.DEFAULT_ZOOM);
   }
-
-  // Reset sort state
-  sortState = { column: null, direction: null };
 
   // Clear cache and reload
   allStationsCache = [];
@@ -614,12 +414,6 @@ function addDistanceToStations() {
   if (!userLocation) return;
 
   stationsData.forEach(station => {
-    station.distance = getDistanceInMeters(
-      userLocation.lat, userLocation.lng,
-      station.latitude, station.longitude
-    );
-  });
-  originalOrder.forEach(station => {
     station.distance = getDistanceInMeters(
       userLocation.lat, userLocation.lng,
       station.latitude, station.longitude
@@ -735,17 +529,8 @@ async function init() {
   if (savedCity && (CITIES[savedCity] || savedCity === 'all')) {
     currentCity = savedCity;
   }
-  // Sync both city selectors
-  const mapCitySelect = document.getElementById('city-select');
-  const listCitySelect = document.getElementById('list-city-select');
-  if (mapCitySelect) mapCitySelect.value = currentCity;
-  if (listCitySelect) listCitySelect.value = currentCity;
-
-  // Restore saved view
-  const savedView = localStorage.getItem('ubike-view');
-  if (savedView && (savedView === 'map' || savedView === 'list')) {
-    currentView = savedView;
-  }
+  const citySelect = document.getElementById('city-select');
+  if (citySelect) citySelect.value = currentCity;
 
   // Try to get user location first
   try {
@@ -762,24 +547,30 @@ async function init() {
     map.setView([userLocation.lat, userLocation.lng], CONFIG.DEFAULT_ZOOM);
   }
 
-  // Set initial view
-  setView(currentView);
-
   // Load stations
   await loadStations();
 
   // Start geolocation tracking
   initGeolocationTracking();
 
-  // Start auto-refresh if in map view
-  if (currentView === 'map') {
-    startAutoRefresh();
-  }
+  // Start auto-refresh
+  startAutoRefresh();
 
   // Setup search
   document.getElementById('search-input').addEventListener('input', (e) => {
     filterStations(e.target.value);
   });
+
+  // Initialize bottom sheet (mobile only)
+  const panel = document.getElementById('panel');
+  if (panel && typeof BottomSheet !== 'undefined') {
+    bottomSheet = new BottomSheet(panel, {
+      initialSnap: 'collapsed',
+      onSnapChange: (snap) => {
+        console.log('[UBike] Sheet snap:', snap);
+      }
+    });
+  }
 
   console.log('[UBike] Initialization complete');
 }
@@ -807,10 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Make functions available globally for onclick handlers
-window.setView = setView;
 window.toggleLang = toggleLang;
 window.changeCity = changeCity;
-window.toggleSearchPanel = toggleSearchPanel;
 window.selectStation = selectStation;
-window.sortByColumn = sortByColumn;
 window.centerToUserLocation = centerToUserLocation;
