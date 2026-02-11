@@ -244,15 +244,102 @@
       color: white;
       border-color: #0d47a1;
     }
-    /* Line + Direction row */
-    .line-direction-row {
+    /* Route selector row */
+    .route-selector-row {
+      margin-bottom: 8px;
+    }
+    .route-selector-row select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 0;
+    }
+    /* Variant selector (Mountain/Coast toggle) */
+    .variant-selector {
       display: flex;
       gap: 8px;
-      align-items: center;
+      margin-top: 8px;
     }
-    .line-direction-row select {
+    .variant-btn {
       flex: 1;
-      margin-bottom: 0;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .variant-btn:hover { background: #e3f2fd; }
+    .variant-btn.active {
+      background: #0d47a1;
+      color: white;
+      border-color: #0d47a1;
+    }
+    /* Route comparison (side-by-side for Mountain vs Coast) */
+    .route-comparison {
+      display: flex;
+      gap: 8px;
+    }
+    .variant-column {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .variant-column h4 {
+      margin: 0;
+      padding: 10px 12px;
+      background: #f5f5f5;
+      font-size: 13px;
+      border-bottom: 1px solid #ddd;
+    }
+    .variant-column.mountain h4 { background: #e8f5e9; color: #2e7d32; }
+    .variant-column.coast h4 { background: #e3f2fd; color: #1565c0; }
+    .variant-column .train-list { max-height: 400px; overflow-y: auto; }
+    .variant-column .train-item { padding: 8px 10px; }
+    .route-info-badge {
+      font-size: 0.75em;
+      color: #666;
+      padding: 2px 6px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .transfer-badge {
+      font-size: 0.7em;
+      color: #f57c00;
+      padding: 2px 6px;
+      background: #fff3e0;
+      border-radius: 4px;
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+    .transfer-details {
+      grid-column: 1 / -1;
+      font-size: 0.8em;
+      color: #666;
+      background: #f5f5f5;
+      padding: 4px 8px;
+      margin: 4px 0 0 0;
+      border-radius: 4px;
+      border-left: 3px solid #f57c00;
+    }
+    .transfer-details .wait-time {
+      color: #999;
+      margin-left: 8px;
+    }
+    .transfer-details .transfer-leg {
+      padding: 2px 0;
+    }
+    .transfer-details .transfer-leg:not(:last-child) {
+      border-bottom: 1px dashed #ddd;
     }
     /* Direction tabs */
     .direction-tabs {
@@ -435,6 +522,35 @@
     .train-timetable .stop.passed {
       color: #bbb;
     }
+    .train-timetable .stop.transfer {
+      color: #e65100;
+      font-weight: bold;
+    }
+    .train-timetable .stop.destination {
+      color: #1b5e20;
+      font-weight: bold;
+    }
+    .train-timetable .leg-header {
+      width: 100%;
+      color: #1565c0;
+      font-weight: bold;
+      margin-top: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid #e3f2fd;
+    }
+    .train-timetable .leg-header:first-child {
+      margin-top: 0;
+    }
+    .train-timetable .transfer-marker {
+      width: 100%;
+      background: #fff3e0;
+      color: #e65100;
+      padding: 6px 10px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-weight: bold;
+      text-align: center;
+    }
     /* Markers */
     .marker-icon {
       border-radius: 50%;
@@ -611,22 +727,24 @@
         margin-bottom: 6px;
       }
       .view-toggle { display: flex; }
-      .line-direction-row {
-        flex-direction: row;
-        gap: 6px;
+      .route-selector-row select {
+        font-size: 12px;
+        padding: 6px;
       }
-      .line-direction-row select {
-        flex: 1.2;
-        margin-bottom: 0;
-      }
-      .line-direction-row .direction-tabs {
-        flex: 1;
-        margin-top: 0;
+      .variant-selector {
         gap: 4px;
+        margin-top: 6px;
       }
-      .line-direction-row .direction-tab {
-        padding: 6px 4px;
+      .variant-btn {
+        padding: 6px 8px;
         font-size: 11px;
+      }
+      .route-comparison {
+        flex-direction: column;
+      }
+      .variant-column h4 {
+        padding: 8px 10px;
+        font-size: 12px;
       }
       .station-selectors { flex-direction: row; gap: 6px; margin-top: 6px; }
       .station-row { flex: 1; }
@@ -712,22 +830,37 @@
               <span data-en="Map" data-zh="地圖">Map</span>
             </button>
           </div>
-          <div class="line-direction-row">
-            <select id="schedule-line-select" onchange="onScheduleLineChange()">
-              <option value="WL" data-en="Western Line (North)" data-zh="西部幹線(北段)">Western Line (North)</option>
-              <option value="ML" data-en="Mountain Line" data-zh="山線">Mountain Line</option>
-              <option value="CL" data-en="Coast Line" data-zh="海線">Coast Line</option>
-              <option value="SL" data-en="Western Line (South)" data-zh="西部幹線(南段)">Western Line (South)</option>
-              <option value="YL" data-en="Yilan Line" data-zh="宜蘭線">Yilan Line</option>
+          <div class="route-selector-row">
+            <select id="route-select" onchange="onRouteChange()">
+              <optgroup label="Main Lines" data-en="Main Lines" data-zh="幹線">
+                <option value="western" data-en="Western Main Line" data-zh="西部幹線">Western Main Line</option>
+                <option value="eastern" data-en="Eastern Main Line" data-zh="東部幹線">Eastern Main Line</option>
+                <option value="circular" data-en="Taiwan Circular 🔄" data-zh="環島線 🔄">Taiwan Circular 🔄</option>
+              </optgroup>
+              <optgroup label="Branch Lines" data-en="Branch Lines" data-zh="支線">
+                <option value="PX" data-en="Pingxi Line" data-zh="平溪線">Pingxi Line</option>
+                <option value="NW" data-en="Neiwan Line" data-zh="內灣線">Neiwan Line</option>
+                <option value="JJ" data-en="Jiji Line" data-zh="集集線">Jiji Line</option>
+                <option value="SH" data-en="Shalun Line" data-zh="沙崙線">Shalun Line</option>
+                <option value="LJ" data-en="Liujia Line" data-zh="六家線">Liujia Line</option>
+              </optgroup>
             </select>
-            <div class="direction-tabs">
-              <div class="direction-tab active" data-dir="south" onclick="setDirection('south')">
-                <span data-en="↓ 南下" data-zh="↓ 南下">↓ 南下</span>
-              </div>
-              <div class="direction-tab" data-dir="north" onclick="setDirection('north')">
-                <span data-en="↑ 北上" data-zh="↑ 北上">↑ 北上</span>
-              </div>
+          </div>
+          <div class="direction-tabs">
+            <div class="direction-tab active" data-dir="south" onclick="setDirection('south')">
+              <span data-en="↓ South" data-zh="↓ 南下">↓ South</span>
             </div>
+            <div class="direction-tab" data-dir="north" onclick="setDirection('north')">
+              <span data-en="↑ North" data-zh="↑ 北上">↑ North</span>
+            </div>
+          </div>
+          <div id="variant-selector" class="variant-selector" style="display: none;">
+            <button class="variant-btn active" data-variant="mountain" onclick="setVariant('mountain')">
+              <span>🏔️</span> <span data-en="Mountain" data-zh="山線">Mountain</span>
+            </button>
+            <button class="variant-btn" data-variant="coast" onclick="setVariant('coast')">
+              <span>🌊</span> <span data-en="Coast" data-zh="海線">Coast</span>
+            </button>
           </div>
           <div class="station-selectors">
             <div class="station-row">
@@ -1062,6 +1195,53 @@ const CONFIG = {
 const TDX_PROXY_URL = 'https://tdx-proxy.owen-ouyang.workers.dev';
 const TDX_DELAY_REFRESH_INTERVAL = 60000; // 1 minute
 
+// ===== INTEGRATED ROUTES CONFIGURATION =====
+// Merged routes for user-friendly navigation across line segments
+const INTEGRATED_ROUTES = {
+  western: {
+    name: { en: 'Western Main Line', zh: '西部幹線' },
+    segments: ['WL', 'ML', 'SL'],  // Default: Mountain route
+    variants: {
+      mountain: { segments: ['WL', 'ML', 'SL'], name: { en: 'Mountain Route', zh: '山線' }, icon: '🏔️' },
+      coast: { segments: ['WL', 'CL', 'SL'], name: { en: 'Coast Route', zh: '海線' }, icon: '🌊' }
+    },
+    // Stations where ML and CL diverge/converge
+    junctions: {
+      start: '1240',  // Zhunan - where WL splits to ML/CL
+      end: '3300'     // Changhua - where ML/CL merge to SL
+    }
+  },
+  eastern: {
+    name: { en: 'Eastern Main Line', zh: '東部幹線' },
+    segments: ['YL', 'NL', 'TL'],
+    junctions: {
+      start: '0920',  // Badu - connects WL to YL
+      middle: '7250', // Su'ao - connects YL to NL
+      hualien: '7410' // Hualien - connects NL to TL
+    }
+  },
+  circular: {
+    name: { en: 'Taiwan Circular', zh: '環島線' },
+    segments: ['WL', 'ML', 'SL', 'SLL', 'TL', 'NL', 'YL'],
+    description: { en: 'Full island circuit', zh: '環島一周' },
+    icon: '🔄'
+  }
+};
+
+// Branch lines remain separate
+const BRANCH_LINES = ['PX', 'NW', 'JJ', 'SH', 'LJ'];
+
+// Junction station IDs for merging routes
+const JUNCTION_STATIONS = {
+  'Badu': '0920',      // WL ↔ YL
+  'Zhunan': '1240',    // WL ↔ ML, WL ↔ CL
+  'Changhua': '3300',  // ML ↔ SL, CL ↔ SL
+  'Suao': '7250',      // YL ↔ NL (Su'ao)
+  'Hualien': '7410',   // NL ↔ TL
+  'Taitung': '7740',   // TL ↔ SLL
+  'Fangliao': '7870'   // SLL connects back to SL area
+};
+
 // Train types configuration
 const TRAIN_TYPES = {
   express: { name: { en: 'Tze-Chiang', zh: '自強' }, class: 'express' },
@@ -1070,13 +1250,18 @@ const TRAIN_TYPES = {
   fastLocal: { name: { en: 'Fast Local', zh: '區間快' }, class: 'fast-local' }
 };
 
-// Major stations for schedule (Western Line North as primary demo)
+// Major stations for schedule
 const SCHEDULE_STATIONS = {
+  // Western Lines
   WL: ['0900', '0920', '0930', '0980', '0990', '1000', '1020', '1080', '1100', '1200', '1240'],
-  ML: ['1240', '2120', '2170', '2180', '2190', '2240', '2270', '2280'],
-  CL: ['1240', '2020', '2090', '2300', '2310', '2340'],
+  ML: ['1240', '2120', '2170', '2180', '2190', '2240', '2270', '2280', '3300'], // Zhunan to Changhua
+  CL: ['1240', '2020', '2090', '2300', '2310', '2340', '3300'], // Zhunan to Changhua (Coast)
   SL: ['3300', '3330', '3360', '3400', '3460', '3500', '3550', '3600', '3670', '3700', '3760'],
-  YL: ['0920', '7020', '7140', '7180', '7210', '7240']
+  // Eastern Lines
+  YL: ['0920', '7020', '7140', '7180', '7210', '7240'], // Badu to Su'ao
+  NL: ['7240', '7310', '7320', '7350', '7380', '7410'], // Su'ao to Hualien
+  TL: ['7410', '7530', '7560', '7580', '7610', '7630', '7670', '7690', '7740'], // Hualien to Taitung
+  SLL: ['7740', '7810', '7820', '7830', '7840', '7870', '3760'] // Taitung to Fangliao to Xinzuoying
 };
 
 // Demo train schedule data (minutes from midnight)
@@ -1130,67 +1315,73 @@ const TRAIN_SCHEDULE = {
     ]
   },
   ML: {
+    // Times synchronized: ML[0] = WL[10] (Zhunan), ML[8] = SL[0] (Changhua)
+    // Express trains run continuously WL→ML→SL without transfer
     southbound: [
-      { trainNo: '110', type: 'express', times: [480, 505, 525, 535, 542, 555, 575, 580] },
-      { trainNo: '2502', type: 'local', times: [528, 565, 590, 602, 612, 635, 665, 672] },
-      { trainNo: '112', type: 'express', times: [540, 565, 585, 595, 602, 615, 635, 640] },
-      { trainNo: '114', type: 'express', times: [600, 625, 645, 655, 662, 675, 695, 700] },
-      { trainNo: '116', type: 'express', times: [660, 685, 705, 715, 722, 735, 755, 760] },
-      { trainNo: '118', type: 'express', times: [720, 745, 765, 775, 782, 795, 815, 820] },
-      { trainNo: '2506', type: 'local', times: [780, 817, 842, 854, 864, 887, 917, 924] },
-      { trainNo: '120', type: 'express', times: [840, 865, 885, 895, 902, 915, 935, 940] },
-      { trainNo: '122', type: 'express', times: [900, 925, 945, 955, 962, 975, 995, 1000] },
+      { trainNo: '110', type: 'express', times: [480, 502, 520, 530, 538, 550, 568, 575, 580] },
+      { trainNo: '2502', type: 'local', times: [528, 565, 590, 602, 612, 635, 665, 672, 700] },
+      { trainNo: '112', type: 'express', times: [540, 562, 580, 590, 598, 610, 628, 635, 640] },
+      { trainNo: '114', type: 'express', times: [600, 622, 640, 650, 658, 670, 688, 695, 700] },
+      { trainNo: '116', type: 'express', times: [660, 682, 700, 710, 718, 730, 748, 755, 760] },
+      { trainNo: '118', type: 'express', times: [720, 742, 760, 770, 778, 790, 808, 815, 820] },
+      { trainNo: '2506', type: 'local', times: [780, 817, 842, 854, 864, 887, 917, 924, 960] },
+      { trainNo: '120', type: 'express', times: [780, 802, 820, 830, 838, 850, 868, 875, 880] },
+      { trainNo: '122', type: 'express', times: [840, 862, 880, 890, 898, 910, 928, 935, 940] },
+      { trainNo: '124', type: 'express', times: [900, 922, 940, 950, 958, 970, 988, 995, 1000] },
     ],
     northbound: [
-      { trainNo: '111', type: 'express', times: [1000, 995, 975, 965, 958, 945, 925, 920] },
-      { trainNo: '2501', type: 'local', times: [360, 333, 303, 288, 275, 245, 205, 195] },
-      { trainNo: '113', type: 'express', times: [450, 445, 425, 415, 408, 395, 375, 370] },
-      { trainNo: '115', type: 'express', times: [540, 535, 515, 505, 498, 485, 465, 460] },
-      { trainNo: '117', type: 'express', times: [660, 655, 635, 625, 618, 605, 585, 580] },
-      { trainNo: '2505', type: 'local', times: [720, 693, 663, 648, 635, 605, 565, 555] },
-      { trainNo: '119', type: 'express', times: [780, 775, 755, 745, 738, 725, 705, 700] },
-      { trainNo: '121', type: 'express', times: [900, 895, 875, 865, 858, 845, 825, 820] },
-      { trainNo: '123', type: 'express', times: [1020, 1015, 995, 985, 978, 965, 945, 940] },
+      { trainNo: '111', type: 'express', times: [990, 983, 965, 955, 947, 935, 917, 910, 905] },
+      { trainNo: '2501', type: 'local', times: [360, 333, 303, 288, 275, 245, 205, 195, 182] },
+      { trainNo: '113', type: 'express', times: [450, 443, 425, 415, 407, 395, 377, 370, 365] },
+      { trainNo: '115', type: 'express', times: [540, 533, 515, 505, 497, 485, 467, 460, 455] },
+      { trainNo: '117', type: 'express', times: [660, 653, 635, 625, 617, 605, 587, 580, 575] },
+      { trainNo: '2505', type: 'local', times: [720, 693, 663, 648, 635, 605, 565, 555, 542] },
+      { trainNo: '119', type: 'express', times: [780, 773, 755, 745, 737, 725, 707, 700, 695] },
+      { trainNo: '121', type: 'express', times: [900, 893, 875, 865, 857, 845, 827, 820, 815] },
+      { trainNo: '123', type: 'express', times: [1020, 1013, 995, 985, 977, 965, 947, 940, 935] },
     ]
   },
   CL: {
     southbound: [
-      { trainNo: '2302', type: 'local', times: [400, 430, 465, 505, 520, 545] },
-      { trainNo: '2304', type: 'local', times: [520, 550, 585, 625, 640, 665] },
-      { trainNo: '2306', type: 'local', times: [640, 670, 705, 745, 760, 785] },
-      { trainNo: '2308', type: 'local', times: [760, 790, 825, 865, 880, 905] },
-      { trainNo: '2310', type: 'local', times: [880, 910, 945, 985, 1000, 1025] },
-      { trainNo: '2312', type: 'local', times: [1000, 1030, 1065, 1105, 1120, 1145] },
+      { trainNo: '2302', type: 'local', times: [400, 430, 465, 505, 520, 545, 560] },
+      { trainNo: '2304', type: 'local', times: [520, 550, 585, 625, 640, 665, 680] },
+      { trainNo: '2306', type: 'local', times: [640, 670, 705, 745, 760, 785, 800] },
+      { trainNo: '2308', type: 'local', times: [760, 790, 825, 865, 880, 905, 920] },
+      { trainNo: '2310', type: 'local', times: [880, 910, 945, 985, 1000, 1025, 1040] },
+      { trainNo: '2312', type: 'local', times: [1000, 1030, 1065, 1105, 1120, 1145, 1160] },
     ],
     northbound: [
-      { trainNo: '2301', type: 'local', times: [1145, 1120, 1085, 1045, 1030, 1005] },
-      { trainNo: '2303', type: 'local', times: [360, 335, 300, 260, 245, 220] },
-      { trainNo: '2305', type: 'local', times: [480, 455, 420, 380, 365, 340] },
-      { trainNo: '2307', type: 'local', times: [600, 575, 540, 500, 485, 460] },
-      { trainNo: '2309', type: 'local', times: [720, 695, 660, 620, 605, 580] },
-      { trainNo: '2311', type: 'local', times: [840, 815, 780, 740, 725, 700] },
+      { trainNo: '2301', type: 'local', times: [1145, 1120, 1085, 1045, 1030, 1005, 990] },
+      { trainNo: '2303', type: 'local', times: [360, 335, 300, 260, 245, 220, 205] },
+      { trainNo: '2305', type: 'local', times: [480, 455, 420, 380, 365, 340, 325] },
+      { trainNo: '2307', type: 'local', times: [600, 575, 540, 500, 485, 460, 445] },
+      { trainNo: '2309', type: 'local', times: [720, 695, 660, 620, 605, 580, 565] },
+      { trainNo: '2311', type: 'local', times: [840, 815, 780, 740, 725, 700, 685] },
     ]
   },
   SL: {
+    // Times synchronized: SL[0] = ML[8] (Changhua)
+    // Express trains run continuously WL→ML→SL without transfer
     southbound: [
       { trainNo: '110', type: 'express', times: [580, 600, 618, 650, 690, 720, 750, 785, 820, 850, 880] },
-      { trainNo: '2702', type: 'local', times: [600, 630, 655, 705, 768, 815, 865, 920, 975, 1020, 1068] },
+      { trainNo: '2702', type: 'local', times: [700, 730, 755, 805, 868, 915, 965, 1020, 1075, 1120, 1168] },
       { trainNo: '112', type: 'express', times: [640, 660, 678, 710, 750, 780, 810, 845, 880, 910, 940] },
       { trainNo: '114', type: 'express', times: [700, 720, 738, 770, 810, 840, 870, 905, 940, 970, 1000] },
       { trainNo: '116', type: 'express', times: [760, 780, 798, 830, 870, 900, 930, 965, 1000, 1030, 1060] },
       { trainNo: '118', type: 'express', times: [820, 840, 858, 890, 930, 960, 990, 1025, 1060, 1090, 1120] },
-      { trainNo: '120', type: 'express', times: [940, 960, 978, 1010, 1050, 1080, 1110, 1145, 1180, 1210, 1240] },
-      { trainNo: '122', type: 'express', times: [1000, 1020, 1038, 1070, 1110, 1140, 1170, 1205, 1240, 1270, 1300] },
+      { trainNo: '120', type: 'express', times: [880, 900, 918, 950, 990, 1020, 1050, 1085, 1120, 1150, 1180] },
+      { trainNo: '122', type: 'express', times: [940, 960, 978, 1010, 1050, 1080, 1110, 1145, 1180, 1210, 1240] },
+      { trainNo: '124', type: 'express', times: [1000, 1020, 1038, 1070, 1110, 1140, 1170, 1205, 1240, 1270, 1300] },
     ],
     northbound: [
-      { trainNo: '111', type: 'express', times: [1300, 1270, 1252, 1220, 1180, 1150, 1120, 1085, 1050, 1020, 990] },
+      { trainNo: '111', type: 'express', times: [905, 875, 857, 825, 785, 755, 725, 690, 655, 625, 595] },
       { trainNo: '2701', type: 'local', times: [360, 318, 288, 228, 150, 90, 25, 1405, 1335, 1278, 1218] },
-      { trainNo: '113', type: 'express', times: [450, 420, 402, 370, 330, 300, 270, 235, 200, 170, 140] },
-      { trainNo: '115', type: 'express', times: [540, 510, 492, 460, 420, 390, 360, 325, 290, 260, 230] },
-      { trainNo: '117', type: 'express', times: [660, 630, 612, 580, 540, 510, 480, 445, 410, 380, 350] },
-      { trainNo: '119', type: 'express', times: [780, 750, 732, 700, 660, 630, 600, 565, 530, 500, 470] },
-      { trainNo: '121', type: 'express', times: [900, 870, 852, 820, 780, 750, 720, 685, 650, 620, 590] },
-      { trainNo: '123', type: 'express', times: [1020, 990, 972, 940, 900, 870, 840, 805, 770, 740, 710] },
+      { trainNo: '113', type: 'express', times: [365, 335, 317, 285, 245, 215, 185, 150, 115, 85, 55] },
+      { trainNo: '115', type: 'express', times: [455, 425, 407, 375, 335, 305, 275, 240, 205, 175, 145] },
+      { trainNo: '117', type: 'express', times: [575, 545, 527, 495, 455, 425, 395, 360, 325, 295, 265] },
+      { trainNo: '119', type: 'express', times: [695, 665, 647, 615, 575, 545, 515, 480, 445, 415, 385] },
+      { trainNo: '121', type: 'express', times: [815, 785, 767, 735, 695, 665, 635, 600, 565, 535, 505] },
+      { trainNo: '123', type: 'express', times: [935, 905, 887, 855, 815, 785, 755, 720, 685, 655, 625] },
     ]
   },
   YL: {
@@ -1214,6 +1405,73 @@ const TRAIN_SCHEDULE = {
       { trainNo: '4113', type: 'local', times: [720, 695, 660, 635, 615, 590] },
       { trainNo: '213', type: 'express', times: [780, 760, 730, 715, 700, 680] },
     ]
+  },
+  // North-Link Line: Su'ao (7240) to Hualien (7410) - 6 stations
+  NL: {
+    southbound: [
+      { trainNo: '408', type: 'express', times: [540, 565, 585, 620, 650, 675] },
+      { trainNo: '4182', type: 'local', times: [580, 615, 645, 695, 740, 780] },
+      { trainNo: '410', type: 'express', times: [660, 685, 705, 740, 770, 795] },
+      { trainNo: '4186', type: 'local', times: [720, 755, 785, 835, 880, 920] },
+      { trainNo: '412', type: 'express', times: [780, 805, 825, 860, 890, 915] },
+      { trainNo: '414', type: 'express', times: [900, 925, 945, 980, 1010, 1035] },
+    ],
+    northbound: [
+      { trainNo: '407', type: 'express', times: [1035, 1010, 980, 945, 925, 900] },
+      { trainNo: '4181', type: 'local', times: [420, 380, 350, 300, 255, 215] },
+      { trainNo: '409', type: 'express', times: [555, 530, 500, 465, 445, 420] },
+      { trainNo: '4185', type: 'local', times: [600, 560, 530, 480, 435, 395] },
+      { trainNo: '411', type: 'express', times: [675, 650, 620, 585, 565, 540] },
+      { trainNo: '413', type: 'express', times: [795, 770, 740, 705, 685, 660] },
+    ]
+  },
+  // Taitung Line: Hualien (7410) to Taitung (7740) - 9 stations
+  TL: {
+    southbound: [
+      { trainNo: '408', type: 'express', times: [675, 700, 725, 750, 785, 820, 870, 905, 945] },
+      { trainNo: '4182', type: 'local', times: [780, 815, 850, 885, 935, 985, 1055, 1105, 1165] },
+      { trainNo: '410', type: 'express', times: [795, 820, 845, 870, 905, 940, 990, 1025, 1065] },
+      { trainNo: '412', type: 'express', times: [915, 940, 965, 990, 1025, 1060, 1110, 1145, 1185] },
+      { trainNo: '414', type: 'express', times: [1035, 1060, 1085, 1110, 1145, 1180, 1230, 1265, 1305] },
+    ],
+    northbound: [
+      { trainNo: '407', type: 'express', times: [900, 860, 825, 800, 765, 730, 680, 645, 605] },
+      { trainNo: '4181', type: 'local', times: [215, 175, 140, 105, 55, 5, 1375, 1325, 1265] },
+      { trainNo: '409', type: 'express', times: [420, 380, 345, 320, 285, 250, 200, 165, 125] },
+      { trainNo: '411', type: 'express', times: [540, 500, 465, 440, 405, 370, 320, 285, 245] },
+      { trainNo: '413', type: 'express', times: [660, 620, 585, 560, 525, 490, 440, 405, 365] },
+    ]
+  },
+  // South-Link Line: Taitung (7740) to Fangliao (7870) to Xinzuoying (3760) - 7 stations
+  SLL: {
+    southbound: [
+      // Times: [Taitung(0), Zhiben(1), Taimali(2), Jinlun(3), Dawu(4), Fangliao(5), Xinzuoying(6)]
+      // Southbound = Taitung → Xinzuoying (departure at idx 0, arrival at idx 6)
+      { trainNo: '301', type: 'express', times: [480, 510, 540, 575, 625, 680, 780] },
+      { trainNo: '303', type: 'express', times: [600, 630, 660, 695, 745, 800, 900] },
+      { trainNo: '305', type: 'express', times: [720, 750, 780, 815, 865, 920, 1020] },
+      { trainNo: '307', type: 'express', times: [840, 870, 900, 935, 985, 1040, 1140] },
+      { trainNo: '309', type: 'express', times: [960, 990, 1020, 1055, 1105, 1160, 1260] },
+      { trainNo: '311', type: 'express', times: [1080, 1110, 1140, 1175, 1225, 1280, 1380] },
+      { trainNo: '3502', type: 'local', times: [540, 600, 660, 730, 820, 920, 1080] },
+    ],
+    northbound: [
+      // Times: [Taitung(0), Zhiben(1), Taimali(2), Jinlun(3), Dawu(4), Fangliao(5), Xinzuoying(6)]
+      // Northbound = Xinzuoying → Taitung (departure at idx 6, arrival at idx 0)
+      { trainNo: '302', type: 'express', times: [1200, 1100, 1045, 995, 945, 910, 880] },
+      { trainNo: '304', type: 'express', times: [480, 380, 325, 275, 225, 190, 160] },
+      { trainNo: '306', type: 'express', times: [600, 500, 445, 395, 345, 310, 280] },
+      { trainNo: '308', type: 'express', times: [720, 620, 565, 515, 465, 430, 400] },
+      { trainNo: '310', type: 'express', times: [840, 740, 685, 635, 585, 550, 520] },
+      { trainNo: '312', type: 'express', times: [960, 860, 805, 755, 705, 670, 640] },
+      { trainNo: '314', type: 'express', times: [1080, 980, 925, 875, 825, 790, 760] },
+      { trainNo: '316', type: 'express', times: [1200, 1100, 1045, 995, 945, 910, 880] },
+      { trainNo: '318', type: 'express', times: [1320, 1220, 1165, 1115, 1065, 1030, 1000] },
+      { trainNo: '320', type: 'express', times: [1440, 1340, 1285, 1235, 1185, 1150, 1120] },
+      { trainNo: '322', type: 'express', times: [1520, 1420, 1365, 1315, 1265, 1230, 1200] },
+      { trainNo: '324', type: 'express', times: [1600, 1500, 1445, 1395, 1345, 1310, 1280] },
+      { trainNo: '3501', type: 'local', times: [1680, 1540, 1470, 1405, 1340, 1265, 1205] },
+    ]
   }
 };
 
@@ -1229,10 +1487,13 @@ const TRA_FARE_RATES = {
 // Approximate distances between schedule stations (in km)
 const SCHEDULE_DISTANCES = {
   WL: [0, 5, 8, 25, 30, 35, 50, 75, 85, 130, 150],  // Keelung to Zhunan
-  ML: [0, 28, 52, 68, 78, 96, 126, 134],            // Zhunan to Changhua (Mountain)
-  CL: [0, 25, 52, 81, 90, 105],                     // Zhunan to Changhua (Coast)
-  SL: [0, 25, 48, 100, 160, 200, 240, 290, 340, 380, 420],  // Changhua to Kaohsiung
-  YL: [0, 30, 65, 90, 105, 120]                     // Badu to Suao
+  ML: [0, 28, 52, 68, 78, 96, 126, 134, 150],       // Zhunan to Changhua (Mountain)
+  CL: [0, 25, 52, 81, 90, 105, 120],                // Zhunan to Changhua (Coast)
+  SL: [0, 25, 48, 100, 160, 200, 240, 290, 340, 380, 420],  // Changhua to Xinzuoying
+  YL: [0, 30, 65, 90, 105, 120],                    // Badu to Su'ao
+  NL: [0, 12, 22, 40, 66, 79],                      // Su'ao to Hualien
+  TL: [0, 20, 37, 49, 71, 91, 121, 133, 168],       // Hualien to Taitung
+  SLL: [0, 13, 28, 41, 63, 98, 198]                 // Taitung to Fangliao to Xinzuoying
 };
 
 function calculateFare(trainType, distanceKm) {
@@ -1392,9 +1653,13 @@ let selectedStation = null;
 let selectedDestStation = null;
 let isZh = detectLanguage() === 'zh';
 let userLocation = null;
-let currentScheduleLine = 'WL';
+let currentRoute = 'western';           // Current integrated route
+let currentVariant = 'mountain';        // For western route: 'mountain' or 'coast'
+let currentScheduleLine = 'WL';         // Legacy - kept for compatibility
 let currentDirection = 'south';
 let timeUpdateInterval = null;
+let showBothVariants = false;           // Show side-by-side comparison
+let currentJourneys = {};               // Store journey data for timetable display
 
 // Config for showing previous trains
 const SHOW_DEPARTED_MINUTES = 30;
@@ -1423,6 +1688,142 @@ let currentViewMode = 'split';
 let bottomSheet = null;
 
 // ============================================================
+// INTEGRATED ROUTE FUNCTIONS
+// ============================================================
+
+// Get stations for an integrated route, merging segments and avoiding junction duplicates
+function getRouteStations(routeKey, variant = 'mountain') {
+  // Handle branch lines directly
+  if (BRANCH_LINES.includes(routeKey)) {
+    return STATIONS.filter(s => s.line === routeKey);
+  }
+
+  const route = INTEGRATED_ROUTES[routeKey];
+  if (!route) return [];
+
+  // Determine which segments to use
+  let segments;
+  if (route.variants && route.variants[variant]) {
+    segments = route.variants[variant].segments;
+  } else {
+    segments = route.segments;
+  }
+
+  // Merge stations from segments, handling junctions
+  let allStations = [];
+  let seenIds = new Set();
+
+  segments.forEach((lineCode, idx) => {
+    const lineStations = STATIONS.filter(s => s.line === lineCode);
+
+    // Sort by km for proper ordering
+    lineStations.sort((a, b) => (a.km || 0) - (b.km || 0));
+
+    lineStations.forEach(station => {
+      // Skip duplicates at junctions (same station ID already added)
+      if (seenIds.has(station.id)) return;
+      seenIds.add(station.id);
+      allStations.push(station);
+    });
+  });
+
+  return allStations;
+}
+
+// Get cumulative distance for a station within a route
+function getRouteDistance(routeKey, variant, stationId) {
+  const stations = getRouteStations(routeKey, variant);
+  let cumulative = 0;
+  let prevLine = null;
+  let lineOffset = 0;
+
+  for (const station of stations) {
+    // When line changes, update the offset
+    if (prevLine && prevLine !== station.line) {
+      // At junction, the offset becomes the cumulative distance so far
+      lineOffset = cumulative;
+    }
+
+    if (station.id === stationId) {
+      return lineOffset + (station.km || 0);
+    }
+
+    // Add station's km to cumulative (relative to line start)
+    if (station.km !== undefined) {
+      cumulative = lineOffset + station.km;
+    }
+
+    prevLine = station.line;
+  }
+
+  return 0;
+}
+
+// Check if a journey crosses the Zhunan-Changhua section (requires variant choice)
+function journeyCrossesVariantSection(routeKey, originId, destId) {
+  if (routeKey !== 'western') return false;
+
+  const route = INTEGRATED_ROUTES.western;
+  const zhunanId = route.junctions.start;   // '1240'
+  const changhuaId = route.junctions.end;   // '3300'
+
+  // Get station indices in the full route
+  const stations = getRouteStations('western', 'mountain');
+  const stationIds = stations.map(s => s.id);
+
+  const originIdx = stationIds.indexOf(originId);
+  const destIdx = stationIds.indexOf(destId);
+  const zhunanIdx = stationIds.indexOf(zhunanId);
+  const changhuaIdx = stationIds.indexOf(changhuaId);
+
+  if (originIdx === -1 || destIdx === -1) return false;
+
+  // Journey crosses variant section if it spans across the Zhunan-Changhua range
+  const minIdx = Math.min(originIdx, destIdx);
+  const maxIdx = Math.max(originIdx, destIdx);
+
+  // Check if journey goes through the ML/CL section
+  return minIdx <= zhunanIdx && maxIdx >= changhuaIdx;
+}
+
+// Get schedule station IDs for a route
+function getScheduleStationsForRoute(routeKey, variant = 'mountain') {
+  // For branch lines, use the existing SCHEDULE_STATIONS if available
+  if (BRANCH_LINES.includes(routeKey)) {
+    // Branch lines don't have predefined schedule stations, use all stations
+    return STATIONS.filter(s => s.line === routeKey).map(s => s.id);
+  }
+
+  const route = INTEGRATED_ROUTES[routeKey];
+  if (!route) return [];
+
+  // Get segments for this route/variant
+  let segments;
+  if (route.variants && route.variants[variant]) {
+    segments = route.variants[variant].segments;
+  } else {
+    segments = route.segments;
+  }
+
+  // Merge schedule stations from all segments
+  let allScheduleStations = [];
+  let seenIds = new Set();
+
+  segments.forEach((lineCode, idx) => {
+    const lineScheduleStations = SCHEDULE_STATIONS[lineCode] || [];
+
+    lineScheduleStations.forEach(stationId => {
+      // At junctions, avoid duplicates
+      if (idx > 0 && seenIds.has(stationId)) return;
+      seenIds.add(stationId);
+      allScheduleStations.push(stationId);
+    });
+  });
+
+  return allScheduleStations;
+}
+
+// ============================================================
 // BOTTOM SHEET SUMMARY
 // ============================================================
 
@@ -1441,8 +1842,8 @@ function updateSheetSummary() {
     const destValue = destSelect?.value;
 
     if (originValue && destValue) {
-      const originStation = SCHEDULE_STATIONS[currentScheduleLine]?.find(s => s.id === originValue);
-      const destStation = SCHEDULE_STATIONS[currentScheduleLine]?.find(s => s.id === destValue);
+      const originStation = STATIONS.find(s => s.id === originValue);
+      const destStation = STATIONS.find(s => s.id === destValue);
       const originName = isZh ? originStation?.name?.zh : originStation?.name?.en;
       const destName = isZh ? destStation?.name?.zh : destStation?.name?.en;
       const trainCount = document.querySelectorAll('.train-item:not(.departed)').length;
@@ -1453,9 +1854,19 @@ function updateSheetSummary() {
       }
     }
 
-    // Fallback if no destination selected
-    const lineName = RAIL_LINES[currentScheduleLine]?.name[isZh ? 'zh' : 'en'] || currentScheduleLine;
-    summaryEl.textContent = `🚃 ${lineName}`;
+    // Fallback - show route name
+    let routeName;
+    if (BRANCH_LINES.includes(currentRoute)) {
+      routeName = RAIL_LINES[currentRoute]?.name[isZh ? 'zh' : 'en'] || currentRoute;
+    } else {
+      routeName = INTEGRATED_ROUTES[currentRoute]?.name[isZh ? 'zh' : 'en'] || currentRoute;
+      // Add variant for western route
+      if (currentRoute === 'western') {
+        const variantName = INTEGRATED_ROUTES.western.variants[currentVariant]?.name[isZh ? 'zh' : 'en'];
+        if (variantName) routeName += ` (${variantName})`;
+      }
+    }
+    summaryEl.textContent = `🚃 ${routeName}`;
   } else {
     // Stations tab: "🚃 Western Line • 45 stations"
     const stationCount = filteredStations.length;
@@ -1514,8 +1925,8 @@ function updateUI() {
     if (text) btn.textContent = text;
   });
 
-  // Update all data-en/data-zh elements
-  document.querySelectorAll('[data-en]').forEach(el => {
+  // Update all data-en/data-zh elements (exclude optgroup/option - they use label attribute or are handled separately)
+  document.querySelectorAll('[data-en]:not(optgroup):not(option)').forEach(el => {
     const text = isZh ? el.dataset.zh : el.dataset.en;
     if (text) el.textContent = text;
   });
@@ -1529,7 +1940,8 @@ function updateUI() {
   document.getElementById('class-select').value = currentClass;
 
   // Update schedule selectors and render
-  updateScheduleLineSelector();
+  updateRouteSelector();
+  updateVariantSelector();
   updateScheduleStationSelector();
   renderTrainSchedule();
 
@@ -1813,12 +2225,83 @@ function setupTabs() {
   });
 }
 
-function updateScheduleLineSelector() {
-  const select = document.getElementById('schedule-line-select');
+function updateRouteSelector() {
+  const select = document.getElementById('route-select');
+  if (!select) return;
+
+  // Update option text for current language
   Array.from(select.options).forEach(option => {
     const text = isZh ? option.dataset.zh : option.dataset.en;
     if (text) option.textContent = text;
   });
+
+  // Update optgroup labels
+  Array.from(select.querySelectorAll('optgroup')).forEach(group => {
+    const text = isZh ? group.dataset.zh : group.dataset.en;
+    if (text) group.label = text;
+  });
+
+  // Show/hide variant selector based on route
+  updateVariantSelector();
+}
+
+function updateVariantSelector() {
+  const variantSelector = document.getElementById('variant-selector');
+  if (!variantSelector) return;
+
+  // Only show for western route
+  if (currentRoute === 'western') {
+    variantSelector.style.display = 'flex';
+
+    // Update variant button active state
+    document.querySelectorAll('.variant-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.variant === currentVariant);
+    });
+
+    // Update variant button text
+    document.querySelectorAll('.variant-btn [data-en]').forEach(el => {
+      const text = isZh ? el.dataset.zh : el.dataset.en;
+      if (text) el.textContent = text;
+    });
+  } else {
+    variantSelector.style.display = 'none';
+  }
+}
+
+function setVariant(variant) {
+  currentVariant = variant;
+  updateVariantSelector();
+  updateScheduleStationSelector();
+  renderTrainSchedule();
+}
+
+function onRouteChange() {
+  const select = document.getElementById('route-select');
+  currentRoute = select.value;
+
+  // Reset variant to mountain for western route
+  if (currentRoute === 'western') {
+    currentVariant = 'mountain';
+  }
+
+  // Clear destination
+  selectedDestStation = null;
+
+  // Hide direction tabs for circular route (direction doesn't apply)
+  const dirTabs = document.querySelector('.direction-tabs');
+  if (dirTabs) {
+    dirTabs.style.display = currentRoute === 'circular' ? 'none' : 'flex';
+  }
+
+  updateVariantSelector();
+  updateScheduleStationSelector();
+  renderTrainSchedule();
+  updateSheetSummary();
+}
+
+// Legacy function kept for compatibility
+function updateScheduleLineSelector() {
+  updateRouteSelector();
 }
 
 function updateScheduleStationSelector() {
@@ -1826,25 +2309,80 @@ function updateScheduleStationSelector() {
   const destSelect = document.getElementById('dest-station-select');
   const currentValue = select.value;
   const currentDestValue = destSelect.value;
-  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+
+  // Get segments for grouping
+  const route = INTEGRATED_ROUTES[currentRoute];
+  let segments = [];
+  if (BRANCH_LINES.includes(currentRoute)) {
+    segments = [currentRoute];
+  } else if (route) {
+    segments = route.variants?.[currentVariant]?.segments || route.segments || [];
+  }
+
+  // Reverse segments for northbound direction
+  if (currentDirection === 'north' && currentRoute !== 'circular') {
+    segments = [...segments].reverse();
+  }
 
   select.innerHTML = `<option value="">${isZh ? '-- 選擇起站 --' : '-- Select Origin --'}</option>`;
   destSelect.innerHTML = `<option value="">${isZh ? '-- 選擇迄站 --' : '-- Select Destination --'}</option>`;
 
-  stationIds.forEach(id => {
-    const station = STATIONS.find(s => s.id === id);
-    if (station) {
-      const name = isZh ? station.name.zh : station.name.en;
-      select.innerHTML += `<option value="${id}">${name}</option>`;
-      destSelect.innerHTML += `<option value="${id}">${name}</option>`;
-    }
+  let allStationIds = [];
+  let seenIds = new Set();
+
+  // Build grouped options
+  segments.forEach((lineCode, segIdx) => {
+    const lineStations = SCHEDULE_STATIONS[lineCode] || [];
+    const lineName = RAIL_LINES[lineCode]?.name[isZh ? 'zh' : 'en'] || lineCode;
+
+    // For northbound, reverse stations within each segment
+    let orderedStations = currentDirection === 'north' && currentRoute !== 'circular'
+      ? [...lineStations].reverse()
+      : lineStations;
+
+    // Filter out already seen stations (junction duplicates)
+    const uniqueStations = orderedStations.filter(id => {
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
+
+    if (uniqueStations.length === 0) return;
+
+    // Create optgroup for this line segment
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = lineName;
+
+    const destOptgroup = document.createElement('optgroup');
+    destOptgroup.label = lineName;
+
+    uniqueStations.forEach(id => {
+      const station = STATIONS.find(s => s.id === id);
+      if (station) {
+        const name = isZh ? station.name.zh : station.name.en;
+        allStationIds.push(id);
+
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        optgroup.appendChild(option);
+
+        const destOption = document.createElement('option');
+        destOption.value = id;
+        destOption.textContent = name;
+        destOptgroup.appendChild(destOption);
+      }
+    });
+
+    select.appendChild(optgroup);
+    destSelect.appendChild(destOptgroup);
   });
 
   // Try to restore selection if still valid
-  if (stationIds.includes(currentValue)) {
+  if (allStationIds.includes(currentValue)) {
     select.value = currentValue;
   }
-  if (stationIds.includes(currentDestValue)) {
+  if (allStationIds.includes(currentDestValue)) {
     destSelect.value = currentDestValue;
   }
   updateDestOptions();
@@ -1853,32 +2391,50 @@ function updateScheduleStationSelector() {
 function updateDestOptions() {
   const originId = document.getElementById('schedule-station-select').value;
   const destSelect = document.getElementById('dest-station-select');
-  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+  let stationIds = getScheduleStationsForRoute(currentRoute, currentVariant);
+
+  // Reverse for northbound to match dropdown order (not for circular)
+  if (currentDirection === 'north' && currentRoute !== 'circular') {
+    stationIds = [...stationIds].reverse();
+  }
+
   const originIndex = stationIds.indexOf(originId);
 
-  // Enable/disable destination options based on direction
+  // Enable/disable destination options
   Array.from(destSelect.options).forEach((opt, idx) => {
     if (idx === 0) return; // Skip placeholder
     const destIndex = stationIds.indexOf(opt.value);
-    if (currentDirection === 'south') {
-      opt.disabled = destIndex <= originIndex;
+
+    // For circular route, allow ANY destination except same as origin
+    if (currentRoute === 'circular') {
+      opt.disabled = opt.value === originId;
     } else {
-      opt.disabled = destIndex >= originIndex;
+      // For linear routes, destination must be after origin in current order
+      opt.disabled = destIndex <= originIndex;
     }
   });
+
+  // Check if journey crosses variant section and update showBothVariants flag
+  if (currentRoute === 'western' && originId && selectedDestStation) {
+    showBothVariants = journeyCrossesVariantSection('western', originId, selectedDestStation);
+  } else {
+    showBothVariants = false;
+  }
 }
 
 function onDestChange() {
   selectedDestStation = document.getElementById('dest-station-select').value;
-  renderTrainSchedule();
-}
 
-function onScheduleLineChange() {
-  const select = document.getElementById('schedule-line-select');
-  currentScheduleLine = select.value;
-  selectedDestStation = null;
-  updateScheduleStationSelector();
+  // Check if journey crosses variant section
+  const originId = document.getElementById('schedule-station-select').value;
+  if (currentRoute === 'western' && originId && selectedDestStation) {
+    showBothVariants = journeyCrossesVariantSection('western', originId, selectedDestStation);
+  } else {
+    showBothVariants = false;
+  }
+
   renderTrainSchedule();
+  updateSheetSummary();
 }
 
 function onScheduleStationChange() {
@@ -1899,22 +2455,100 @@ function setDirection(dir) {
   document.querySelectorAll('.direction-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.dir === dir);
   });
-  updateDestOptions();
-  // Clear destination if it's no longer valid
+  // Refresh station selector to reverse order based on direction
+  updateScheduleStationSelector();
+  // Clear destination since order changed
   const destSelect = document.getElementById('dest-station-select');
-  if (destSelect.selectedOptions[0]?.disabled) {
-    destSelect.value = '';
-    selectedDestStation = null;
-  }
+  destSelect.value = '';
+  selectedDestStation = null;
   renderTrainSchedule();
 }
 
-function getTrainsForStation(stationId, lineCode, direction) {
+// Get trains for a route (handles both integrated routes and branch lines)
+function getTrainsForRoute(routeKey, variant, originId, destId, direction) {
+  // For branch lines, use legacy single-line logic
+  if (BRANCH_LINES.includes(routeKey)) {
+    return getTrainsForSingleLine(routeKey, originId, destId, direction);
+  }
+
+  // For integrated routes, we need to find trains across multiple segments
+  const route = INTEGRATED_ROUTES[routeKey];
+  if (!route) return [];
+
+  // Get the segments for this variant
+  let segments;
+  if (route.variants && route.variants[variant]) {
+    segments = route.variants[variant].segments;
+  } else {
+    segments = route.segments;
+  }
+
+  // Find which segment(s) the origin and destination are in
+  const originStation = STATIONS.find(s => s.id === originId);
+  const destStation = STATIONS.find(s => s.id === destId);
+
+  if (!originStation || !destStation) return [];
+
+  const originSegment = originStation.line;
+  const destSegment = destStation.line;
+
+  // For same segment, use single-line logic
+  if (originSegment === destSegment && SCHEDULE_STATIONS[originSegment]) {
+    return getTrainsForSingleLine(originSegment, originId, destId, direction);
+  }
+
+  // For circular route, find optimal path around the circle
+  if (routeKey === 'circular') {
+    const path = findCircularPath(segments, originSegment, destSegment);
+    if (path.segments.length > 0) {
+      return getTrainsForCrossSegment(path.segments, originId, destId, path.direction);
+    }
+  }
+
+  // For linear cross-segment journeys
+  return getTrainsForCrossSegment(segments, originId, destId, direction);
+}
+
+// Find optimal path around the circular route
+function findCircularPath(segments, originSeg, destSeg) {
+  const originIdx = segments.indexOf(originSeg);
+  const destIdx = segments.indexOf(destSeg);
+
+  if (originIdx === -1 || destIdx === -1) {
+    return { segments: [], direction: 'south' };
+  }
+
+  const n = segments.length;
+
+  // Calculate clockwise distance (forward in array, wrapping)
+  const clockwiseDist = (destIdx - originIdx + n) % n;
+  // Calculate counter-clockwise distance
+  const counterClockwiseDist = (originIdx - destIdx + n) % n;
+
+  if (clockwiseDist <= counterClockwiseDist) {
+    // Go clockwise (forward in segment order)
+    const path = [];
+    for (let i = 0; i <= clockwiseDist; i++) {
+      path.push(segments[(originIdx + i) % n]);
+    }
+    return { segments: path, direction: 'south' };
+  } else {
+    // Go counter-clockwise (reverse in segment order)
+    const path = [];
+    for (let i = 0; i <= counterClockwiseDist; i++) {
+      path.push(segments[(originIdx - i + n) % n]);
+    }
+    return { segments: path, direction: 'north' };
+  }
+}
+
+// Get trains for a single line segment (legacy behavior)
+function getTrainsForSingleLine(lineCode, originId, destId, direction) {
   const stationIds = SCHEDULE_STATIONS[lineCode];
   if (!stationIds) return [];
 
-  const stationIndex = stationIds.indexOf(stationId);
-  if (stationIndex === -1) return [];
+  const originIndex = stationIds.indexOf(originId);
+  if (originIndex === -1) return [];
 
   const lineSchedule = TRAIN_SCHEDULE[lineCode];
   if (!lineSchedule) return [];
@@ -1923,55 +2557,42 @@ function getTrainsForStation(stationId, lineCode, direction) {
   const now = getCurrentMinutes();
   const distances = SCHEDULE_DISTANCES[lineCode] || [];
 
-  // Use selected destination or default to terminal
+  // Use provided destination or default to terminal
   let destIndex;
   let destStation;
-  if (selectedDestStation && stationIds.includes(selectedDestStation)) {
-    destIndex = stationIds.indexOf(selectedDestStation);
-    destStation = STATIONS.find(s => s.id === selectedDestStation);
+  if (destId && stationIds.includes(destId)) {
+    destIndex = stationIds.indexOf(destId);
+    destStation = STATIONS.find(s => s.id === destId);
   } else {
     // Default to terminal station
-    if (direction === 'south') {
-      destIndex = stationIds.length - 1;
-    } else {
-      destIndex = 0;
-    }
+    destIndex = direction === 'south' ? stationIds.length - 1 : 0;
     destStation = STATIONS.find(s => s.id === stationIds[destIndex]);
   }
 
   // Calculate distance to destination
-  const startDist = distances[stationIndex] || 0;
+  const startDist = distances[originIndex] || 0;
   const endDist = distances[destIndex] || 0;
   const distanceKm = Math.abs(endDist - startDist);
 
   const trains = schedule.map(train => {
-    const depTime = train.times[stationIndex];
+    const depTime = train.times[originIndex];
     const arrTime = train.times[destIndex];
     if (depTime === undefined || arrTime === undefined) return null;
 
-    // Handle late night wrap-around: treat early morning trains as "tomorrow"
-    // If current time is after 10 PM (1320 min) and train is before 8 AM (480 min),
-    // treat the train as being +1440 minutes (tomorrow)
     let adjustedDepTime = depTime;
     if (now >= 1320 && depTime < 480) {
-      adjustedDepTime = depTime + 1440; // Tomorrow's train
+      adjustedDepTime = depTime + 1440;
     }
 
     const diff = adjustedDepTime - now;
-    // Show trains departed within SHOW_DEPARTED_MINUTES
     const isDeparted = diff < -SHOW_DEPARTED_MINUTES;
     const isRecentlyDeparted = diff < 0 && diff >= -SHOW_DEPARTED_MINUTES;
     const isArriving = diff >= 0 && diff <= 5;
 
-    // Calculate duration
-    const duration = direction === 'south'
-      ? arrTime - depTime
-      : depTime - arrTime;
-
-    // Calculate fare based on train type and distance
+    // Duration is always positive (arrival time - departure time in absolute terms)
+    const duration = Math.abs(arrTime - depTime);
     const fare = calculateFare(train.type, distanceKm);
 
-    // Demo platform (based on direction and train number)
     const platform = direction === 'south'
       ? (parseInt(train.trainNo) % 2 === 0 ? 1 : 2)
       : (parseInt(train.trainNo) % 2 === 0 ? 2 : 1);
@@ -1990,11 +2611,11 @@ function getTrainsForStation(stationId, lineCode, direction) {
       isDeparted: isDeparted,
       isRecentlyDeparted: isRecentlyDeparted,
       isArriving: isArriving,
-      countdown: getCountdown(depTime, isZh)
+      countdown: getCountdown(depTime, isZh),
+      line: lineCode
     };
   }).filter(t => t !== null);
 
-  // Sort by departure time, show next 15 trains (including recently departed)
   return trains
     .filter(t => !t.isDeparted)
     .sort((a, b) => {
@@ -2003,6 +2624,238 @@ function getTrainsForStation(stationId, lineCode, direction) {
       return aNorm - bNorm;
     })
     .slice(0, 15);
+}
+
+// Determine direction within a segment based on station indices
+function getDirectionInSegment(lineCode, fromId, toId) {
+  const stations = SCHEDULE_STATIONS[lineCode] || [];
+  const fromIdx = stations.indexOf(fromId);
+  const toIdx = stations.indexOf(toId);
+  if (fromIdx === -1 || toIdx === -1) return 'south'; // default
+  return fromIdx < toIdx ? 'south' : 'north';
+}
+
+// Find junction station between two segments
+function findJunctionBetweenSegments(seg1, seg2) {
+  const stations1 = new Set(SCHEDULE_STATIONS[seg1] || []);
+  const stations2 = SCHEDULE_STATIONS[seg2] || [];
+  // Find common station
+  for (const st of stations2) {
+    if (stations1.has(st)) return st;
+  }
+  // If no common station in schedule, check physical connections
+  const junctionMap = {
+    'WL-YL': '0920', 'YL-WL': '0920',  // Badu
+    'WL-ML': '1240', 'ML-WL': '1240',  // Zhunan
+    'WL-CL': '1240', 'CL-WL': '1240',  // Zhunan
+    'ML-SL': '3300', 'SL-ML': '3300',  // Changhua
+    'CL-SL': '3300', 'SL-CL': '3300',  // Changhua
+    'YL-NL': '7240', 'NL-YL': '7240',  // Su'ao
+    'NL-TL': '7410', 'TL-NL': '7410',  // Hualien
+    'TL-SLL': '7740', 'SLL-TL': '7740', // Taitung
+    'SL-SLL': '3760', 'SLL-SL': '3760'  // Xinzuoying (Kaohsiung)
+  };
+  return junctionMap[`${seg1}-${seg2}`] || null;
+}
+
+// Get trains for cross-segment journeys with integrated schedule (supports 2+ segments)
+function getTrainsForCrossSegment(segments, originId, destId, direction) {
+  const originStation = STATIONS.find(s => s.id === originId);
+  const destStation = STATIONS.find(s => s.id === destId);
+
+  if (!originStation || !destStation) return [];
+
+  // Find segment indices in the path
+  const originSegIdx = segments.indexOf(originStation.line);
+  const destSegIdx = segments.indexOf(destStation.line);
+
+  if (originSegIdx === -1 || destSegIdx === -1) return [];
+
+  // Build segments to traverse in order
+  const segmentsToTraverse = originSegIdx <= destSegIdx
+    ? segments.slice(originSegIdx, destSegIdx + 1)
+    : segments.slice(destSegIdx, originSegIdx + 1).reverse();
+
+  if (segmentsToTraverse.length === 1) {
+    const dir = getDirectionInSegment(segmentsToTraverse[0], originId, destId);
+    return getTrainsForSingleLine(segmentsToTraverse[0], originId, destId, dir);
+  }
+
+  // Build list of junctions between segments
+  const junctions = [];
+  for (let i = 0; i < segmentsToTraverse.length - 1; i++) {
+    const junctionId = findJunctionBetweenSegments(segmentsToTraverse[i], segmentsToTraverse[i + 1]);
+    if (!junctionId) return [];
+    junctions.push({
+      id: junctionId,
+      station: STATIONS.find(s => s.id === junctionId),
+      fromLine: segmentsToTraverse[i],
+      toLine: segmentsToTraverse[i + 1]
+    });
+  }
+
+  // Get first leg trains (origin to first junction)
+  const firstLine = segmentsToTraverse[0];
+  const firstJunction = junctions[0];
+  const firstLegDirection = getDirectionInSegment(firstLine, originId, firstJunction.id);
+  const firstLegTrains = getTrainsForSingleLine(firstLine, originId, firstJunction.id, firstLegDirection);
+
+  if (firstLegTrains.length === 0) return [];
+
+  const integratedTrains = [];
+  const now = getCurrentMinutes();
+
+  // For each first leg train, chain through all segments
+  firstLegTrains.forEach(firstTrain => {
+    let currentTrainNo = firstTrain.trainNo;
+    let currentArrival = firstTrain.arrTime;
+    let totalDistance = 0;
+    let allTransfers = [];
+    let allLegs = []; // Track all legs for timetable display
+    let lastArrTime = firstTrain.arrTime;
+    let chainBroken = false;
+
+    // Calculate first leg distance
+    const dist1 = SCHEDULE_DISTANCES[firstLine] || [];
+    const originIdx1 = (SCHEDULE_STATIONS[firstLine] || []).indexOf(originId);
+    const juncIdx1 = (SCHEDULE_STATIONS[firstLine] || []).indexOf(firstJunction.id);
+    totalDistance += Math.abs((dist1[juncIdx1] || 0) - (dist1[originIdx1] || 0));
+
+    // Store first leg info
+    allLegs.push({
+      line: firstLine,
+      trainNo: firstTrain.trainNo,
+      type: firstTrain.type,
+      fromId: originId,
+      toId: firstJunction.id,
+      direction: firstLegDirection
+    });
+
+    // Chain through remaining segments
+    for (let i = 1; i < segmentsToTraverse.length && !chainBroken; i++) {
+      const currentLine = segmentsToTraverse[i];
+      const prevJunction = junctions[i - 1];
+      const nextJunction = i < junctions.length ? junctions[i] : null;
+      const legDestId = nextJunction ? nextJunction.id : destId;
+
+      const legDirection = getDirectionInSegment(currentLine, prevJunction.id, legDestId);
+      const stations = SCHEDULE_STATIONS[currentLine] || [];
+      const schedule = TRAIN_SCHEDULE[currentLine];
+
+      if (!schedule) { chainBroken = true; continue; }
+
+      const legSchedule = legDirection === 'south' ? schedule.southbound : schedule.northbound;
+      const juncIdx = stations.indexOf(prevJunction.id);
+      const destIdx = stations.indexOf(legDestId);
+
+      if (juncIdx === -1) { chainBroken = true; continue; }
+
+      // First, check if the SAME train continues on this segment (no transfer needed)
+      const sameTrain = legSchedule.find(train => train.trainNo === currentTrainNo);
+      let connTrain = null;
+      let isContinuation = false;
+
+      if (sameTrain && sameTrain.times[juncIdx] !== undefined) {
+        // Same train continues - check if timing is reasonable (within 10 min of arrival)
+        const sameTrainDep = sameTrain.times[juncIdx];
+        if (Math.abs(sameTrainDep - currentArrival) <= 10) {
+          connTrain = sameTrain;
+          isContinuation = true;
+        }
+      }
+
+      // If same train doesn't continue, find a connecting train
+      if (!connTrain) {
+        const minConnTime = currentArrival + 5;
+        connTrain = legSchedule.find(train => {
+          const depTime = train.times[juncIdx];
+          if (depTime === undefined) return false;
+          let adj = depTime;
+          if (currentArrival > 1200 && depTime < 300) adj += 1440;
+          return adj >= minConnTime;
+        });
+      }
+
+      if (!connTrain) { chainBroken = true; continue; }
+
+      const connDepTime = connTrain.times[juncIdx];
+      const connArrTime = destIdx !== -1 ? connTrain.times[destIdx] : connTrain.times[legDirection === 'south' ? stations.length - 1 : 0];
+
+      // Calculate wait time, handling midnight wraparound
+      let waitTime = connDepTime - currentArrival;
+      if (waitTime < 0 && connDepTime < 300 && currentArrival > 1200) {
+        // Next day train (e.g., arrive 23:00, depart 01:00)
+        waitTime = (connDepTime + 1440) - currentArrival;
+      } else if (waitTime < 0) {
+        // Same train continuing (times might be slightly off), treat as 0
+        waitTime = 0;
+      }
+
+      // Only add to transfers if it's actually a different train (not continuation)
+      if (!isContinuation) {
+        allTransfers.push({
+          at: prevJunction.station,
+          waitTime: waitTime,
+          train: { trainNo: connTrain.trainNo, type: connTrain.type, depTime: connDepTime }
+        });
+        currentTrainNo = connTrain.trainNo; // Update current train for next iteration
+      }
+
+      // Store leg info for timetable
+      allLegs.push({
+        line: currentLine,
+        trainNo: connTrain.trainNo,
+        type: connTrain.type,
+        fromId: prevJunction.id,
+        toId: legDestId,
+        direction: legDirection,
+        isContinuation: isContinuation
+      });
+
+      // Calculate leg distance
+      const legDist = SCHEDULE_DISTANCES[currentLine] || [];
+      const legDestIdx = destIdx !== -1 ? destIdx : (legDirection === 'south' ? stations.length - 1 : 0);
+      totalDistance += Math.abs((legDist[legDestIdx] || 0) - (legDist[juncIdx] || 0));
+
+      currentArrival = connArrTime;
+      lastArrTime = connArrTime;
+    }
+
+    if (chainBroken) return;
+
+    const totalDuration = Math.abs(lastArrTime - firstTrain.depTime);
+    const totalFare = calculateFare(firstTrain.type, totalDistance);
+
+    integratedTrains.push({
+      ...firstTrain,
+      duration: totalDuration,
+      fare: totalFare,
+      destination: destStation,
+      requiresTransfer: allTransfers.length > 0,
+      transferAt: allTransfers[0]?.at,
+      transfers: allTransfers,
+      transferWait: allTransfers[0]?.waitTime,
+      connectingTrain: allTransfers[0]?.train,
+      finalDestination: destStation,
+      legs: allLegs,  // Store all legs for timetable display
+      segmentsTraversed: segmentsToTraverse
+    });
+  });
+
+  // Sort by departure time and limit
+  return integratedTrains
+    .filter(t => !t.isDeparted)
+    .sort((a, b) => {
+      const aNorm = a.depTime < now - 120 ? a.depTime + 1440 : a.depTime;
+      const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
+      return aNorm - bNorm;
+    })
+    .slice(0, 15);
+}
+
+// Legacy function - kept for compatibility
+function getTrainsForStation(stationId, lineCode, direction) {
+  return getTrainsForSingleLine(lineCode, stationId, selectedDestStation, direction);
 }
 
 function renderTrainSchedule() {
@@ -2018,22 +2871,31 @@ function renderTrainSchedule() {
     return;
   }
 
-  // Check if this is terminal station for the direction
-  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
+  // Get station IDs for current route
+  const stationIds = getScheduleStationsForRoute(currentRoute, currentVariant);
   const stationIndex = stationIds.indexOf(stationId);
 
+  // Check if this is terminal station for the direction
   if ((currentDirection === 'south' && stationIndex === stationIds.length - 1) ||
       (currentDirection === 'north' && stationIndex === 0)) {
     listEl.innerHTML = `<li class="no-trains">${isZh ? '此為終點站，無此方向列車' : 'Terminal station - no trains in this direction'}</li>`;
     return;
   }
 
-  const trains = getTrainsForStation(stationId, currentScheduleLine, currentDirection);
+  // Get trains using route-based function
+  const trains = getTrainsForRoute(currentRoute, currentVariant, stationId, selectedDestStation, currentDirection);
 
   if (trains.length === 0) {
     listEl.innerHTML = `<li class="no-trains">${isZh ? '目前無列車資訊' : 'No train information available'}</li>`;
+    currentJourneys = {};
     return;
   }
+
+  // Store journey data for timetable display (includes transfer info)
+  currentJourneys = {};
+  trains.forEach(train => {
+    currentJourneys[train.trainNo] = train;
+  });
 
   listEl.innerHTML = trains.map((train, index) => {
     const destName = train.destination ? (isZh ? train.destination.name.zh : train.destination.name.en) : '';
@@ -2061,17 +2923,64 @@ function renderTrainSchedule() {
     // First non-departed train gets "next" highlight
     const isFirstUpcoming = !train.isRecentlyDeparted && trains.filter(t => !t.isRecentlyDeparted).indexOf(train) === 0;
 
+    // Transfer info if cross-segment journey
+    let transferInfo = '';
+    let transferDetails = '';
+    if (train.requiresTransfer && train.transfers && train.transfers.length > 0) {
+      // Show all transfer stations in badge
+      const transferStations = train.transfers.map(t => isZh ? t.at.name.zh : t.at.name.en).join(' → ');
+      transferInfo = `<span class="transfer-badge" title="${isZh ? '需轉乘' : 'Transfer required'}">🔄 ${transferStations}</span>`;
+
+      // Show all transfer details
+      let detailsHtml = '';
+      let prevArrTime = train.arrTime;
+      train.transfers.forEach((transfer, idx) => {
+        const stationName = isZh ? transfer.at.name.zh : transfer.at.name.en;
+        const connTypeName = getTrainTypeName(transfer.train.type);
+        const waitStr = transfer.waitTime ? `${transfer.waitTime}${isZh ? '分' : 'm'}` : '';
+        detailsHtml += `<div class="transfer-leg">
+          ${idx + 1}. ${stationName}: ${formatTime(prevArrTime)} → ${transfer.train.trainNo} ${connTypeName} ${formatTime(transfer.train.depTime)}
+          ${waitStr ? `<span class="wait-time">(${isZh ? '等' : ''} ${waitStr})</span>` : ''}
+        </div>`;
+        // Next leg's arrival time would be this train's arrival, but we don't have it easily
+      });
+      transferDetails = `<div class="transfer-details">${detailsHtml}</div>`;
+    } else if (train.requiresTransfer && train.transferAt) {
+      // Fallback for single transfer
+      const transferStationName = isZh ? train.transferAt.name.zh : train.transferAt.name.en;
+      transferInfo = `<span class="transfer-badge" title="${isZh ? '需在此站轉乘' : 'Transfer required'}">🔄 ${transferStationName}</span>`;
+      if (train.connectingTrain) {
+        const connTypeName = getTrainTypeName(train.connectingTrain.type);
+        const waitStr = train.transferWait ? `${train.transferWait}${isZh ? '分' : 'm'}` : '';
+        transferDetails = `<div class="transfer-details">
+          ${isZh ? '轉乘' : 'Transfer'}: ${formatTime(train.arrTime)} → ${train.connectingTrain.trainNo} ${connTypeName} ${formatTime(train.connectingTrain.depTime)}
+          ${waitStr ? `<span class="wait-time">(${isZh ? '等候' : 'wait'} ${waitStr})</span>` : ''}
+        </div>`;
+      }
+    }
+
+    // Line badge for integrated routes
+    let lineBadge = '';
+    if (train.line && !BRANCH_LINES.includes(currentRoute)) {
+      const lineInfo = RAIL_LINES[train.line];
+      if (lineInfo) {
+        const lineName = isZh ? lineInfo.name.zh : lineInfo.name.en;
+        lineBadge = `<span class="route-info-badge">${lineName}</span>`;
+      }
+    }
+
     return `
       <li class="train-item${train.isRecentlyDeparted ? ' departed' : ''}${isFirstUpcoming ? ' next-train' : ''}" data-train="${train.trainNo}">
         <span class="train-time">${train.depTimeStr}${delayBadge}</span>
         <span class="train-number">${train.trainNo}</span>
         <span class="train-type ${typeClass}">${typeName}</span>
-        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}</span>
+        <span class="train-dest">${isZh ? '往' : '→'} ${destName}${lineBadge}${isFirstUpcoming ? `<span class="next-badge">${isZh ? '下一班' : 'NEXT'}</span>` : ''}${transferInfo}</span>
         <span class="train-info">
           <span class="train-duration">${durationStr}</span>
           <span class="train-fare">$${train.fare}</span>
           <button class="timetable-btn" onclick="toggleTimetable('${train.trainNo}')" title="${isZh ? '時刻表' : 'Timetable'}">▼</button>
         </span>
+        ${transferDetails}
         <div class="train-timetable" id="timetable-${train.trainNo}"></div>
       </li>
     `;
@@ -2111,18 +3020,71 @@ function toggleTimetable(trainNo) {
     el.textContent = '▼';
   });
 
-  // Find train data
-  const schedule = currentDirection === 'south'
-    ? TRAIN_SCHEDULE[currentScheduleLine]?.southbound
-    : TRAIN_SCHEDULE[currentScheduleLine]?.northbound;
+  // Get stored journey data (includes transfer info for cross-segment journeys)
+  const journey = currentJourneys[trainNo];
+  if (!journey) return;
 
-  if (!schedule) return;
-
-  const train = schedule.find(t => t.trainNo === trainNo);
-  if (!train) return;
-
-  const stationIds = SCHEDULE_STATIONS[currentScheduleLine] || [];
   const selectedStationId = document.getElementById('schedule-station-select').value;
+  const destStationId = selectedDestStation;
+  let html = '';
+
+  // Check if this is a cross-segment journey (has legs data or transfers)
+  if (journey.legs && journey.legs.length > 1) {
+    // Build multi-leg timetable (continuous train or with transfers)
+    html = buildMultiLegTimetable(journey, selectedStationId, destStationId);
+  } else if (journey.transfers && journey.transfers.length > 0) {
+    // Legacy: Build multi-leg timetable from transfers
+    html = buildMultiLegTimetable(journey, selectedStationId, destStationId);
+  } else {
+    // Single segment journey - use original logic
+    html = buildSingleLegTimetable(trainNo, journey, selectedStationId);
+  }
+
+  timetableEl.innerHTML = html;
+  timetableEl.classList.add('show');
+  btn.classList.add('active');
+  btn.textContent = '▲';
+}
+
+function buildSingleLegTimetable(trainNo, journey, selectedStationId) {
+  // Find train data - search in all relevant schedules
+  let train = null;
+  let lineCode = null;
+  let stationIds = [];
+
+  // For branch lines, just use that line
+  if (BRANCH_LINES.includes(currentRoute)) {
+    const schedule = currentDirection === 'south'
+      ? TRAIN_SCHEDULE[currentRoute]?.southbound
+      : TRAIN_SCHEDULE[currentRoute]?.northbound;
+    if (schedule) {
+      train = schedule.find(t => t.trainNo === trainNo);
+      lineCode = currentRoute;
+      stationIds = SCHEDULE_STATIONS[currentRoute] || [];
+    }
+  } else {
+    // For integrated routes, find which line this train is on
+    const route = INTEGRATED_ROUTES[currentRoute];
+    const segments = route?.variants?.[currentVariant]?.segments || route?.segments || [];
+
+    for (const seg of segments) {
+      const schedule = currentDirection === 'south'
+        ? TRAIN_SCHEDULE[seg]?.southbound
+        : TRAIN_SCHEDULE[seg]?.northbound;
+      if (schedule) {
+        const foundTrain = schedule.find(t => t.trainNo === trainNo);
+        if (foundTrain) {
+          train = foundTrain;
+          lineCode = seg;
+          stationIds = SCHEDULE_STATIONS[seg] || [];
+          break;
+        }
+      }
+    }
+  }
+
+  if (!train || !lineCode) return '';
+
   const selectedStationIndex = stationIds.indexOf(selectedStationId);
 
   // Build station list with times
@@ -2145,7 +3107,7 @@ function toggleTimetable(trainNo) {
     stationsToShow.reverse();
   }
 
-  const html = stationsToShow.map((item, idx) => {
+  return stationsToShow.map((item, idx) => {
     const isCurrent = item.station.id === selectedStationId;
     const isPassed = currentDirection === 'south'
       ? item.index < selectedStationIndex
@@ -2156,11 +3118,170 @@ function toggleTimetable(trainNo) {
 
     return `<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`;
   }).join('');
+}
 
-  timetableEl.innerHTML = html;
-  timetableEl.classList.add('show');
-  btn.classList.add('active');
-  btn.textContent = '▲';
+function buildMultiLegTimetable(journey, originId, destId) {
+  const htmlParts = [];
+
+  // Use the legs array if available (new format)
+  if (journey.legs && journey.legs.length > 0) {
+    let seenStations = new Set();
+    let currentTrainNo = null;
+
+    journey.legs.forEach((leg, legIdx) => {
+      const train = findTrainInSchedule(leg.trainNo, leg.line);
+      if (!train) return;
+
+      const stations = SCHEDULE_STATIONS[leg.line] || [];
+      const fromIdx = stations.indexOf(leg.fromId);
+      const toIdx = stations.indexOf(leg.toId);
+
+      if (fromIdx === -1 || toIdx === -1) return;
+
+      // Add header only for first leg or when train changes
+      if (legIdx === 0 || (leg.trainNo !== currentTrainNo && !leg.isContinuation)) {
+        // If train changed, add transfer marker
+        if (legIdx > 0 && !leg.isContinuation) {
+          const transfer = journey.transfers?.find(t => t.train.trainNo === leg.trainNo);
+          const waitStr = transfer?.waitTime > 0 ? ` (${isZh ? '等' : 'wait'} ${transfer.waitTime}${isZh ? '分' : 'm'})` : '';
+          htmlParts.push(`<div class="transfer-marker">🔄 ${isZh ? '轉乘' : 'Transfer'}${waitStr}</div>`);
+        }
+
+        const lineName = RAIL_LINES[leg.line]?.name[isZh ? 'zh' : 'en'] || leg.line;
+        htmlParts.push(`<div class="leg-header">${leg.trainNo} ${getTrainTypeName(leg.type)} (${lineName})</div>`);
+        currentTrainNo = leg.trainNo;
+      }
+
+      // Add stations
+      const startIdx = Math.min(fromIdx, toIdx);
+      const endIdx = Math.max(fromIdx, toIdx);
+
+      for (let i = startIdx; i <= endIdx; i++) {
+        const stationId = stations[i];
+
+        // Skip duplicate stations at junctions (except for transfers)
+        if (seenStations.has(stationId) && leg.isContinuation !== false) continue;
+        seenStations.add(stationId);
+
+        const station = STATIONS.find(s => s.id === stationId);
+        if (station && train.times[i] !== undefined) {
+          const stationName = isZh ? station.name.zh : station.name.en;
+          const timeStr = formatTime(train.times[i]);
+
+          let stopClass = '';
+          if (stationId === originId) stopClass = 'current';
+          else if (stationId === destId) stopClass = 'destination';
+
+          htmlParts.push(`<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`);
+        }
+      }
+    });
+
+    return htmlParts.join('');
+  }
+
+  // Fallback to old transfer-based logic if no legs array
+  const route = INTEGRATED_ROUTES[currentRoute];
+  const segments = route?.variants?.[currentVariant]?.segments || route?.segments || [];
+
+  // Find origin station's segment
+  const originStation = STATIONS.find(s => s.id === originId);
+  if (!originStation) return '';
+
+  // First leg: origin to first transfer station
+  const firstTransfer = journey.transfers[0];
+  const firstLineCode = originStation.line;
+  const firstTrain = findTrainInSchedule(journey.trainNo, firstLineCode);
+
+  if (firstTrain) {
+    const firstStations = SCHEDULE_STATIONS[firstLineCode] || [];
+    const originIdx = firstStations.indexOf(originId);
+    const juncIdx = firstStations.indexOf(firstTransfer.at.id);
+
+    // Add first leg header
+    const lineName = RAIL_LINES[firstLineCode]?.name[isZh ? 'zh' : 'en'] || firstLineCode;
+    htmlParts.push(`<div class="leg-header">${journey.trainNo} ${getTrainTypeName(journey.type)} (${lineName})</div>`);
+
+    // Add first leg stations
+    const startIdx = Math.min(originIdx, juncIdx);
+    const endIdx = Math.max(originIdx, juncIdx);
+    for (let i = startIdx; i <= endIdx; i++) {
+      const station = STATIONS.find(s => s.id === firstStations[i]);
+      if (station && firstTrain.times[i] !== undefined) {
+        const stationName = isZh ? station.name.zh : station.name.en;
+        const timeStr = formatTime(firstTrain.times[i]);
+        const stopClass = station.id === originId ? 'current' : (station.id === firstTransfer.at.id ? 'transfer' : '');
+        htmlParts.push(`<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`);
+      }
+    }
+  }
+
+  // Subsequent legs (transfers)
+  for (let t = 0; t < journey.transfers.length; t++) {
+    const transfer = journey.transfers[t];
+    const nextTransfer = journey.transfers[t + 1];
+    const transferTrain = transfer.train;
+
+    // Find the line for this transfer train
+    let transferLineCode = null;
+    for (const seg of segments) {
+      const schedule = TRAIN_SCHEDULE[seg]?.southbound || [];
+      const scheduleN = TRAIN_SCHEDULE[seg]?.northbound || [];
+      if (schedule.find(tr => tr.trainNo === transferTrain.trainNo) ||
+          scheduleN.find(tr => tr.trainNo === transferTrain.trainNo)) {
+        transferLineCode = seg;
+        break;
+      }
+    }
+
+    if (!transferLineCode) continue;
+
+    const transferTrainData = findTrainInSchedule(transferTrain.trainNo, transferLineCode);
+    if (!transferTrainData) continue;
+
+    const transferStations = SCHEDULE_STATIONS[transferLineCode] || [];
+    const fromIdx = transferStations.indexOf(transfer.at.id);
+    const toIdx = nextTransfer
+      ? transferStations.indexOf(nextTransfer.at.id)
+      : transferStations.indexOf(destId);
+
+    // Add transfer marker
+    const waitStr = transfer.waitTime > 0 ? ` (${isZh ? '等' : 'wait'} ${transfer.waitTime}${isZh ? '分' : 'm'})` : '';
+    htmlParts.push(`<div class="transfer-marker">🔄 ${isZh ? '轉乘' : 'Transfer'}${waitStr}</div>`);
+
+    // Add leg header
+    const lineName = RAIL_LINES[transferLineCode]?.name[isZh ? 'zh' : 'en'] || transferLineCode;
+    htmlParts.push(`<div class="leg-header">${transferTrain.trainNo} ${getTrainTypeName(transferTrain.type)} (${lineName})</div>`);
+
+    // Add leg stations
+    if (fromIdx !== -1 && toIdx !== -1) {
+      const startIdx = Math.min(fromIdx, toIdx);
+      const endIdx = Math.max(fromIdx, toIdx);
+      for (let i = startIdx; i <= endIdx; i++) {
+        const station = STATIONS.find(s => s.id === transferStations[i]);
+        if (station && transferTrainData.times[i] !== undefined) {
+          const stationName = isZh ? station.name.zh : station.name.en;
+          const timeStr = formatTime(transferTrainData.times[i]);
+          const isLast = (i === endIdx && t === journey.transfers.length - 1);
+          const stopClass = isLast ? 'destination' : (station.id === transfer.at.id ? 'transfer' : '');
+          htmlParts.push(`<span class="stop ${stopClass}">${stationName} ${timeStr}</span>`);
+        }
+      }
+    }
+  }
+
+  return htmlParts.join('');
+}
+
+function findTrainInSchedule(trainNo, lineCode) {
+  const schedule = TRAIN_SCHEDULE[lineCode];
+  if (!schedule) return null;
+
+  let train = schedule.southbound?.find(t => t.trainNo === trainNo);
+  if (!train) {
+    train = schedule.northbound?.find(t => t.trainNo === trainNo);
+  }
+  return train;
 }
 
 async function centerToUserLocation() {
@@ -2261,7 +3382,7 @@ async function initialize() {
     if (text) btn.textContent = text;
   });
 
-  document.querySelectorAll('[data-en]').forEach(el => {
+  document.querySelectorAll('[data-en]:not(optgroup):not(option)').forEach(el => {
     const text = isZh ? el.dataset.zh : el.dataset.en;
     if (text) el.textContent = text;
   });
@@ -2270,8 +3391,9 @@ async function initialize() {
   searchInput.addEventListener('input', handleSearch);
   searchInput.placeholder = isZh ? '搜尋車站...' : 'Search stations...';
 
-  // Setup train schedule
-  updateScheduleLineSelector();
+  // Setup train schedule with integrated routes
+  updateRouteSelector();
+  updateVariantSelector();
   updateScheduleStationSelector();
   renderTrainSchedule();
 
