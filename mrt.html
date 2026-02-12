@@ -291,8 +291,8 @@
       }
 
       #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
-      #panel.snap-half { transform: translateY(50%); }
-      #panel.snap-full { transform: translateY(10%); }
+      #panel.snap-half { transform: translateY(40vh); }
+      #panel.snap-full { transform: translateY(0); }
       #panel.dragging { transition: none; }
       #panel.no-transition { transition: none; }
 
@@ -933,30 +933,41 @@ function filterStations() {
 function updateLineSelect() {
   const lineSelect = document.getElementById('line-select');
 
-  if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {
+  // Build line options based on current system
+  let options = '<option value="all">' + (isZh ? '所有路線' : 'All Lines') + '</option>';
+
+  if (currentSystem === 'all') {
+    // Show all lines from all systems, grouped by system
+    Object.entries(MRT_SYSTEMS).forEach(([sysCode, system]) => {
+      const sysName = isZh ? system.name.zh : system.name.en;
+      Object.entries(system.lines).forEach(([code, info]) => {
+        const lineName = isZh ? info.name.zh : info.name.en;
+        options += `<option value="${code}">${lineName} (${sysName})</option>`;
+      });
+    });
+    lineSelect.innerHTML = options;
+    lineSelect.style.display = '';
+    currentLine = 'all';
+  } else if (MRT_SYSTEMS[currentSystem]) {
     const system = MRT_SYSTEMS[currentSystem];
     const lineEntries = Object.entries(system.lines);
 
     if (lineEntries.length === 1) {
+      // Single-line system: hide selector, auto-select the line
       lineSelect.style.display = 'none';
+      lineSelect.innerHTML = '';
       currentLine = lineEntries[0][0];
       return;
     }
-  }
 
-  lineSelect.style.display = '';
-  let options = '<option value="all">' + (isZh ? '所有路線' : 'All Lines') + '</option>';
-
-  if (currentSystem !== 'all' && MRT_SYSTEMS[currentSystem]) {
-    const system = MRT_SYSTEMS[currentSystem];
-    Object.entries(system.lines).forEach(([code, info]) => {
+    lineEntries.forEach(([code, info]) => {
       const lineName = isZh ? info.name.zh : info.name.en;
       options += `<option value="${code}">${lineName}</option>`;
     });
+    lineSelect.innerHTML = options;
+    lineSelect.style.display = '';
+    currentLine = 'all';
   }
-
-  lineSelect.innerHTML = options;
-  currentLine = 'all';
 }
 
 function changeSystem() {

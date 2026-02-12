@@ -15,6 +15,44 @@ let tokenExpiry = 0;
 const TDX_AUTH_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
 const TDX_API_BASE = 'https://tdx.transportdata.tw/api/basic';
 
+/**
+ * Determine cache TTL (in seconds) based on the API endpoint.
+ * Static data (routes, stops) → long cache. Real-time data (arrivals) → short cache.
+ */
+function getCacheTtl(path) {
+  const p = path.toLowerCase();
+
+  // Real-time: arrivals, delays, live position → 30 seconds
+  if (p.includes('estimatedtimeofarrival') ||
+      p.includes('realtimebyfrequency') ||
+      p.includes('realtimenearstop') ||
+      p.includes('livetraindelay') ||
+      p.includes('liveposition')) {
+    return 30;
+  }
+
+  // Semi-static: timetables, schedules → 6 hours
+  if (p.includes('generaltimetable') ||
+      p.includes('dailytimetable') ||
+      p.includes('schedule')) {
+    return 6 * 3600;
+  }
+
+  // Static: routes, stops, stations, fare → 24 hours
+  if (p.includes('route') ||
+      p.includes('stop') ||
+      p.includes('station') ||
+      p.includes('fare') ||
+      p.includes('shape') ||
+      p.includes('displaystopofroute') ||
+      p.includes('stopofroute')) {
+    return 24 * 3600;
+  }
+
+  // Default: 5 minutes for unknown endpoints
+  return 300;
+}
+
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,7 +101,7 @@ async function getAccessToken(env) {
 /**
  * Handle incoming requests
  */
-async function handleRequest(request, env) {
+async function handleRequest(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -99,6 +137,27 @@ async function handleRequest(request, env) {
   // Proxy TDX API requests
   if (path.startsWith('/v2/')) {
     try {
+      // Determine cache TTL based on endpoint type
+      const cacheTtl = getCacheTtl(path);
+
+      // Check Cloudflare Cache API first
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), { method: 'GET' });
+
+      if (cacheTtl > 0) {
+        const cachedResponse = await cache.match(cacheKey);
+        if (cachedResponse) {
+          // Clone and add CORS headers (cached response may not have them)
+          const headers = new Headers(cachedResponse.headers);
+          Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+          headers.set('X-Cache', 'HIT');
+          return new Response(cachedResponse.body, {
+            status: cachedResponse.status,
+            headers,
+          });
+        }
+      }
+
       const token = await getAccessToken(env);
 
       // Build TDX API URL
@@ -125,14 +184,29 @@ async function handleRequest(request, env) {
       }
 
       const data = await response.json();
+      const body = JSON.stringify(data);
 
-      return new Response(JSON.stringify(data), {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=30', // Cache for 30 seconds
-        },
-      });
+      const responseHeaders = {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${cacheTtl}`,
+        'X-Cache': 'MISS',
+      };
+
+      const result = new Response(body, { headers: responseHeaders });
+
+      // Store in Cloudflare edge cache (non-blocking)
+      if (cacheTtl > 0) {
+        const cacheResponse = new Response(body, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': `public, max-age=${cacheTtl}`,
+          },
+        });
+        ctx.waitUntil(cache.put(cacheKey, cacheResponse));
+      }
+
+      return result;
     } catch (error) {
       return new Response(JSON.stringify({
         error: 'Proxy error',
@@ -164,6 +238,6 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    return handleRequest(request, env);
+    return handleRequest(request, env, ctx);
   },
 };

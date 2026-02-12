@@ -570,11 +570,9 @@ function getRouteFareInfo(routeId) {
 
 function calculateTotalJourneyTime(stops) {
     if (!stops || stops.length < 2) return 0;
-    const firstTime = stops[0].time.split(':').map(Number);
-    const lastTime = stops[stops.length - 1].time.split(':').map(Number);
-    const firstMinutes = firstTime[0] * 60 + firstTime[1];
-    const lastMinutes = lastTime[0] * 60 + lastTime[1];
-    return lastMinutes - firstMinutes;
+    const firstMinutes = timeToMinutes(stops[0]?.time);
+    const lastMinutes = timeToMinutes(stops[stops.length - 1]?.time);
+    return Math.max(0, lastMinutes - firstMinutes);
 }
 
 function getNextBusTime(scheduleInfo) {
@@ -582,10 +580,11 @@ function getNextBusTime(scheduleInfo) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     // Parse first and last bus times
-    const [firstH, firstM] = scheduleInfo.firstBus.split(':').map(Number);
-    const [lastH, lastM] = scheduleInfo.lastBus.split(':').map(Number);
-    const firstBusMinutes = firstH * 60 + firstM;
-    const lastBusMinutes = lastH * 60 + lastM;
+    if (!scheduleInfo?.firstBus || !scheduleInfo?.lastBus) {
+        return { time: null, waitMinutes: null, ended: true };
+    }
+    const firstBusMinutes = timeToMinutes(scheduleInfo.firstBus);
+    const lastBusMinutes = timeToMinutes(scheduleInfo.lastBus);
 
     // Check if within service hours
     if (currentMinutes < firstBusMinutes) {
@@ -663,28 +662,28 @@ function renderRouteSchedule() {
     if (selectedOriginStop !== null && selectedDestStop !== null) {
         const originIdx = parseInt(selectedOriginStop);
         const destIdx = parseInt(selectedDestStop);
-        const originTime = stops[originIdx].time.split(':').map(Number);
-        const destTime = stops[destIdx].time.split(':').map(Number);
-        tripDuration = (destTime[0] * 60 + destTime[1]) - (originTime[0] * 60 + originTime[1]);
-        tripStops = destIdx - originIdx + 1;
-        // Calculate fare based on sections traveled (approximate)
-        const totalStops = stops.length;
-        const stopsPerSection = totalStops / fareInfo.sections;
-        const sectionsTraveled = Math.max(1, Math.ceil(tripStops / stopsPerSection));
-        tripFare = fareInfo.baseFare * sectionsTraveled;
 
-        // Calculate arrival time at destination based on next bus
-        if (nextBus.time && !nextBus.ended) {
-            const [busH, busM] = nextBus.time.split(':').map(Number);
-            const busDepartMinutes = busH * 60 + busM;
-            const firstStopTime = stops[0].time.split(':').map(Number);
-            const firstStopMinutes = firstStopTime[0] * 60 + firstStopTime[1];
-            const destStopMinutes = destTime[0] * 60 + destTime[1];
-            const elapsedToDest = destStopMinutes - firstStopMinutes;
-            const arrivalMinutes = busDepartMinutes + elapsedToDest;
-            const arrH = Math.floor(arrivalMinutes / 60) % 24;
-            const arrM = arrivalMinutes % 60;
-            arrivalAtDest = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+        if (stops[originIdx] && stops[destIdx]) {
+            const originMinutes = timeToMinutes(stops[originIdx].time);
+            const destMinutes = timeToMinutes(stops[destIdx].time);
+            tripDuration = Math.max(0, destMinutes - originMinutes);
+            tripStops = destIdx - originIdx + 1;
+            // Calculate fare based on sections traveled (approximate)
+            const totalStops = stops.length;
+            const stopsPerSection = totalStops / fareInfo.sections;
+            const sectionsTraveled = Math.max(1, Math.ceil(tripStops / stopsPerSection));
+            tripFare = fareInfo.baseFare * sectionsTraveled;
+
+            // Calculate arrival time at destination based on next bus
+            if (nextBus.time && !nextBus.ended) {
+                const busDepartMinutes = timeToMinutes(nextBus.time);
+                const firstStopMinutes = timeToMinutes(stops[0]?.time);
+                const elapsedToDest = destMinutes - firstStopMinutes;
+                const arrivalMinutes = busDepartMinutes + elapsedToDest;
+                const arrH = Math.floor(arrivalMinutes / 60) % 24;
+                const arrM = arrivalMinutes % 60;
+                arrivalAtDest = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+            }
         }
     }
 
@@ -747,13 +746,11 @@ function renderRouteSchedule() {
     // Calculate next bus departure time in minutes for arrival time calculation
     let nextBusDepartureMinutes = null;
     if (nextBus.time && !nextBus.ended) {
-        const [h, m] = nextBus.time.split(':').map(Number);
-        nextBusDepartureMinutes = h * 60 + m;
+        nextBusDepartureMinutes = timeToMinutes(nextBus.time);
     }
 
     // Get first stop base time for elapsed calculation
-    const firstStopTime = stops[0].time.split(':').map(Number);
-    const firstStopMinutes = firstStopTime[0] * 60 + firstStopTime[1];
+    const firstStopMinutes = timeToMinutes(stops[0]?.time);
 
     const stopsHtml = stops.map((stop, index) => {
         const isFirst = index === 0;
@@ -766,14 +763,12 @@ function renderRouteSchedule() {
         const isInTrip = originIdx >= 0 && destIdx >= 0 && index >= originIdx && index <= destIdx;
 
         // Calculate elapsed time from first stop
-        const stopTime = stop.time.split(':').map(Number);
-        const stopMinutes = stopTime[0] * 60 + stopTime[1];
+        const stopMinutes = timeToMinutes(stop.time);
         const elapsedFromFirst = stopMinutes - firstStopMinutes;
 
         // Calculate elapsed time from origin (for display)
         const baseIdx = originIdx >= 0 ? originIdx : 0;
-        const baseTime = stops[baseIdx].time.split(':').map(Number);
-        const baseMinutes = baseTime[0] * 60 + baseTime[1];
+        const baseMinutes = timeToMinutes(stops[baseIdx]?.time);
         const elapsedFromOrigin = stopMinutes - baseMinutes;
 
         // Calculate estimated arrival time at this stop based on next bus
@@ -1075,18 +1070,24 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
             return null;
         }
 
-        const stops = routeData.Stops.map((stop, idx) => ({
+        // First pass: build stops with coordinates
+        const rawStops = routeData.Stops.map((stop, idx) => ({
             name: {
                 en: stop.StopName?.En || stop.StopName?.Zh_tw || `Stop ${idx + 1}`,
                 zh: stop.StopName?.Zh_tw || `站點 ${idx + 1}`
             },
             stopUID: stop.StopUID,
             sequence: stop.StopSequence || idx + 1,
-            // Include position data for map markers
             lat: stop.StopPosition?.PositionLat || null,
             lng: stop.StopPosition?.PositionLon || null,
-            // Estimate time based on sequence (3 min per stop as rough estimate)
-            time: calculateEstimatedTime(idx)
+            time: null // will be filled in below
+        }));
+
+        // Second pass: calculate distance-based estimated times
+        const estimatedTimes = calculateEstimatedTimes(rawStops);
+        const stops = rawStops.map((stop, idx) => ({
+            ...stop,
+            time: estimatedTimes[idx] || calculateEstimatedTime(idx)
         }));
 
         // Log how many stops have coordinates
@@ -1101,14 +1102,64 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
     }
 }
 
-// Calculate estimated time for a stop based on its sequence
+// Calculate estimated times for all stops based on distances between them
+// Returns array of "HH:MM" strings. Uses coordinates when available,
+// falls back to even spacing for stops without coordinates.
+function calculateEstimatedTimes(stops) {
+    const BASE_MINUTES = 360; // 06:00 start
+    const AVG_SPEED_KMH = 20; // average city bus speed including traffic
+    const ROAD_FACTOR = 1.3;  // straight-line to road distance multiplier
+    const DWELL_SECONDS = 30; // dwell time per stop
+    const MIN_MINUTES = 1;    // minimum 1 min between stops
+    const FALLBACK_MINUTES = 2; // fallback when no coordinates
+
+    if (!stops || stops.length === 0) return [];
+
+    const times = [BASE_MINUTES]; // first stop at base time
+
+    for (let i = 1; i < stops.length; i++) {
+        const prev = stops[i - 1];
+        const curr = stops[i];
+        let segmentMinutes = FALLBACK_MINUTES;
+
+        if (prev.lat && prev.lng && curr.lat && curr.lng) {
+            const distMeters = getDistanceInMeters(prev.lat, prev.lng, curr.lat, curr.lng);
+            const roadMeters = distMeters * ROAD_FACTOR;
+            const travelSeconds = (roadMeters / 1000) / AVG_SPEED_KMH * 3600;
+            segmentMinutes = Math.max(MIN_MINUTES, Math.round((travelSeconds + DWELL_SECONDS) / 60));
+        }
+
+        times.push(times[i - 1] + segmentMinutes);
+    }
+
+    return times.map(totalMin => {
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    });
+}
+
+// Legacy single-stop fallback (used when stops array not available)
 function calculateEstimatedTime(index) {
-    const baseHour = 6;
-    const minutesPerStop = 3;
-    const totalMinutes = baseHour * 60 + index * minutesPerStop;
+    const totalMinutes = 360 + index * 2;
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// Safely parse a "HH:MM" time string into [hours, minutes].
+// Returns [0, 0] if the input is invalid.
+function safeParseTime(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return [0, 0];
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return [0, 0];
+    return parts;
+}
+
+// Convert "HH:MM" to total minutes, safely.
+function timeToMinutes(timeStr) {
+    const [h, m] = safeParseTime(timeStr);
+    return h * 60 + m;
 }
 
 function getStopName(stop) {
