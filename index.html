@@ -269,6 +269,9 @@
           grid-template-columns: 1fr;
         }
       }
+      @media (display-mode: standalone), (display-mode: fullscreen) {
+        #install-hint { display: none !important; }
+      }
     </style>
   </head>
   <body>
@@ -285,13 +288,10 @@
     </header>
 
     <div class="container">
-      <div class="data-note">
-        <span class="data-note-icon">💡</span>
-        <span class="data-note-text" id="data-note">
-          This hub provides transport information using open data APIs and static datasets.
-          YouBike data updates in real-time. Station data for rail and bus uses static snapshots.
-          For official real-time data, visit <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>.
-        </span>
+      <div class="data-note" id="install-hint" style="display:none;">
+        <span class="data-note-icon">📲</span>
+        <span class="data-note-text" id="install-hint-text"></span>
+        <button onclick="dismissInstallHint()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:1.2em;padding:4px 8px;flex-shrink:0;" aria-label="Dismiss">&times;</button>
       </div>
 
       <!-- Bike Sharing Section -->
@@ -638,10 +638,8 @@
         ? '台灣交通'
         : 'Taiwan Transport';
 
-      // Data note
-      document.getElementById('data-note').innerHTML = isZh
-        ? '本站使用開放資料 API 及靜態資料集提供交通資訊。YouBike 資料即時更新，軌道與客運資料為靜態快照。如需官方即時資料，請造訪 <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>。'
-        : 'This hub provides transport information using open data APIs and static datasets. YouBike data updates in real-time. Station data for rail and bus uses static snapshots. For official real-time data, visit <a href="https://tdx.transportdata.tw/" target="_blank">TDX</a>.';
+      // Install hint
+      updateInstallHint();
 
       // Section headers
       document.getElementById('section-bike').textContent = isZh ? '公共自行車' : 'Bike Sharing';
@@ -664,6 +662,85 @@
         langBtn.textContent = isZh ? '中' : 'EN';
       }
     }
+
+    // Install hint logic
+    function getInstallHintText() {
+      // Don't show if already installed as PWA
+      if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return null;
+      // Don't show if user dismissed
+      if (localStorage.getItem('install-hint-dismissed')) return null;
+
+      const ua = navigator.userAgent;
+      const isMac = /Macintosh|Mac OS X/.test(ua);
+      const isWindows = /Windows/.test(ua);
+      const isChromium = /Chrome/.test(ua) && !/Edg/.test(ua);
+      const isEdge = /Edg/.test(ua);
+      const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+      const isFirefox = /Firefox/.test(ua);
+      const isIOS = /iPad|iPhone/.test(ua);
+      const isAndroid = /Android/.test(ua);
+
+      if (isIOS && isSafari) {
+        return isZh
+          ? '將此 App 加到主畫面：點選 Safari 底部的「分享」按鈕，再選「加入主畫面」。'
+          : 'Add to Home Screen: tap the Share button in Safari, then select "Add to Home Screen".';
+      }
+      if (isAndroid && isChromium) {
+        return isZh
+          ? '安裝此 App：點選 Chrome 網址列右側的選單（⋮），再選「安裝應用程式」。'
+          : 'Install this app: tap the Chrome menu (⋮), then select "Install app".';
+      }
+      if (isMac && isSafari) {
+        return isZh
+          ? '安裝此 App：點選選單列「檔案」→「加入 Dock」，即可像原生 App 一樣使用。'
+          : 'Install this app: click File → "Add to Dock" in the menu bar to use it like a native app.';
+      }
+      if (isChromium) {
+        return isZh
+          ? '安裝此 App：點選網址列右側的安裝圖示（⊕），即可像桌面應用程式一樣使用。'
+          : 'Install this app: click the install icon (⊕) in the address bar to use it like a desktop app.';
+      }
+      if (isEdge) {
+        return isZh
+          ? '安裝此 App：點選網址列右側的安裝圖示（⊕），或從選單選「應用程式」→「安裝此網站」。'
+          : 'Install this app: click the install icon (⊕) in the address bar, or go to Menu → Apps → "Install this site".';
+      }
+      if (isFirefox) {
+        return isZh
+          ? '提示：使用 Chrome 或 Edge 開啟此頁面可將其安裝為桌面 App。'
+          : 'Tip: Open this page in Chrome or Edge to install it as a desktop app.';
+      }
+      // Generic fallback for other desktop browsers
+      if (!isIOS && !isAndroid) {
+        return isZh
+          ? '提示：使用 Chrome、Edge 或 Safari 開啟此頁面可將其安裝為 App。'
+          : 'Tip: Open this page in Chrome, Edge, or Safari to install it as an app.';
+      }
+      return null;
+    }
+
+    function updateInstallHint() {
+      const hint = document.getElementById('install-hint');
+      const text = getInstallHintText();
+      if (text && hint) {
+        document.getElementById('install-hint-text').textContent = text;
+        hint.style.display = '';
+      } else if (hint) {
+        hint.style.display = 'none';
+      }
+    }
+
+    function dismissInstallHint() {
+      localStorage.setItem('install-hint-dismissed', '1');
+      const hint = document.getElementById('install-hint');
+      if (hint) hint.style.display = 'none';
+    }
+
+    // Hide hint once app is installed
+    window.addEventListener('appinstalled', () => {
+      const hint = document.getElementById('install-hint');
+      if (hint) hint.style.display = 'none';
+    });
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {

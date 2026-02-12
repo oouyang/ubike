@@ -154,20 +154,6 @@
       }
       .float-btn:hover { background: #f4f4f4; }
       .float-btn:active { background: #e0e0e0; }
-      .note {
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        font-size: 0.9em;
-      }
-      .note-title {
-        font-weight: bold;
-        color: #856404;
-        margin-bottom: 4px;
-      }
-      .note-text { color: #856404; }
       .header-nav {
         display: flex;
         justify-content: center;
@@ -203,15 +189,6 @@
       </div>
     </header>
     <div class="container">
-      <div class="note">
-        <div class="note-title" id="note-title">About TDX</div>
-        <div class="note-text" id="note-text">
-          This hub uses static data for stations and routes that rarely change.
-          For real-time data (arrivals, availability), you can apply for a free TDX API key at
-          <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a>.
-        </div>
-      </div>
-
       <div class="section-title" id="section-rail">Rail Transport</div>
       <div class="grid">
         <a href="thsr.html" class="card">
@@ -333,10 +310,6 @@
       // Update page title
       document.title = isZh ? '台灣交通資料' : 'Taiwan Transport Data';
       document.getElementById('page-title').textContent = isZh ? 'TDX 資料中心' : 'TDX Data Hub';
-      document.getElementById('note-title').textContent = isZh ? '關於 TDX' : 'About TDX';
-      document.getElementById('note-text').innerHTML = isZh
-        ? '本站使用靜態資料顯示較少變動的站點與路線資訊。如需即時資料（到站時間、可用數量），可至 <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a> 申請免費 API 金鑰。'
-        : 'This hub uses static data for stations and routes that rarely change. For real-time data (arrivals, availability), you can apply for a free TDX API key at <a href="https://tdx.transportdata.tw/" target="_blank">tdx.transportdata.tw</a>.';
       document.getElementById('section-rail').textContent = isZh ? '軌道運輸' : 'Rail Transport';
       document.getElementById('section-other').textContent = isZh ? '其他運輸' : 'Other Transport';
 

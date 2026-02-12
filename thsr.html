@@ -634,8 +634,37 @@ const STATION_ID_MAP = {
   '1040': 6, '1043': 7, '1047': 8, '1050': 9, '1060': 10, '1070': 11
 };
 
-// Real timetable data (loaded from TDX API)
-let timetableData = { southbound: [], northbound: [] };
+// Demo timetable data (fallback when TDX API is unavailable)
+const DEMO_TIMETABLE = {
+  southbound: [
+    { trainNo: '101', direction: 0, times: [360, 366, 374, 394, 415, null, 450, null, null, 490, 520, 540], stationTimes: {0:{arr:360,dep:360,stationName:'Nangang'},1:{arr:364,dep:366,stationName:'Taipei'},2:{arr:372,dep:374,stationName:'Banqiao'},3:{arr:392,dep:394,stationName:'Taoyuan'},4:{arr:413,dep:415,stationName:'Hsinchu'},6:{arr:448,dep:450,stationName:'Taichung'},9:{arr:488,dep:490,stationName:'Chiayi'},10:{arr:518,dep:520,stationName:'Tainan'},11:{arr:540,dep:540,stationName:'Zuoying'}} },
+    { trainNo: '103', direction: 0, times: [390, 396, 404, 424, 445, null, 480, null, null, 520, 550, 570], stationTimes: {0:{arr:390,dep:390,stationName:'Nangang'},1:{arr:394,dep:396,stationName:'Taipei'},2:{arr:402,dep:404,stationName:'Banqiao'},3:{arr:422,dep:424,stationName:'Taoyuan'},4:{arr:443,dep:445,stationName:'Hsinchu'},6:{arr:478,dep:480,stationName:'Taichung'},9:{arr:518,dep:520,stationName:'Chiayi'},10:{arr:548,dep:550,stationName:'Tainan'},11:{arr:570,dep:570,stationName:'Zuoying'}} },
+    { trainNo: '111', direction: 0, times: [420, 426, 434, 454, 475, 495, 520, 535, 555, 575, 605, 625], stationTimes: {0:{arr:420,dep:420,stationName:'Nangang'},1:{arr:424,dep:426,stationName:'Taipei'},2:{arr:432,dep:434,stationName:'Banqiao'},3:{arr:452,dep:454,stationName:'Taoyuan'},4:{arr:473,dep:475,stationName:'Hsinchu'},5:{arr:493,dep:495,stationName:'Miaoli'},6:{arr:518,dep:520,stationName:'Taichung'},7:{arr:533,dep:535,stationName:'Changhua'},8:{arr:553,dep:555,stationName:'Yunlin'},9:{arr:573,dep:575,stationName:'Chiayi'},10:{arr:603,dep:605,stationName:'Tainan'},11:{arr:625,dep:625,stationName:'Zuoying'}} },
+    { trainNo: '105', direction: 0, times: [480, 486, 494, 514, 535, null, 570, null, null, 610, 640, 660], stationTimes: {0:{arr:480,dep:480,stationName:'Nangang'},1:{arr:484,dep:486,stationName:'Taipei'},2:{arr:492,dep:494,stationName:'Banqiao'},3:{arr:512,dep:514,stationName:'Taoyuan'},4:{arr:533,dep:535,stationName:'Hsinchu'},6:{arr:568,dep:570,stationName:'Taichung'},9:{arr:608,dep:610,stationName:'Chiayi'},10:{arr:638,dep:640,stationName:'Tainan'},11:{arr:660,dep:660,stationName:'Zuoying'}} },
+    { trainNo: '113', direction: 0, times: [540, 546, 554, 574, 595, 615, 640, 655, 675, 695, 725, 745], stationTimes: {0:{arr:540,dep:540,stationName:'Nangang'},1:{arr:544,dep:546,stationName:'Taipei'},2:{arr:552,dep:554,stationName:'Banqiao'},3:{arr:572,dep:574,stationName:'Taoyuan'},4:{arr:593,dep:595,stationName:'Hsinchu'},5:{arr:613,dep:615,stationName:'Miaoli'},6:{arr:638,dep:640,stationName:'Taichung'},7:{arr:653,dep:655,stationName:'Changhua'},8:{arr:673,dep:675,stationName:'Yunlin'},9:{arr:693,dep:695,stationName:'Chiayi'},10:{arr:723,dep:725,stationName:'Tainan'},11:{arr:745,dep:745,stationName:'Zuoying'}} },
+    { trainNo: '107', direction: 0, times: [600, 606, 614, 634, 655, null, 690, null, null, 730, 760, 780], stationTimes: {0:{arr:600,dep:600,stationName:'Nangang'},1:{arr:604,dep:606,stationName:'Taipei'},2:{arr:612,dep:614,stationName:'Banqiao'},3:{arr:632,dep:634,stationName:'Taoyuan'},4:{arr:653,dep:655,stationName:'Hsinchu'},6:{arr:688,dep:690,stationName:'Taichung'},9:{arr:728,dep:730,stationName:'Chiayi'},10:{arr:758,dep:760,stationName:'Tainan'},11:{arr:780,dep:780,stationName:'Zuoying'}} },
+    { trainNo: '115', direction: 0, times: [720, 726, 734, 754, 775, 795, 820, 835, 855, 875, 905, 925], stationTimes: {0:{arr:720,dep:720,stationName:'Nangang'},1:{arr:724,dep:726,stationName:'Taipei'},2:{arr:732,dep:734,stationName:'Banqiao'},3:{arr:752,dep:754,stationName:'Taoyuan'},4:{arr:773,dep:775,stationName:'Hsinchu'},5:{arr:793,dep:795,stationName:'Miaoli'},6:{arr:818,dep:820,stationName:'Taichung'},7:{arr:833,dep:835,stationName:'Changhua'},8:{arr:853,dep:855,stationName:'Yunlin'},9:{arr:873,dep:875,stationName:'Chiayi'},10:{arr:903,dep:905,stationName:'Tainan'},11:{arr:925,dep:925,stationName:'Zuoying'}} },
+    { trainNo: '109', direction: 0, times: [840, 846, 854, 874, 895, null, 930, null, null, 970, 1000, 1020], stationTimes: {0:{arr:840,dep:840,stationName:'Nangang'},1:{arr:844,dep:846,stationName:'Taipei'},2:{arr:852,dep:854,stationName:'Banqiao'},3:{arr:872,dep:874,stationName:'Taoyuan'},4:{arr:893,dep:895,stationName:'Hsinchu'},6:{arr:928,dep:930,stationName:'Taichung'},9:{arr:968,dep:970,stationName:'Chiayi'},10:{arr:998,dep:1000,stationName:'Tainan'},11:{arr:1020,dep:1020,stationName:'Zuoying'}} },
+    { trainNo: '117', direction: 0, times: [960, 966, 974, 994, 1015, 1035, 1060, 1075, 1095, 1115, 1145, 1165], stationTimes: {0:{arr:960,dep:960,stationName:'Nangang'},1:{arr:964,dep:966,stationName:'Taipei'},2:{arr:972,dep:974,stationName:'Banqiao'},3:{arr:992,dep:994,stationName:'Taoyuan'},4:{arr:1013,dep:1015,stationName:'Hsinchu'},5:{arr:1033,dep:1035,stationName:'Miaoli'},6:{arr:1058,dep:1060,stationName:'Taichung'},7:{arr:1073,dep:1075,stationName:'Changhua'},8:{arr:1093,dep:1095,stationName:'Yunlin'},9:{arr:1113,dep:1115,stationName:'Chiayi'},10:{arr:1143,dep:1145,stationName:'Tainan'},11:{arr:1165,dep:1165,stationName:'Zuoying'}} },
+    { trainNo: '119', direction: 0, times: [1080, 1086, 1094, 1114, 1135, null, 1170, null, null, 1210, 1240, 1260], stationTimes: {0:{arr:1080,dep:1080,stationName:'Nangang'},1:{arr:1084,dep:1086,stationName:'Taipei'},2:{arr:1092,dep:1094,stationName:'Banqiao'},3:{arr:1112,dep:1114,stationName:'Taoyuan'},4:{arr:1133,dep:1135,stationName:'Hsinchu'},6:{arr:1168,dep:1170,stationName:'Taichung'},9:{arr:1208,dep:1210,stationName:'Chiayi'},10:{arr:1238,dep:1240,stationName:'Tainan'},11:{arr:1260,dep:1260,stationName:'Zuoying'}} },
+    { trainNo: '121', direction: 0, times: [1200, 1206, 1214, 1234, 1255, 1275, 1300, 1315, 1335, 1355, 1385, 1405], stationTimes: {0:{arr:1200,dep:1200,stationName:'Nangang'},1:{arr:1204,dep:1206,stationName:'Taipei'},2:{arr:1212,dep:1214,stationName:'Banqiao'},3:{arr:1232,dep:1234,stationName:'Taoyuan'},4:{arr:1253,dep:1255,stationName:'Hsinchu'},5:{arr:1273,dep:1275,stationName:'Miaoli'},6:{arr:1298,dep:1300,stationName:'Taichung'},7:{arr:1313,dep:1315,stationName:'Changhua'},8:{arr:1333,dep:1335,stationName:'Yunlin'},9:{arr:1353,dep:1355,stationName:'Chiayi'},10:{arr:1383,dep:1385,stationName:'Tainan'},11:{arr:1405,dep:1405,stationName:'Zuoying'}} }
+  ],
+  northbound: [
+    { trainNo: '102', direction: 1, times: [540, 520, 500, 470, 440, null, 400, null, null, 360, 336, 320], stationTimes: {0:{arr:540,dep:540,stationName:'Nangang'},1:{arr:538,dep:536,stationName:'Taipei'},2:{arr:530,dep:528,stationName:'Banqiao'},3:{arr:508,dep:506,stationName:'Taoyuan'},4:{arr:487,dep:485,stationName:'Hsinchu'},6:{arr:448,dep:446,stationName:'Taichung'},9:{arr:398,dep:396,stationName:'Chiayi'},10:{arr:370,dep:368,stationName:'Tainan'},11:{arr:320,dep:320,stationName:'Zuoying'}} },
+    { trainNo: '104', direction: 1, times: [600, 580, 560, 530, 500, null, 460, null, null, 420, 396, 380], stationTimes: {0:{arr:600,dep:600,stationName:'Nangang'},1:{arr:598,dep:596,stationName:'Taipei'},2:{arr:590,dep:588,stationName:'Banqiao'},3:{arr:568,dep:566,stationName:'Taoyuan'},4:{arr:547,dep:545,stationName:'Hsinchu'},6:{arr:508,dep:506,stationName:'Taichung'},9:{arr:458,dep:456,stationName:'Chiayi'},10:{arr:430,dep:428,stationName:'Tainan'},11:{arr:380,dep:380,stationName:'Zuoying'}} },
+    { trainNo: '112', direction: 1, times: [660, 645, 635, 610, 585, 565, 540, 525, 505, 485, 456, 435], stationTimes: {0:{arr:660,dep:660,stationName:'Nangang'},1:{arr:658,dep:656,stationName:'Taipei'},2:{arr:648,dep:646,stationName:'Banqiao'},3:{arr:623,dep:621,stationName:'Taoyuan'},4:{arr:598,dep:596,stationName:'Hsinchu'},5:{arr:578,dep:576,stationName:'Miaoli'},6:{arr:553,dep:551,stationName:'Taichung'},7:{arr:538,dep:536,stationName:'Changhua'},8:{arr:518,dep:516,stationName:'Yunlin'},9:{arr:498,dep:496,stationName:'Chiayi'},10:{arr:469,dep:467,stationName:'Tainan'},11:{arr:435,dep:435,stationName:'Zuoying'}} },
+    { trainNo: '106', direction: 1, times: [720, 700, 680, 650, 620, null, 580, null, null, 540, 516, 500], stationTimes: {0:{arr:720,dep:720,stationName:'Nangang'},1:{arr:718,dep:716,stationName:'Taipei'},2:{arr:710,dep:708,stationName:'Banqiao'},3:{arr:688,dep:686,stationName:'Taoyuan'},4:{arr:667,dep:665,stationName:'Hsinchu'},6:{arr:628,dep:626,stationName:'Taichung'},9:{arr:578,dep:576,stationName:'Chiayi'},10:{arr:550,dep:548,stationName:'Tainan'},11:{arr:500,dep:500,stationName:'Zuoying'}} },
+    { trainNo: '114', direction: 1, times: [810, 795, 785, 760, 735, 715, 690, 675, 655, 635, 606, 585], stationTimes: {0:{arr:810,dep:810,stationName:'Nangang'},1:{arr:808,dep:806,stationName:'Taipei'},2:{arr:798,dep:796,stationName:'Banqiao'},3:{arr:773,dep:771,stationName:'Taoyuan'},4:{arr:748,dep:746,stationName:'Hsinchu'},5:{arr:728,dep:726,stationName:'Miaoli'},6:{arr:703,dep:701,stationName:'Taichung'},7:{arr:688,dep:686,stationName:'Changhua'},8:{arr:668,dep:666,stationName:'Yunlin'},9:{arr:648,dep:646,stationName:'Chiayi'},10:{arr:619,dep:617,stationName:'Tainan'},11:{arr:585,dep:585,stationName:'Zuoying'}} },
+    { trainNo: '108', direction: 1, times: [900, 880, 860, 830, 800, null, 760, null, null, 720, 696, 680], stationTimes: {0:{arr:900,dep:900,stationName:'Nangang'},1:{arr:898,dep:896,stationName:'Taipei'},2:{arr:890,dep:888,stationName:'Banqiao'},3:{arr:868,dep:866,stationName:'Taoyuan'},4:{arr:847,dep:845,stationName:'Hsinchu'},6:{arr:808,dep:806,stationName:'Taichung'},9:{arr:758,dep:756,stationName:'Chiayi'},10:{arr:730,dep:728,stationName:'Tainan'},11:{arr:680,dep:680,stationName:'Zuoying'}} },
+    { trainNo: '116', direction: 1, times: [990, 975, 965, 940, 915, 895, 870, 855, 835, 815, 786, 765], stationTimes: {0:{arr:990,dep:990,stationName:'Nangang'},1:{arr:988,dep:986,stationName:'Taipei'},2:{arr:978,dep:976,stationName:'Banqiao'},3:{arr:953,dep:951,stationName:'Taoyuan'},4:{arr:928,dep:926,stationName:'Hsinchu'},5:{arr:908,dep:906,stationName:'Miaoli'},6:{arr:883,dep:881,stationName:'Taichung'},7:{arr:868,dep:866,stationName:'Changhua'},8:{arr:848,dep:846,stationName:'Yunlin'},9:{arr:828,dep:826,stationName:'Chiayi'},10:{arr:799,dep:797,stationName:'Tainan'},11:{arr:765,dep:765,stationName:'Zuoying'}} },
+    { trainNo: '110', direction: 1, times: [1080, 1060, 1040, 1010, 980, null, 940, null, null, 900, 876, 860], stationTimes: {0:{arr:1080,dep:1080,stationName:'Nangang'},1:{arr:1078,dep:1076,stationName:'Taipei'},2:{arr:1070,dep:1068,stationName:'Banqiao'},3:{arr:1048,dep:1046,stationName:'Taoyuan'},4:{arr:1027,dep:1025,stationName:'Hsinchu'},6:{arr:988,dep:986,stationName:'Taichung'},9:{arr:938,dep:936,stationName:'Chiayi'},10:{arr:910,dep:908,stationName:'Tainan'},11:{arr:860,dep:860,stationName:'Zuoying'}} },
+    { trainNo: '118', direction: 1, times: [1200, 1185, 1175, 1150, 1125, 1105, 1080, 1065, 1045, 1025, 996, 975], stationTimes: {0:{arr:1200,dep:1200,stationName:'Nangang'},1:{arr:1198,dep:1196,stationName:'Taipei'},2:{arr:1188,dep:1186,stationName:'Banqiao'},3:{arr:1163,dep:1161,stationName:'Taoyuan'},4:{arr:1138,dep:1136,stationName:'Hsinchu'},5:{arr:1118,dep:1116,stationName:'Miaoli'},6:{arr:1093,dep:1091,stationName:'Taichung'},7:{arr:1078,dep:1076,stationName:'Changhua'},8:{arr:1058,dep:1056,stationName:'Yunlin'},9:{arr:1038,dep:1036,stationName:'Chiayi'},10:{arr:1009,dep:1007,stationName:'Tainan'},11:{arr:975,dep:975,stationName:'Zuoying'}} },
+    { trainNo: '120', direction: 1, times: [1320, 1300, 1280, 1250, 1220, null, 1180, null, null, 1140, 1116, 1100], stationTimes: {0:{arr:1320,dep:1320,stationName:'Nangang'},1:{arr:1318,dep:1316,stationName:'Taipei'},2:{arr:1310,dep:1308,stationName:'Banqiao'},3:{arr:1288,dep:1286,stationName:'Taoyuan'},4:{arr:1267,dep:1265,stationName:'Hsinchu'},6:{arr:1228,dep:1226,stationName:'Taichung'},9:{arr:1178,dep:1176,stationName:'Chiayi'},10:{arr:1150,dep:1148,stationName:'Tainan'},11:{arr:1100,dep:1100,stationName:'Zuoying'}} }
+  ]
+};
+
+// Real timetable data (loaded from TDX API, initialized with demo fallback)
+let timetableData = { southbound: [...DEMO_TIMETABLE.southbound], northbound: [...DEMO_TIMETABLE.northbound] };
 let isLoadingTimetable = false;
 let timetableError = null;
 let lastTimetableUpdate = null;
@@ -957,12 +986,9 @@ function setDirection(dir) {
     tab.classList.toggle('active', tab.dataset.dir === dir);
   });
   updateDestOptions();
-  // Clear destination if it's no longer valid
-  const destSelect = document.getElementById('dest-station-select');
-  if (destSelect.selectedOptions[0]?.disabled) {
-    destSelect.value = '';
-    selectedDestStation = null;
-  }
+  // Always clear destination on direction switch
+  selectedDestStation = null;
+  document.getElementById('dest-station-select').value = '';
   renderTrainSchedule();
 }
 
@@ -992,11 +1018,16 @@ function getTrainsForStation(stationId, direction) {
   let destIndex;
   if (selectedDestStation) {
     destIndex = STATIONS.findIndex(s => s.id === selectedDestStation);
+    if (destIndex === -1) {
+      destIndex = direction === 'south' ? STATIONS.length - 1 : 0;
+    }
   } else if (direction === 'south') {
     destIndex = STATIONS.length - 1; // Zuoying
   } else {
     destIndex = 0; // Nangang
   }
+
+  if (destIndex < 0 || destIndex >= STATIONS.length) return [];
 
   const trains = schedule.map(train => {
     const depTime = train.times[stationIndex];
@@ -1034,6 +1065,7 @@ function getTrainsForStation(stationId, direction) {
     return {
       trainNo: train.trainNo,
       depTime: depTime,
+      adjustedDepTime: adjustedDepTime,
       depTimeStr: formatTime(depTime),
       arrTime: arrTime,
       arrTimeStr: formatTime(arrTime),
@@ -1051,15 +1083,10 @@ function getTrainsForStation(stationId, direction) {
     };
   }).filter(t => t !== null);
 
-  // Sort by departure time, show trains including recently departed
+  // Sort by adjusted departure time, show trains including recently departed
   return trains
     .filter(t => !t.isDeparted)
-    .sort((a, b) => {
-      // Handle day wraparound for sorting
-      const aNorm = a.depTime < now - 120 ? a.depTime + 1440 : a.depTime;
-      const bNorm = b.depTime < now - 120 ? b.depTime + 1440 : b.depTime;
-      return aNorm - bNorm;
-    })
+    .sort((a, b) => a.adjustedDepTime - b.adjustedDepTime)
     .slice(0, 20); // Show more trains
 }
 
@@ -1225,7 +1252,7 @@ function renderStationList() {
     let distanceHtml = '';
     if (userLocation) {
       const dist = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
-      distanceHtml = `<span class="station-distance">${formatDistance(dist)}</span>`;
+      distanceHtml = `<span class="station-distance">${formatDistance(dist, isZh)}</span>`;
     }
 
     return `
@@ -1283,7 +1310,7 @@ function getPopupContent(station) {
   let distanceHtml = '';
   if (userLocation) {
     const dist = getDistanceInMeters(userLocation.lat, userLocation.lng, station.lat, station.lng);
-    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(dist)}`;
+    distanceHtml = `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(dist, isZh)}`;
   }
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
