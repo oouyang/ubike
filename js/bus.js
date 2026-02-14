@@ -139,7 +139,34 @@ const BUS_CITIES = {
     HualienCounty: { name: { en: 'Hualien', zh: '花蓮縣' }, center: [23.9917, 121.6011] },
     TaitungCounty: { name: { en: 'Taitung', zh: '台東縣' }, center: [22.7583, 121.1444] },
     KinmenCounty: { name: { en: 'Kinmen', zh: '金門縣' }, center: [24.4493, 118.3767] },
-    PenghuCounty: { name: { en: 'Penghu', zh: '澎湖縣' }, center: [23.5711, 119.5793] }
+    PenghuCounty: { name: { en: 'Penghu', zh: '澎湖縣' }, center: [23.5711, 119.5793] },
+    LianjiangCounty: { name: { en: 'Lianjiang', zh: '連江縣' }, center: [26.1505, 119.9499] }
+};
+
+// Adjacency map: cities that share bus routes across administrative boundaries
+const ADJACENT_CITIES = {
+    Taipei:         ['NewTaipei', 'Keelung'],
+    NewTaipei:      ['Taipei', 'Keelung', 'Taoyuan', 'YilanCounty'],
+    Keelung:        ['Taipei', 'NewTaipei'],
+    Taoyuan:        ['NewTaipei', 'Hsinchu', 'HsinchuCounty'],
+    Hsinchu:        ['HsinchuCounty', 'Taoyuan', 'MiaoliCounty'],
+    HsinchuCounty:  ['Hsinchu', 'Taoyuan', 'MiaoliCounty'],
+    MiaoliCounty:   ['Hsinchu', 'HsinchuCounty', 'Taichung'],
+    Taichung:       ['MiaoliCounty', 'ChanghuaCounty', 'NantouCounty'],
+    ChanghuaCounty: ['Taichung', 'NantouCounty', 'YunlinCounty'],
+    NantouCounty:   ['Taichung', 'ChanghuaCounty'],
+    YunlinCounty:   ['ChanghuaCounty', 'ChiayiCounty', 'Chiayi'],
+    Chiayi:         ['ChiayiCounty', 'YunlinCounty'],
+    ChiayiCounty:   ['Chiayi', 'YunlinCounty', 'Tainan'],
+    Tainan:         ['ChiayiCounty', 'Kaohsiung'],
+    Kaohsiung:      ['Tainan', 'PingtungCounty'],
+    PingtungCounty: ['Kaohsiung'],
+    YilanCounty:    ['NewTaipei'],
+    HualienCounty:  [],
+    TaitungCounty:  [],
+    KinmenCounty:   [],
+    PenghuCounty:   [],
+    LianjiangCounty:[]
 };
 
 // State
@@ -156,7 +183,6 @@ let accessToken = null;
 let tokenExpiry = 0;
 let isZh = (typeof detectLanguage === 'function') ? detectLanguage() === 'zh' : (navigator.language || navigator.userLanguage).startsWith('zh');
 let refreshTimer = null;
-let scheduleTimer = null;
 
 // Route schedule state
 let currentRouteCity = 'Taipei';
@@ -167,6 +193,12 @@ let selectedOriginStop = null;
 let selectedDestStop = null;
 let fetchedRoutes = {}; // Cache for fetched routes by city
 let fetchedRouteStops = {}; // Cache for fetched route stops
+let routeArrivalData = {}; // Real-time arrival data keyed by "direction_StopUID"
+let routeArrivalTimer = null; // 30s auto-refresh timer for route arrivals
+let routeBusData = { nearStop: {}, busPositions: [] }; // Real-time bus plate & GPS data
+let busMarkers = []; // Live bus markers on map (separate from stop markers)
+let mergedRoutesCache = {};       // Merged routes (primary + adjacent) per city
+let activeRouteSourceCity = null;  // Actual TDX city for the selected route
 let isLoadingRoutes = false;
 let isLoadingStops = false;
 let bottomSheet = null;
@@ -289,6 +321,8 @@ function setupTabs() {
                 }
                 updateRouteMapMarkers();
             } else if (btn.dataset.tab === 'nearby') {
+                // Clear bus markers when leaving schedule tab
+                clearBusMarkers();
                 // Load nearby stops if not loaded yet
                 if (busStops.length === 0) {
                     await loadNearbyStops();
@@ -341,12 +375,12 @@ async function updateRouteSelector() {
         return;
     }
 
-    // Fetch routes from TDX (or use cache)
-    let routes = fetchedRoutes[currentRouteCity];
+    // Fetch merged routes (primary + adjacent cities)
+    let routes = mergedRoutesCache[currentRouteCity];
     if (!routes) {
         isLoadingRoutes = true;
         select.innerHTML = `<option value="">${isZh ? '載入路線中...' : 'Loading routes...'}</option>`;
-        routes = await fetchRoutes(currentRouteCity);
+        routes = await fetchMergedRoutes(currentRouteCity);
         isLoadingRoutes = false;
     }
 
@@ -377,7 +411,11 @@ async function updateRouteSelector() {
         filteredRoutes.forEach(route => {
             const name = isZh ? route.name.zh : route.name.en;
             const terminals = isZh ? route.terminals.zh : route.terminals.en;
-            select.innerHTML += `<option value="${route.id}">${name} (${terminals})</option>`;
+            // Show city badge for adjacent city routes
+            const cityBadge = route.isAdjacentCity
+                ? ` [${isZh ? BUS_CITIES[route.sourceCity].name.zh : BUS_CITIES[route.sourceCity].name.en}]`
+                : '';
+            select.innerHTML += `<option value="${route.id}" data-source-city="${route.sourceCity}">${name} (${terminals})${cityBadge}</option>`;
         });
     }
 
@@ -398,11 +436,24 @@ async function onRouteSearch() {
 
 async function _onRouteCityChangeImpl() {
     const select = document.getElementById('route-city-select');
+    const oldCity = currentRouteCity;
     currentRouteCity = select.value;
     currentRoute = '';
     selectedOriginStop = null;
     selectedDestStop = null;
+    activeRouteSourceCity = null;
     routeSearchQuery = ''; // Clear search
+    routeArrivalData = {};
+    routeBusData = { nearStop: {}, busPositions: [] };
+
+    // Clear merged routes cache for old city
+    delete mergedRoutesCache[oldCity];
+
+    // Clear arrival timer
+    if (routeArrivalTimer) {
+        clearInterval(routeArrivalTimer);
+        routeArrivalTimer = null;
+    }
 
     // Clear search input
     const searchInput = document.getElementById('route-search-input');
@@ -431,18 +482,39 @@ async function onRouteChange() {
     selectedOriginStop = null;
     selectedDestStop = null;
 
+    // Read source city from selected option's data attribute
+    const selectedOption = select.options[select.selectedIndex];
+    activeRouteSourceCity = (selectedOption && selectedOption.dataset.sourceCity) || currentRouteCity;
+
+    // Clear old arrival timer
+    if (routeArrivalTimer) {
+        clearInterval(routeArrivalTimer);
+        routeArrivalTimer = null;
+    }
+    routeArrivalData = {};
+    routeBusData = { nearStop: {}, busPositions: [] };
+
     if (currentRoute) {
         // Show loading state
         isLoadingStops = true;
         renderRouteSchedule(); // Show loading indicator
 
-        // Fetch stops for both directions
+        // Fetch stops, real-time arrivals, and bus positions using the actual source city
         await Promise.all([
-            fetchRouteStopsFromTDX(currentRouteCity, currentRoute, 'go'),
-            fetchRouteStopsFromTDX(currentRouteCity, currentRoute, 'back')
+            fetchRouteStopsFromTDX(activeRouteSourceCity, currentRoute, 'go'),
+            fetchRouteStopsFromTDX(activeRouteSourceCity, currentRoute, 'back'),
+            fetchRouteArrivals(activeRouteSourceCity, currentRoute).then(data => {
+                routeArrivalData = data;
+            }),
+            fetchRouteBusPositions(activeRouteSourceCity, currentRoute).then(data => {
+                routeBusData = data;
+            })
         ]);
 
         isLoadingStops = false;
+
+        // Start 30s auto-refresh for route arrivals
+        routeArrivalTimer = setInterval(refreshRouteArrivals, 30000);
     }
 
     updateStopSelectors();
@@ -538,11 +610,12 @@ async function setRouteDirection(dir) {
 
     // Fetch stops for new direction if not cached
     if (currentRoute) {
-        const cacheKey = `${currentRouteCity}_${currentRoute}_${dir}`;
+        const city = activeRouteSourceCity || currentRouteCity;
+        const cacheKey = `${city}_${currentRoute}_${dir}`;
         if (!fetchedRouteStops[cacheKey]) {
             isLoadingStops = true;
             renderRouteSchedule();
-            await fetchRouteStopsFromTDX(currentRouteCity, currentRoute, dir);
+            await fetchRouteStopsFromTDX(city, currentRoute, dir);
             isLoadingStops = false;
         }
     }
@@ -550,11 +623,17 @@ async function setRouteDirection(dir) {
     updateStopSelectors();
     renderRouteSchedule();
     updateRouteMapMarkers();
+
+    // Refresh arrivals after direction change
+    if (currentRoute) {
+        refreshRouteArrivals();
+    }
 }
 
 function getRouteStops(routeId, direction) {
-    // Get fetched TDX data from cache
-    const cacheKey = `${currentRouteCity}_${routeId}_${direction}`;
+    // Get fetched TDX data from cache using actual source city
+    const city = activeRouteSourceCity || currentRouteCity;
+    const cacheKey = `${city}_${routeId}_${direction}`;
     return fetchedRouteStops[cacheKey] || [];
 }
 
@@ -615,6 +694,77 @@ function getNextBusTime(scheduleInfo) {
     return { time: timeStr, waitMinutes: nextBusMinutes - currentMinutes };
 }
 
+// Render stop items HTML for a given direction — reusable for single and dual-column layouts
+function renderStopItems(stops, direction, arrivalMap, opts = {}) {
+    const { originIdx = -1, destIdx = -1, nextBusDepartureMinutes = null, firstStopMinutes = 0 } = opts;
+
+    return stops.map((stop, index) => {
+        const isFirst = index === 0;
+        const isLast = index === stops.length - 1;
+        const stopName = isZh ? stop.name.zh : stop.name.en;
+
+        const isOrigin = index === originIdx;
+        const isDestination = index === destIdx;
+        const isInTrip = originIdx >= 0 && destIdx >= 0 && index >= originIdx && index <= destIdx;
+
+        // Calculate elapsed time from first stop
+        const stopMinutes = timeToMinutes(stop.time);
+        const elapsedFromFirst = stopMinutes - firstStopMinutes;
+
+        // Calculate elapsed time from origin (for display)
+        const baseIdx = originIdx >= 0 ? originIdx : 0;
+        const baseMinutes = timeToMinutes(stops[baseIdx]?.time);
+        const elapsedFromOrigin = stopMinutes - baseMinutes;
+
+        // Calculate distance-based ETA
+        let arrivalTimeStr = '';
+        if (nextBusDepartureMinutes !== null) {
+            const arrivalMinutes = nextBusDepartureMinutes + elapsedFromFirst;
+            const arrH = Math.floor(arrivalMinutes / 60) % 24;
+            const arrM = arrivalMinutes % 60;
+            arrivalTimeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+        }
+
+        // Look up real-time arrival data
+        const arrivalKey = `${direction}_${stop.stopUID}`;
+        const realTime = arrivalMap[arrivalKey];
+        const nearStopInfo = routeBusData.nearStop[arrivalKey];
+        let realTimeBadge = '';
+        if (realTime) {
+            const rtText = formatArrivalTime(realTime.estimateTime, realTime.stopStatus);
+            const rtClass = getArrivalClass(realTime.estimateTime, realTime.stopStatus);
+            const plateTag = nearStopInfo && nearStopInfo.plate ? `<span class="plate-tag">${nearStopInfo.plate}</span>` : '';
+            realTimeBadge = `<span class="arrival-badge ${rtClass}" style="margin-left:4px;">${rtText}${plateTag}</span>`;
+        } else if (nearStopInfo && nearStopInfo.plate) {
+            const eventText = nearStopInfo.a2event === 1 ? (isZh ? '進站中' : 'Arriving') : (isZh ? '離站中' : 'Departing');
+            realTimeBadge = `<span class="arrival-badge arriving" style="margin-left:4px;">${eventText}<span class="plate-tag">${nearStopInfo.plate}</span></span>`;
+        }
+
+        // Build class list
+        let classList = ['route-stop-item'];
+        if (isFirst) classList.push('first-stop');
+        if (isLast) classList.push('last-stop');
+        if (isOrigin) classList.push('selected-origin');
+        if (isDestination) classList.push('selected-dest');
+        if (isInTrip && !isOrigin && !isDestination) classList.push('in-trip');
+
+        return `
+            <li class="${classList.join(' ')}">
+                <div class="stop-sequence ${isFirst || isLast ? 'terminal' : ''} ${isOrigin ? 'origin-marker' : ''} ${isDestination ? 'dest-marker' : ''}">${index + 1}</div>
+                <div class="route-stop-info">
+                    <div class="route-stop-name">${stopName}${isOrigin ? ` <span style="color:#2E7D32;font-size:0.8em;">(${isZh ? '上車' : 'Board'})</span>` : ''}${isDestination ? ` <span style="color:#c62828;font-size:0.8em;">(${isZh ? '下車' : 'Alight'})</span>` : ''}</div>
+                    <div class="route-stop-details">
+                        ${realTimeBadge || (arrivalTimeStr ? `<span class="arrival-time-est" style="${realTimeBadge ? '' : 'opacity:0.6;'}">${isZh ? '預計' : 'ETA'} ${arrivalTimeStr}</span>` : '')}
+                        ${index > baseIdx ? `<span class="elapsed-time">+${elapsedFromOrigin} ${isZh ? '分' : 'min'}</span>` : ''}
+                        ${isFirst && !isOrigin ? `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>` : ''}
+                        ${isLast && !isDestination ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join('');
+}
+
 function renderRouteSchedule() {
     const listEl = document.getElementById('route-stop-list');
     const timeEl = document.getElementById('schedule-time');
@@ -649,7 +799,7 @@ function renderRouteSchedule() {
     const totalJourneyTime = calculateTotalJourneyTime(stops);
 
     // Route summary card (fare, total time, etc.)
-    const routes = fetchedRoutes[currentRouteCity] || [];
+    const routes = mergedRoutesCache[currentRouteCity] || fetchedRoutes[activeRouteSourceCity || currentRouteCity] || [];
     const routeData = routes.find(r => r.id === currentRoute);
     const routeTerminals = routeData ? (isZh ? routeData.terminals.zh : routeData.terminals.en) : '';
 
@@ -711,9 +861,56 @@ function renderRouteSchedule() {
         ${fareInfo.transferDiscount ? `<div class="transfer-note">🎫 ${isZh ? '可享捷運/公車轉乘優惠' : 'MRT/Bus transfer discount available'}</div>` : ''}
     </li>`;
 
-    // Next bus info header
+    // Cross-city route search info bar
+    let crossCityHtml = '';
+    if (currentRoute) {
+        const otherCities = findRouteInOtherCities(currentRoute);
+        if (otherCities.length > 0) {
+            const cityLinks = otherCities.map(c =>
+                `<a href="#" onclick="event.preventDefault();switchToRouteCity('${c.city}')" style="color:#795548;font-weight:bold;text-decoration:underline;">${c.cityName}</a>`
+            ).join(', ');
+            crossCityHtml = `<li style="padding:8px 15px;background:#FFF8E1;border-bottom:1px solid #FFE082;font-size:0.85em;color:#795548;">
+                📌 ${currentRoute} ${isZh ? '也在' : 'also in'}: ${cityLinks}
+            </li>`;
+        }
+    }
+
+    // Check if we have real-time arrival data for the first stop
+    const hasRealTimeData = Object.keys(routeArrivalData).length > 0;
+    const firstStopKey = stops.length > 0 ? `${routeDirection}_${stops[0].stopUID}` : null;
+    const firstStopArrival = firstStopKey ? routeArrivalData[firstStopKey] : null;
+
+    // Next bus info header — use real-time data when available
     let headerHtml = '';
-    if (nextBus.ended) {
+    if (hasRealTimeData && firstStopArrival) {
+        const timeStr = formatArrivalTime(firstStopArrival.estimateTime, firstStopArrival.stopStatus);
+        const arrClass = getArrivalClass(firstStopArrival.estimateTime, firstStopArrival.stopStatus);
+        const isArriving = arrClass === 'arriving';
+        const isEnded = firstStopArrival.stopStatus === 3 || firstStopArrival.stopStatus === 4;
+
+        if (isEnded) {
+            headerHtml = `<li class="route-stop-item service-ended">
+                <div class="stop-sequence" style="background:#E65100;">!</div>
+                <div class="route-stop-info">
+                    <div class="route-stop-name" style="color:#E65100;">${timeStr}</div>
+                    <div class="route-stop-time">${isZh ? '首班車' : 'First bus'}: ${scheduleInfo.firstBus} | ${isZh ? '末班車' : 'Last bus'}: ${scheduleInfo.lastBus}</div>
+                </div>
+            </li>`;
+        } else {
+            headerHtml = `<li class="route-stop-item next-bus-item ${isArriving ? 'arriving-soon' : ''}">
+                <div class="stop-sequence" style="background:${isArriving ? '#E65100' : '#2E7D32'};">🚌</div>
+                <div class="route-stop-info">
+                    <div class="next-bus-header">
+                        <span class="next-bus-label">${isZh ? '起站即時' : 'First Stop Live'}</span>
+                        ${isArriving ? `<span class="next-badge">${isZh ? '即將到站' : 'NEXT'}</span>` : ''}
+                    </div>
+                    <div class="next-bus-time">${timeStr}</div>
+                    <div class="route-stop-time">${isZh ? '即時資料' : 'Real-time data'} · ${isZh ? '每30秒更新' : 'Updates every 30s'}</div>
+                </div>
+                <div class="bus-eta ${arrClass}">${timeStr}</div>
+            </li>`;
+        }
+    } else if (nextBus.ended) {
         headerHtml = `<li class="route-stop-item service-ended">
             <div class="stop-sequence" style="background:#E65100;">!</div>
             <div class="route-stop-info">
@@ -752,59 +949,53 @@ function renderRouteSchedule() {
     // Get first stop base time for elapsed calculation
     const firstStopMinutes = timeToMinutes(stops[0]?.time);
 
-    const stopsHtml = stops.map((stop, index) => {
-        const isFirst = index === 0;
-        const isLast = index === stops.length - 1;
-        const stopName = isZh ? stop.name.zh : stop.name.en;
+    // PC dual-direction layout (>=1024px and not mobile bottom sheet)
+    const isDualMode = window.innerWidth >= 1024;
+    const tabSchedule = document.getElementById('tab-schedule');
 
-        // Check if this stop is selected origin/destination
-        const isOrigin = index === originIdx;
-        const isDestination = index === destIdx;
-        const isInTrip = originIdx >= 0 && destIdx >= 0 && index >= originIdx && index <= destIdx;
+    if (isDualMode && currentRoute) {
+        // Add/remove dual mode class for CSS
+        tabSchedule?.classList.add('pc-dual-mode');
 
-        // Calculate elapsed time from first stop
-        const stopMinutes = timeToMinutes(stop.time);
-        const elapsedFromFirst = stopMinutes - firstStopMinutes;
+        const goStops = getRouteStops(currentRoute, 'go');
+        const backStops = getRouteStops(currentRoute, 'back');
+        const goFirstMinutes = timeToMinutes(goStops[0]?.time);
+        const backFirstMinutes = timeToMinutes(backStops[0]?.time);
 
-        // Calculate elapsed time from origin (for display)
-        const baseIdx = originIdx >= 0 ? originIdx : 0;
-        const baseMinutes = timeToMinutes(stops[baseIdx]?.time);
-        const elapsedFromOrigin = stopMinutes - baseMinutes;
+        const goStopsHtml = renderStopItems(goStops, 'go', routeArrivalData, {
+            originIdx: routeDirection === 'go' ? originIdx : -1,
+            destIdx: routeDirection === 'go' ? destIdx : -1,
+            nextBusDepartureMinutes,
+            firstStopMinutes: goFirstMinutes
+        });
+        const backStopsHtml = renderStopItems(backStops, 'back', routeArrivalData, {
+            originIdx: routeDirection === 'back' ? originIdx : -1,
+            destIdx: routeDirection === 'back' ? destIdx : -1,
+            nextBusDepartureMinutes: null,
+            firstStopMinutes: backFirstMinutes
+        });
 
-        // Calculate estimated arrival time at this stop based on next bus
-        let arrivalTimeStr = '';
-        if (nextBusDepartureMinutes !== null) {
-            const arrivalMinutes = nextBusDepartureMinutes + elapsedFromFirst;
-            const arrH = Math.floor(arrivalMinutes / 60) % 24;
-            const arrM = arrivalMinutes % 60;
-            arrivalTimeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
-        }
+        const dualHtml = `<li class="dual-direction-container">
+            <div class="dual-direction-column">
+                <div class="dual-column-header">→ ${isZh ? '去程' : 'Outbound'} (${goStops.length} ${isZh ? '站' : 'stops'})</div>
+                <ul class="route-stop-list">${goStopsHtml}</ul>
+            </div>
+            <div class="dual-direction-column">
+                <div class="dual-column-header">← ${isZh ? '返程' : 'Return'} (${backStops.length} ${isZh ? '站' : 'stops'})</div>
+                <ul class="route-stop-list">${backStopsHtml}</ul>
+            </div>
+        </li>`;
 
-        // Build class list
-        let classList = ['route-stop-item'];
-        if (isFirst) classList.push('first-stop');
-        if (isLast) classList.push('last-stop');
-        if (isOrigin) classList.push('selected-origin');
-        if (isDestination) classList.push('selected-dest');
-        if (isInTrip && !isOrigin && !isDestination) classList.push('in-trip');
+        listEl.innerHTML = summaryHtml + crossCityHtml + headerHtml + dualHtml;
+    } else {
+        tabSchedule?.classList.remove('pc-dual-mode');
 
-        return `
-            <li class="${classList.join(' ')}">
-                <div class="stop-sequence ${isFirst || isLast ? 'terminal' : ''} ${isOrigin ? 'origin-marker' : ''} ${isDestination ? 'dest-marker' : ''}">${index + 1}</div>
-                <div class="route-stop-info">
-                    <div class="route-stop-name">${stopName}${isOrigin ? ` <span style="color:#2E7D32;font-size:0.8em;">(${isZh ? '上車' : 'Board'})</span>` : ''}${isDestination ? ` <span style="color:#c62828;font-size:0.8em;">(${isZh ? '下車' : 'Alight'})</span>` : ''}</div>
-                    <div class="route-stop-details">
-                        ${arrivalTimeStr ? `<span class="arrival-time-est">${isZh ? '預計' : 'ETA'} ${arrivalTimeStr}</span>` : ''}
-                        ${index > baseIdx ? `<span class="elapsed-time">+${elapsedFromOrigin} ${isZh ? '分' : 'min'}</span>` : ''}
-                        ${isFirst && !isOrigin ? `<span class="terminal-label">${isZh ? '起站' : 'Start'}</span>` : ''}
-                        ${isLast && !isDestination ? `<span class="terminal-label">${isZh ? '終點' : 'End'}</span>` : ''}
-                    </div>
-                </div>
-            </li>
-        `;
-    }).join('');
+        const stopsHtml = renderStopItems(stops, routeDirection, routeArrivalData, {
+            originIdx, destIdx, nextBusDepartureMinutes, firstStopMinutes
+        });
 
-    listEl.innerHTML = summaryHtml + headerHtml + stopsHtml;
+        listEl.innerHTML = summaryHtml + crossCityHtml + headerHtml + stopsHtml;
+    }
 
     // Update sheet summary
     updateSheetSummary();
@@ -1020,6 +1211,63 @@ async function fetchRoutes(city) {
     }
 }
 
+// Get adjacent cities for a given city
+function getAdjacentCities(city) {
+    return ADJACENT_CITIES[city] || [];
+}
+
+// Fetch and merge routes from primary city + adjacent cities
+async function fetchMergedRoutes(city) {
+    if (mergedRoutesCache[city]) {
+        return mergedRoutesCache[city];
+    }
+
+    const adjacentCities = getAdjacentCities(city);
+
+    // Fetch primary + all adjacent cities in parallel
+    const allCities = [city, ...adjacentCities];
+    const results = await Promise.all(
+        allCities.map(c => fetchRoutes(c).catch(() => []))
+    );
+
+    // Build merged list: primary city first, then adjacent
+    const seenIds = new Set();
+    const merged = [];
+
+    // Primary city routes (no badge needed)
+    const primaryRoutes = results[0] || [];
+    primaryRoutes.forEach(route => {
+        seenIds.add(route.id);
+        merged.push({ ...route, sourceCity: city, isAdjacentCity: false });
+    });
+
+    // Adjacent city routes (deduplicate — primary wins)
+    for (let i = 1; i < allCities.length; i++) {
+        const adjCity = allCities[i];
+        const adjRoutes = results[i] || [];
+        adjRoutes.forEach(route => {
+            if (!seenIds.has(route.id)) {
+                seenIds.add(route.id);
+                merged.push({ ...route, sourceCity: adjCity, isAdjacentCity: true });
+            }
+        });
+    }
+
+    // Sort: numbers first, then alphabetical
+    merged.sort((a, b) => {
+        const aNum = parseInt(a.id);
+        const bNum = parseInt(b.id);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        if (!isNaN(aNum)) return -1;
+        if (!isNaN(bNum)) return 1;
+        return a.id.localeCompare(b.id, 'zh-TW');
+    });
+
+    mergedRoutesCache[city] = merged;
+    console.log(`[Bus] Merged routes for ${city}: ${primaryRoutes.length} primary + ${merged.length - primaryRoutes.length} adjacent = ${merged.length} total`);
+    return merged;
+}
+
 // Fetch stops for a specific route from TDX
 async function fetchRouteStopsFromTDX(city, routeName, direction) {
     const cacheKey = `${city}_${routeName}_${direction}`;
@@ -1100,6 +1348,203 @@ async function fetchRouteStopsFromTDX(city, routeName, direction) {
         console.error('[Bus] Error fetching route stops:', error);
         return null;
     }
+}
+
+// Fetch real-time arrival data for a specific route from TDX
+async function fetchRouteArrivals(city, routeName) {
+    const token = await getAccessToken();
+    if (!token) {
+        console.warn('[Bus] No TDX token for route arrivals');
+        return {};
+    }
+
+    try {
+        const encodedRouteName = encodeURIComponent(routeName);
+        const apiPath = `/v2/Bus/EstimatedTimeOfArrival/City/${city}/${encodedRouteName}?$format=JSON`;
+
+        let response;
+        if (useProxy()) {
+            response = await fetchWithRetry(TDX_PROXY_URL + apiPath);
+        } else {
+            response = await fetchWithRetry(TDX_CONFIG.apiUrl + apiPath, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        }
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const result = {};
+
+        data.forEach(item => {
+            const dir = item.Direction === 0 ? 'go' : 'back';
+            const key = `${dir}_${item.StopUID}`;
+            result[key] = {
+                estimateTime: item.EstimateTime,
+                stopStatus: item.StopStatus,
+                direction: item.Direction
+            };
+        });
+
+        console.log(`[Bus] Fetched route arrivals for ${routeName}: ${Object.keys(result).length} entries`);
+        return result;
+    } catch (error) {
+        console.error('[Bus] Error fetching route arrivals:', error);
+        return {};
+    }
+}
+
+// Fetch real-time bus positions and near-stop data for a route
+async function fetchRouteBusPositions(city, routeName) {
+    const token = await getAccessToken();
+    if (!token) {
+        return { nearStop: {}, busPositions: [] };
+    }
+
+    const encodedRouteName = encodeURIComponent(routeName);
+    const nearStopPath = `/v2/Bus/RealTimeNearStop/City/${city}/${encodedRouteName}?$format=JSON`;
+    const frequencyPath = `/v2/Bus/RealTimeByFrequency/City/${city}/${encodedRouteName}?$format=JSON`;
+
+    const buildUrl = (path) => useProxy() ? TDX_PROXY_URL + path : TDX_CONFIG.apiUrl + path;
+    const fetchOpts = useProxy() ? {} : { headers: { 'Authorization': `Bearer ${token}` } };
+
+    try {
+        const [nearStopRes, frequencyRes] = await Promise.all([
+            fetchWithRetry(buildUrl(nearStopPath), fetchOpts).catch(() => null),
+            fetchWithRetry(buildUrl(frequencyPath), fetchOpts).catch(() => null)
+        ]);
+
+        const nearStop = {};
+        if (nearStopRes && nearStopRes.ok) {
+            const nearStopData = await nearStopRes.json();
+            nearStopData.forEach(item => {
+                if (item.BusStatus !== undefined && item.BusStatus !== 0) return; // skip non-normal buses
+                const dir = item.Direction === 0 ? 'go' : 'back';
+                const key = `${dir}_${item.StopUID}`;
+                nearStop[key] = {
+                    plate: item.PlateNumb,
+                    a2event: item.A2EventType // 0=departing, 1=arriving
+                };
+            });
+        }
+
+        const busPositions = [];
+        if (frequencyRes && frequencyRes.ok) {
+            const freqData = await frequencyRes.json();
+            freqData.forEach(item => {
+                if (item.BusStatus !== undefined && item.BusStatus !== 0) return;
+                const lat = item.BusPosition?.PositionLat;
+                const lng = item.BusPosition?.PositionLon;
+                if (lat && lng) {
+                    busPositions.push({
+                        plate: item.PlateNumb,
+                        lat,
+                        lng,
+                        speed: item.Speed || 0,
+                        direction: item.Direction === 0 ? 'go' : 'back'
+                    });
+                }
+            });
+        }
+
+        console.log(`[Bus] Fetched bus positions for ${routeName}: ${Object.keys(nearStop).length} near-stop, ${busPositions.length} GPS`);
+        return { nearStop, busPositions };
+    } catch (error) {
+        console.error('[Bus] Error fetching bus positions:', error);
+        return { nearStop: {}, busPositions: [] };
+    }
+}
+
+// Find same route name in other cities using memory/localStorage cache
+// Skips adjacent cities since they are already merged into the dropdown
+function findRouteInOtherCities(routeId) {
+    if (!routeId) return [];
+    const results = [];
+    const routeNameLower = routeId.toLowerCase();
+    const adjacentSet = new Set(getAdjacentCities(currentRouteCity));
+    adjacentSet.add(currentRouteCity);
+
+    Object.keys(fetchedRoutes).forEach(city => {
+        if (adjacentSet.has(city)) return; // Skip primary + adjacent cities
+        const routes = fetchedRoutes[city];
+        if (!routes) return;
+        const match = routes.find(r =>
+            r.id.toLowerCase() === routeNameLower ||
+            r.name.zh === routeId ||
+            r.name.en.toLowerCase() === routeNameLower
+        );
+        if (match) {
+            const cityInfo = BUS_CITIES[city];
+            results.push({
+                city,
+                cityName: isZh ? cityInfo.name.zh : cityInfo.name.en,
+                routeId: match.id
+            });
+        }
+    });
+
+    return results;
+}
+
+// Switch to a route in another city (from cross-city note)
+async function switchToRouteCity(cityKey) {
+    const routeName = currentRoute; // Remember current route name
+    const select = document.getElementById('route-city-select');
+    if (select) select.value = cityKey;
+
+    delete mergedRoutesCache[currentRouteCity];
+    currentRouteCity = cityKey;
+    activeRouteSourceCity = null;
+    routeSearchQuery = '';
+    selectedOriginStop = null;
+    selectedDestStop = null;
+    routeArrivalData = {};
+    routeBusData = { nearStop: {}, busPositions: [] };
+
+    if (routeArrivalTimer) {
+        clearInterval(routeArrivalTimer);
+        routeArrivalTimer = null;
+    }
+
+    const searchInput = document.getElementById('route-search-input');
+    if (searchInput) searchInput.value = '';
+
+    await updateRouteSelector();
+
+    // Auto-select the same route name
+    const routeSelect = document.getElementById('route-select');
+    if (routeSelect) {
+        const matchOption = Array.from(routeSelect.options).find(opt => opt.value === routeName);
+        if (matchOption) {
+            routeSelect.value = routeName;
+            currentRoute = routeName;
+            await onRouteChange();
+            return;
+        }
+    }
+
+    currentRoute = '';
+    renderRouteSchedule();
+    updateRouteMapMarkers();
+}
+
+// Refresh route arrivals and re-render (called by auto-refresh timer)
+async function refreshRouteArrivals() {
+    if (!currentRoute) return;
+
+    const scheduleTabActive = document.querySelector('.tab-btn[data-tab="schedule"]')?.classList.contains('active');
+    if (!scheduleTabActive) return;
+
+    const city = activeRouteSourceCity || currentRouteCity;
+    const [arrivals, busData] = await Promise.all([
+        fetchRouteArrivals(city, currentRoute),
+        fetchRouteBusPositions(city, currentRoute)
+    ]);
+    routeArrivalData = arrivals;
+    routeBusData = busData;
+    renderRouteSchedule();
+    updateRouteMapMarkers();
+    console.log('[Bus] Route arrivals & bus positions refreshed');
 }
 
 // Calculate estimated times for all stops based on distances between them
@@ -1338,8 +1783,14 @@ function updateMarkers() {
 // Route line for showing bus route on map
 let routeLine = null;
 
+function clearBusMarkers() {
+    busMarkers.forEach(m => map.removeLayer(m));
+    busMarkers = [];
+}
+
 function updateRouteMapMarkers() {
     clearMarkers();
+    clearBusMarkers();
     if (routeLine) {
         map.removeLayer(routeLine);
         routeLine = null;
@@ -1408,11 +1859,24 @@ function updateRouteMapMarkers() {
         else if (isFirst) labelText = `<br><span style="color:#2E7D32;">${isZh ? '起站' : 'First Stop'}</span>`;
         else if (isLast) labelText = `<br><span style="color:#c62828;">${isZh ? '終點' : 'Last Stop'}</span>`;
 
+        // Bus near-stop and arrival info for popup
+        const popupArrivalKey = `${routeDirection}_${stop.stopUID}`;
+        const popupNearStop = routeBusData.nearStop[popupArrivalKey];
+        const popupArrival = routeArrivalData[popupArrivalKey];
+        let busInfoHtml = '';
+        if (popupNearStop && popupNearStop.plate) {
+            const eventText = popupNearStop.a2event === 1 ? (isZh ? '進站中' : 'Arriving') : (isZh ? '離站中' : 'Departing');
+            busInfoHtml = `<br><span style="color:#E65100;">🚌 ${popupNearStop.plate} ${eventText}</span>`;
+        } else if (popupArrival) {
+            const timeStr = formatArrivalTime(popupArrival.estimateTime, popupArrival.stopStatus);
+            busInfoHtml = `<br><span style="color:#1565C0;">${timeStr}</span>`;
+        }
+
         marker.bindPopup(`
             <div style="text-align:center;">
                 <strong>${stopName}</strong><br>
                 <small>${isZh ? '站序' : 'Stop'} ${idx + 1}</small>
-                ${labelText}
+                ${labelText}${busInfoHtml}
             </div>
         `);
         marker.addTo(map);
@@ -1428,6 +1892,30 @@ function updateRouteMapMarkers() {
             opacity: 0.7
         }).addTo(map);
     }
+
+    // Plot live bus markers from GPS positions
+    const dirFilter = routeDirection;
+    routeBusData.busPositions.forEach(bus => {
+        if (bus.direction !== dirFilter) return;
+        const busIcon = L.divIcon({
+            className: '',
+            html: `<div class="bus-live-marker" style="width:30px;height:30px;">🚌</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            popupAnchor: [0, -15]
+        });
+        const busM = L.marker([bus.lat, bus.lng], { icon: busIcon, zIndexOffset: 1000 });
+        const speedText = bus.speed > 0 ? `${bus.speed} km/h` : (isZh ? '停靠中' : 'Stopped');
+        const dirText = bus.direction === 'go' ? (isZh ? '去程' : 'Outbound') : (isZh ? '返程' : 'Return');
+        busM.bindPopup(`
+            <div style="text-align:center;">
+                <strong>🚌 ${bus.plate || '---'}</strong><br>
+                <small>${dirText} · ${speedText}</small>
+            </div>
+        `);
+        busM.addTo(map);
+        busMarkers.push(busM);
+    });
 
     // Fit map to show all stops, or just origin/dest if selected
     if (originIdx >= 0 && destIdx >= 0) {
@@ -1559,9 +2047,21 @@ async function init() {
 
     updateUI();
 
+    // Pre-load localStorage-cached routes for cross-city search (no API calls)
+    Object.keys(BUS_CITIES).forEach(city => {
+        if (!fetchedRoutes[city]) {
+            const cached = loadRoutesFromCache(city);
+            if (cached) fetchedRoutes[city] = cached;
+        }
+    });
+
     // Initialize route schedule (async - will update when ready)
     updateRouteSelector().then(() => {
         console.log('[Bus] Routes loaded for', currentRouteCity);
+        // Pre-fetch adjacent cities in background to warm the cache
+        getAdjacentCities(currentRouteCity).forEach(city => {
+            if (!fetchedRoutes[city]) fetchRoutes(city).catch(() => {});
+        });
     });
     renderRouteSchedule();
 
@@ -1618,12 +2118,8 @@ async function init() {
         }
     }, 30000);
 
-    // Update schedule time every minute
-    scheduleTimer = setInterval(() => {
-        if (currentRoute) {
-            renderRouteSchedule();
-        }
-    }, 60000);
+    // Note: schedule time updates are handled by routeArrivalTimer (30s)
+    // which calls refreshRouteArrivals() → renderRouteSchedule()
 
     // Initialize bottom sheet (mobile only)
     const panel = document.getElementById('panel');
@@ -1651,6 +2147,9 @@ window.setRouteDirection = setRouteDirection;
 window.onRouteSearch = onRouteSearch;
 window.onStopSelectorChange = onStopSelectorChange;
 window.centerToUserLocation = centerToUserLocation;
+window.switchToRouteCity = switchToRouteCity;
+window.getAdjacentCities = getAdjacentCities;
+window.fetchMergedRoutes = fetchMergedRoutes;
 
 // Initialize on DOM ready (wait for Leaflet)
 document.addEventListener('DOMContentLoaded', () => {
