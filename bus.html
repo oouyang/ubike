@@ -491,6 +491,28 @@
             font-size: 0.85em;
             color: #666;
         }
+        /* Plate number tag */
+        .plate-tag {
+            font-size: 0.75em;
+            color: #555;
+            margin-left: 2px;
+        }
+        .arrival-badge.arriving .plate-tag {
+            color: #BF360C;
+        }
+        /* Live bus marker on map */
+        .bus-live-marker {
+            background: #FF9800;
+            color: white;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            animation: pulse 2s infinite;
+        }
         /* Floating buttons */
         .float-btn-container {
             position: fixed;
@@ -525,6 +547,42 @@
         @keyframes pulse-locate {
             0%, 100% { background: white; }
             50% { background: #e3f2fd; }
+        }
+
+        /* PC Dual-direction layout */
+        @media (min-width: 1024px) {
+            .dual-direction-container {
+                display: flex;
+                gap: 0;
+            }
+            .dual-direction-column {
+                flex: 1;
+                border-right: 1px solid #e0e0e0;
+                min-width: 0;
+            }
+            .dual-direction-column:last-child {
+                border-right: none;
+            }
+            .dual-direction-column .route-stop-list {
+                padding: 0;
+                margin: 0;
+                list-style: none;
+            }
+            .dual-column-header {
+                padding: 8px 12px;
+                background: #E3F2FD;
+                font-weight: bold;
+                font-size: 0.9em;
+                color: #1565C0;
+                border-bottom: 1px solid #BBDEFB;
+                text-align: center;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+            }
+            .pc-dual-mode .direction-tabs {
+                display: none;
+            }
         }
 
         /* Sheet handle - hidden on desktop */
@@ -675,6 +733,22 @@
                         <option value="Taichung">台中市 Taichung</option>
                         <option value="Tainan">台南市 Tainan</option>
                         <option value="Kaohsiung">高雄市 Kaohsiung</option>
+                        <option value="Keelung">基隆市 Keelung</option>
+                        <option value="Hsinchu">新竹市 Hsinchu</option>
+                        <option value="HsinchuCounty">新竹縣 Hsinchu County</option>
+                        <option value="MiaoliCounty">苗栗縣 Miaoli</option>
+                        <option value="ChanghuaCounty">彰化縣 Changhua</option>
+                        <option value="NantouCounty">南投縣 Nantou</option>
+                        <option value="YunlinCounty">雲林縣 Yunlin</option>
+                        <option value="ChiayiCounty">嘉義縣 Chiayi County</option>
+                        <option value="Chiayi">嘉義市 Chiayi City</option>
+                        <option value="PingtungCounty">屏東縣 Pingtung</option>
+                        <option value="YilanCounty">宜蘭縣 Yilan</option>
+                        <option value="HualienCounty">花蓮縣 Hualien</option>
+                        <option value="TaitungCounty">台東縣 Taitung</option>
+                        <option value="KinmenCounty">金門縣 Kinmen</option>
+                        <option value="PenghuCounty">澎湖縣 Penghu</option>
+                        <option value="LianjiangCounty">連江縣 Lianjiang</option>
                     </select>
                     <input type="text" id="route-search-input" placeholder="Search route..." oninput="onRouteSearch()">
                     <select id="route-select" onchange="onRouteChange()">
@@ -736,6 +810,7 @@
                         <option value="TaitungCounty">台東縣 Taitung</option>
                         <option value="KinmenCounty">金門縣 Kinmen</option>
                         <option value="PenghuCounty">澎湖縣 Penghu</option>
+                        <option value="LianjiangCounty">連江縣 Lianjiang</option>
                     </select>
                     <input type="text" id="search-input" placeholder="Search stops or routes...">
                 </div>

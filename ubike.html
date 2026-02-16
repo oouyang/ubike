@@ -212,6 +212,359 @@
     .marker-ok { background-color: #80FF00; }
     .marker-empty { background-color: #FF9E21; }
     .marker-full { background-color: #FF4D00; }
+    .marker-suspended { background-color: #9E9E9E; }
+    .ebike-bolt { position:absolute; top:-6px; left:-4px; font-size:7px; line-height:1; }
+
+    /* Suspended station in list */
+    .station-suspended { opacity: 0.6; }
+    .suspended-label { color: #9E9E9E; font-weight: bold; }
+
+    /* E-bike badge in list */
+    .ebike-badge {
+      display: inline-block;
+      background: #FFF3E0;
+      color: #E65100;
+      font-size: 11px;
+      padding: 0 4px;
+      border-radius: 3px;
+      margin-left: 2px;
+    }
+
+    /* District filter */
+    .district-filter {
+      display: none;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+      overflow-x: auto;
+    }
+    .district-chip {
+      display: inline-block;
+      padding: 3px 8px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      background: white;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .district-chip:hover { background: #e8f5e9; }
+    .district-chip.active {
+      background: #1976d2;
+      color: white;
+      border-color: #1976d2;
+    }
+
+    /* E-bike filter */
+    .ebike-filter {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+    .ebike-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #333;
+    }
+    .ebike-toggle-label input[type="checkbox"] {
+      accent-color: #E65100;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Fare card */
+    .fare-card {
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+    }
+    .fare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      user-select: none;
+    }
+    .fare-header:hover { background: #f0f0f0; }
+    .fare-toggle {
+      font-size: 11px;
+      color: #888;
+      transition: transform 0.2s;
+    }
+    .fare-toggle.open { transform: rotate(180deg); }
+    .fare-body {
+      display: none;
+      padding: 0 12px 10px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .fare-body.open { display: block; }
+    .fare-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .fare-badge.yes { background: #e8f5e9; color: #2e7d32; }
+    .fare-badge.no { background: #fbe9e7; color: #c62828; }
+    .fare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0;
+      font-size: 12px;
+    }
+    .fare-table th {
+      text-align: left;
+      font-weight: 500;
+      padding: 3px 6px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+    .fare-table td {
+      padding: 3px 6px;
+      border-bottom: 1px solid #eee;
+    }
+    .fare-tpass {
+      margin: 4px 0;
+      padding: 4px 8px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .fare-link {
+      display: inline-block;
+      margin-top: 4px;
+      color: #1976d2;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .fare-link:hover { text-decoration: underline; }
+
+    /* Search autocomplete dropdown */
+    .search-dropdown {
+      display: none;
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 100%;
+      max-height: 240px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .dd-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .dd-item:hover { background: #e8f5e9; }
+    .dd-name { flex: 1; font-weight: 500; }
+    .dd-district {
+      font-size: 11px;
+      color: #888;
+      background: #f0f0f0;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .dd-counts { font-size: 11px; white-space: nowrap; }
+    .dd-bikes { color: #4CAF50; }
+    .dd-slots { color: #2196F3; }
+    .dd-suspended { color: #9E9E9E; font-weight: bold; }
+    .dd-ebike { color: #E65100; }
+
+    /* Map legend */
+    .map-legend {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.92);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.6;
+      z-index: 999;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid #fff;
+      box-shadow: 0 0 1px rgba(0,0,0,0.3);
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
+    /* Report Modal */
+    .report-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+    .report-overlay.open { display: flex; }
+    .report-modal {
+      background: white;
+      border-radius: 12px;
+      width: 95%;
+      max-width: 500px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
+    }
+    .report-header h2 { margin: 0; font-size: 18px; }
+    .report-close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .report-close-btn:hover { color: #333; }
+    .report-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+    .report-section { margin-bottom: 16px; }
+    .report-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .report-station-info {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .report-station-info strong { color: #333; }
+    .report-issue-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .report-issue-chip {
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .report-issue-chip:hover { border-color: #90caf9; background: #e3f2fd; }
+    .report-issue-chip.selected { border-color: #1976d2; background: #e3f2fd; color: #1565c0; font-weight: 600; }
+    .report-notes {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .report-notes:focus { outline: none; border-color: #1976d2; }
+    .report-contact-row {
+      display: flex;
+      gap: 8px;
+    }
+    .report-contact-row input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .report-contact-row input:focus { outline: none; border-color: #1976d2; }
+    .report-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px 20px;
+      border-top: 1px solid #eee;
+      flex-shrink: 0;
+    }
+    .report-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+    }
+    .report-action-btn:hover { background: #f5f5f5; }
+    .report-action-icon { font-size: 24px; flex-shrink: 0; }
+    .report-action-text { flex: 1; }
+    .report-action-title { font-weight: 600; font-size: 14px; }
+    .report-action-desc { font-size: 12px; color: #666; margin-top: 2px; }
+    .report-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #323232;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 10001;
+      animation: toast-in 0.3s ease;
+      max-width: 90vw;
+      text-align: center;
+      line-height: 1.4;
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .report-error { color: #d32f2f; font-size: 12px; margin-top: 4px; }
 
     /* Floating buttons */
     .float-btn-container {
@@ -363,6 +716,20 @@
         min-height: 0;
       }
 
+      /* District filter scrolls horizontally on mobile */
+      .district-filter {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Legend smaller on mobile */
+      .map-legend {
+        font-size: 10px;
+        padding: 6px 8px;
+        bottom: 70px;
+      }
+
       /* Floating buttons above collapsed sheet */
       .float-btn-container {
         bottom: 70px;
@@ -410,8 +777,23 @@
             <option value="taitung">Taitung</option>
           </select>
         </div>
-        <div class="search-section">
-          <input type="text" id="search-input" placeholder="Search stations...">
+        <div class="search-section" style="position:relative;">
+          <input type="text" id="search-input" placeholder="Search stations..." autocomplete="off">
+          <ul id="search-dropdown" class="search-dropdown"></ul>
+        </div>
+        <div id="district-filter" class="district-filter"></div>
+        <div id="ebike-filter" class="ebike-filter" style="display:none;">
+          <label class="ebike-toggle-label">
+            <input type="checkbox" id="ebike-toggle" onchange="toggleEbikeFilter()">
+            <span id="ebike-filter-text">⚡ E-bikes only</span>
+          </label>
+        </div>
+        <div id="fare-card" class="fare-card">
+          <div class="fare-header" onclick="toggleFareCard()">
+            <span data-en="💰 Fare Info" data-zh="💰 費率資訊">💰 Fare Info</span>
+            <span class="fare-toggle" id="fare-toggle">▼</span>
+          </div>
+          <div class="fare-body" id="fare-body"></div>
         </div>
         <div id="result-count" class="result-count"></div>
         <ul id="station-list" class="station-list"></ul>
@@ -422,12 +804,82 @@
     <div id="map-container">
       <div id="loading">Loading...</div>
       <div id="map-canvas"></div>
+      <div class="map-legend" id="map-legend">
+        <div><span class="legend-dot marker-ok"></span><span data-en="Available" data-zh="可借可還">Available</span></div>
+        <div><span class="legend-dot marker-empty"></span><span data-en="No bikes" data-zh="無車可借">No bikes</span></div>
+        <div><span class="legend-dot marker-full"></span><span data-en="Full" data-zh="車位滿載">Full</span></div>
+        <div><span class="legend-dot marker-suspended"></span><span data-en="Suspended" data-zh="暫停營運">Suspended</span></div>
+        <div>⚡ <span data-en="2.0E available" data-zh="有電輔車">2.0E available</span></div>
+      </div>
     </div>
 
     <!-- Floating Buttons -->
     <div class="float-btn-container">
       <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
       <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+    </div>
+  </div>
+
+  <!-- Report Issue Modal -->
+  <div class="report-overlay" id="report-overlay" onclick="if(event.target===this)closeReportModal()">
+    <div class="report-modal">
+      <div class="report-header">
+        <h2 id="report-title">Report Issue</h2>
+        <button class="report-close-btn" onclick="closeReportModal()">&times;</button>
+      </div>
+      <div class="report-body">
+        <div class="report-section">
+          <div class="report-section-title" id="report-station-label">Station</div>
+          <div class="report-station-info" id="report-station-info"></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title" id="report-issue-label">Issue Type</div>
+          <div class="report-issue-grid" id="report-issue-grid"></div>
+          <div class="report-error" id="report-issue-error" style="display:none;"></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title" id="report-notes-label">Notes</div>
+          <textarea class="report-notes" id="report-notes" rows="3"></textarea>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title" id="report-contact-label">Your Contact</div>
+          <div class="report-contact-row">
+            <input type="email" id="report-email" placeholder="Email *">
+            <input type="tel" id="report-phone" placeholder="Phone">
+          </div>
+          <div class="report-error" id="report-email-error" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="report-actions">
+        <button class="report-action-btn" onclick="reportViaForm()">
+          <span class="report-action-icon">🌐</span>
+          <div class="report-action-text">
+            <div class="report-action-title" id="report-action-form-title">Open Official Form</div>
+            <div class="report-action-desc" id="report-action-form-desc">Copy report &amp; open YouBike form</div>
+          </div>
+        </button>
+        <button class="report-action-btn" onclick="reportViaAutoFill()">
+          <span class="report-action-icon">🤖</span>
+          <div class="report-action-text">
+            <div class="report-action-title" id="report-action-autofill-title">Auto-fill Form</div>
+            <div class="report-action-desc" id="report-action-autofill-desc">Copy fill script & open form</div>
+          </div>
+        </button>
+        <button class="report-action-btn" onclick="reportViaCall()">
+          <span class="report-action-icon">📞</span>
+          <div class="report-action-text">
+            <div class="report-action-title" id="report-action-call-title">Call Hotline</div>
+            <div class="report-action-desc" id="report-action-call-desc"></div>
+          </div>
+        </button>
+        <button class="report-action-btn" onclick="reportViaEmail()">
+          <span class="report-action-icon">✉️</span>
+          <div class="report-action-text">
+            <div class="report-action-title" id="report-action-email-title">Send Email</div>
+            <div class="report-action-desc" id="report-action-email-desc"></div>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 

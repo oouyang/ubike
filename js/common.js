@@ -35,6 +35,38 @@ const CITIES = {
 };
 
 /**
+ * YouBike fare data per city - base tiers + per-city subsidy/TPASS info
+ * Base rates are the same across all 13 cities; per-city data captures subsidy + TPASS only.
+ * Source: youbike.com.tw/region/taipei/rate/
+ */
+const YOUBIKE_FARES = {
+    _base: {
+        yb2: [
+            { minutes: 240, per30: 10 },
+            { minutes: 480, per30: 20 },
+            { minutes: Infinity, per30: 40 }
+        ],
+        yb2e: [
+            { minutes: 120, per30: 20 },
+            { minutes: Infinity, per30: 40 }
+        ]
+    },
+    taipei:        { free30: true,  hasEbike: true,  tpass: { zh: '基北北桃 NT$1,200', en: 'Metro Taipei NT$1,200' } },
+    newtaipei:     { free30: true,  hasEbike: true,  tpass: { zh: '基北北桃 NT$1,200', en: 'Metro Taipei NT$1,200' } },
+    taoyuan:       { free30: true,  hasEbike: true,  tpass: { zh: '基北北桃 NT$1,200', en: 'Metro Taipei NT$1,200' } },
+    hsinchu:       { free30: true,  hasEbike: false, tpass: { zh: '竹竹苗 NT$999', en: 'Hsinchu-Miaoli NT$999' } },
+    hsinchuCounty: { free30: true,  hasEbike: false, tpass: { zh: '竹竹苗 NT$999', en: 'Hsinchu-Miaoli NT$999' } },
+    miaoli:        { free30: true,  hasEbike: false, tpass: { zh: '竹竹苗 NT$999', en: 'Hsinchu-Miaoli NT$999' } },
+    taichung:      { free30: true,  hasEbike: false, tpass: { zh: '中彰投 NT$999', en: 'Taichung Region NT$999' } },
+    chiayi:        { free30: true,  hasEbike: false, tpass: { zh: '嘉義 NT$999', en: 'Chiayi NT$999' } },
+    chiayiCounty:  { free30: true,  hasEbike: false, tpass: { zh: '嘉義 NT$999', en: 'Chiayi NT$999' } },
+    tainan:        { free30: true,  hasEbike: false, tpass: { zh: '南高屏 NT$999', en: 'Southern TW NT$999' } },
+    kaohsiung:     { free30: true,  hasEbike: false, tpass: { zh: '南高屏 NT$999', en: 'Southern TW NT$999' } },
+    pingtung:      { free30: true,  hasEbike: false, tpass: { zh: '南高屏 NT$999', en: 'Southern TW NT$999' } },
+    taitung:       { free30: false, hasEbike: false, tpass: null }
+};
+
+/**
  * localStorage keys used across the app
  */
 const STORAGE_KEYS = {
@@ -145,6 +177,9 @@ function normalizeStation(s) {
         longitude: parseFloat(s.lng),
         available_rent_bikes: parseInt(s.available_spaces) || 0,
         available_return_bikes: parseInt(s.empty_spaces) || 0,
+        ebikes: parseInt(s.available_spaces_detail?.eyb) || 0,
+        totalDocks: parseInt(s.parking_spaces) || 0,
+        status: s.status,
         city: cityKey,
         areaCode: s.area_code
     };
@@ -156,6 +191,7 @@ function normalizeStation(s) {
  * @returns {'ok' | 'empty' | 'full'} Marker type
  */
 function getMarkerType(station) {
+    if (station.status === 2) return 'suspended';
     if (station.available_rent_bikes === 0) return 'empty';
     if (station.available_return_bikes === 0) return 'full';
     return 'ok';
@@ -365,6 +401,7 @@ function createMap(elementId, center, zoom = 14) {
 // Export to window for browser use
 window.YOUBIKE_API = YOUBIKE_API;
 window.CITIES = CITIES;
+window.YOUBIKE_FARES = YOUBIKE_FARES;
 window.STORAGE_KEYS = STORAGE_KEYS;
 window.detectLanguage = detectLanguage;
 window.isChineseLocale = isChineseLocale;
@@ -392,6 +429,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         YOUBIKE_API,
         CITIES,
+        YOUBIKE_FARES,
         STORAGE_KEYS,
         detectLanguage,
         isChineseLocale,

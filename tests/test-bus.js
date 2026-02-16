@@ -647,4 +647,178 @@ describe('js/bus.js', () => {
       assert.equal(Object.keys(ctx.mergedRoutesCache).length, 0);
     });
   });
+
+  // ========== BUS_CITIES completeness ==========
+
+  describe('BUS_CITIES completeness', () => {
+    it('has exactly 22 cities', () => {
+      assert.equal(Object.keys(ctx.BUS_CITIES).length, 22);
+    });
+
+    it('includes offshore counties', () => {
+      assert.ok(ctx.BUS_CITIES.KinmenCounty);
+      assert.ok(ctx.BUS_CITIES.PenghuCounty);
+      assert.ok(ctx.BUS_CITIES.LianjiangCounty);
+    });
+
+    it('coordinates are in Taiwan/offshore range', () => {
+      for (const [key, city] of Object.entries(ctx.BUS_CITIES)) {
+        const [lat, lng] = city.center;
+        assert.ok(lat >= 22 && lat <= 27, `${key} lat out of range: ${lat}`);
+        assert.ok(lng >= 118 && lng <= 122, `${key} lng out of range: ${lng}`);
+      }
+    });
+  });
+
+  // ========== ADJACENT_CITIES completeness ==========
+
+  describe('ADJACENT_CITIES completeness', () => {
+    it('all neighbor references point to valid BUS_CITIES keys', () => {
+      for (const [city, neighbors] of Object.entries(ctx.ADJACENT_CITIES)) {
+        for (const neighbor of neighbors) {
+          assert.ok(ctx.BUS_CITIES[neighbor],
+            `${city} references invalid neighbor: ${neighbor}`);
+        }
+      }
+    });
+
+    it('HualienCounty and TaitungCounty have no adjacent cities', () => {
+      assert.equal(ctx.ADJACENT_CITIES.HualienCounty.length, 0);
+      assert.equal(ctx.ADJACENT_CITIES.TaitungCounty.length, 0);
+    });
+  });
+
+  // ========== Caching constants ==========
+
+  describe('Caching constants', () => {
+    it('ROUTE_CACHE_TTL is 24 hours', () => {
+      exposeVars(ctx, ['ROUTE_CACHE_TTL', 'DEBOUNCE_DELAY', 'MAX_RETRIES', 'INITIAL_RETRY_DELAY']);
+      assert.equal(ctx.ROUTE_CACHE_TTL, 24 * 60 * 60 * 1000);
+    });
+
+    it('DEBOUNCE_DELAY is 300ms', () => {
+      exposeVars(ctx, ['DEBOUNCE_DELAY']);
+      assert.equal(ctx.DEBOUNCE_DELAY, 300);
+    });
+
+    it('MAX_RETRIES is 3', () => {
+      exposeVars(ctx, ['MAX_RETRIES']);
+      assert.equal(ctx.MAX_RETRIES, 3);
+    });
+
+    it('INITIAL_RETRY_DELAY is 1000ms', () => {
+      exposeVars(ctx, ['INITIAL_RETRY_DELAY']);
+      assert.equal(ctx.INITIAL_RETRY_DELAY, 1000);
+    });
+  });
+
+  // ========== getStopName ==========
+
+  describe('getStopName()', () => {
+    it('returns English name when isZh=false', () => {
+      setVar(ctx, 'isZh', false);
+      exposeVars(ctx, ['getStopName']);
+      assert.equal(ctx.getStopName({ name: { en: 'Taipei Station', zh: '台北車站' } }), 'Taipei Station');
+    });
+
+    it('returns Chinese name when isZh=true', () => {
+      setVar(ctx, 'isZh', true);
+      exposeVars(ctx, ['getStopName']);
+      assert.equal(ctx.getStopName({ name: { en: 'Taipei Station', zh: '台北車站' } }), '台北車站');
+    });
+  });
+
+  // ========== getRouteScheduleInfo ==========
+
+  describe('getRouteScheduleInfo()', () => {
+    it('returns default schedule', () => {
+      exposeVars(ctx, ['getRouteScheduleInfo']);
+      const info = ctx.getRouteScheduleInfo('any');
+      assert.equal(info.firstBus, '06:00');
+      assert.equal(info.lastBus, '22:00');
+      assert.equal(info.peakInterval, 10);
+      assert.equal(info.offPeakInterval, 15);
+    });
+  });
+
+  // ========== getRouteFareInfo ==========
+
+  describe('getRouteFareInfo()', () => {
+    it('returns default fare info', () => {
+      exposeVars(ctx, ['getRouteFareInfo']);
+      const info = ctx.getRouteFareInfo('any');
+      assert.equal(info.baseFare, 15);
+      assert.equal(info.sections, 1);
+      assert.equal(info.totalFare, 15);
+      assert.equal(info.transferDiscount, true);
+    });
+  });
+
+  // ========== calculateTotalJourneyTime ==========
+
+  describe('calculateTotalJourneyTime()', () => {
+    it('returns 0 for empty/null stops', () => {
+      exposeVars(ctx, ['calculateTotalJourneyTime']);
+      assert.equal(ctx.calculateTotalJourneyTime(null), 0);
+      assert.equal(ctx.calculateTotalJourneyTime([]), 0);
+    });
+
+    it('returns 0 for single stop', () => {
+      exposeVars(ctx, ['calculateTotalJourneyTime']);
+      assert.equal(ctx.calculateTotalJourneyTime([{ time: '06:00' }]), 0);
+    });
+
+    it('calculates duration between first and last stop', () => {
+      exposeVars(ctx, ['calculateTotalJourneyTime']);
+      const stops = [{ time: '06:00' }, { time: '06:15' }, { time: '06:30' }];
+      assert.equal(ctx.calculateTotalJourneyTime(stops), 30);
+    });
+
+    it('handles hour-crossing stops', () => {
+      exposeVars(ctx, ['calculateTotalJourneyTime']);
+      const stops = [{ time: '07:45' }, { time: '08:30' }];
+      assert.equal(ctx.calculateTotalJourneyTime(stops), 45);
+    });
+  });
+
+  // ========== getNextBusTime ==========
+
+  describe('getNextBusTime()', () => {
+    it('returns ended when no schedule info', () => {
+      exposeVars(ctx, ['getNextBusTime']);
+      const result = ctx.getNextBusTime(null);
+      assert.equal(result.ended, true);
+      assert.equal(result.time, null);
+    });
+
+    it('returns ended when firstBus/lastBus missing', () => {
+      exposeVars(ctx, ['getNextBusTime']);
+      const result = ctx.getNextBusTime({});
+      assert.equal(result.ended, true);
+    });
+  });
+
+  // ========== loadRoutesFromCache / saveRoutesToCache ==========
+
+  describe('Route Cache', () => {
+    it('returns null when cache is empty', () => {
+      exposeVars(ctx, ['loadRoutesFromCache', 'saveRoutesToCache']);
+      assert.equal(ctx.loadRoutesFromCache('Taipei'), null);
+    });
+
+    it('saves and loads routes', () => {
+      exposeVars(ctx, ['loadRoutesFromCache', 'saveRoutesToCache']);
+      const routes = [{ id: '1', name: 'Route 1' }];
+      ctx.saveRoutesToCache('Taipei', routes);
+      const loaded = ctx.loadRoutesFromCache('Taipei');
+      assert.deepEqual(loaded, routes);
+    });
+
+    it('returns null for different city', () => {
+      exposeVars(ctx, ['loadRoutesFromCache', 'saveRoutesToCache']);
+      const routes = [{ id: '1', name: 'Route 1' }];
+      ctx.saveRoutesToCache('Taipei', routes);
+      assert.equal(ctx.loadRoutesFromCache('Kaohsiung'), null);
+    });
+  });
 });
