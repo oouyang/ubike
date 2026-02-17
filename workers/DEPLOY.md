@@ -1,191 +1,318 @@
-# Deploy TDX Proxy to Cloudflare Workers
+# Deploy Cloudflare Workers
 
-This guide shows how to deploy the TDX API proxy to Cloudflare Workers to securely use Taiwan bus data without exposing your API credentials.
+This guide covers deploying all four proxy workers used by the Taiwan Transport PWA.
+
+| Worker | File | Purpose | Credentials |
+|--------|------|---------|-------------|
+| `tdx-proxy` | `tdx-proxy.js` | TDX bus/rail API proxy | TDX Client ID/Secret |
+| `oil-price-proxy` | `oil-price-proxy.js` | CPC oil price proxy | None |
+| `twse-etf-proxy` | `twse-etf-proxy.js` | TWSE ETF data proxy | None |
+| `earthquake-notify` | `earthquake-notify.js` | Earthquake push/email alerts | VAPID keys (optional) |
 
 ## Prerequisites
 
 1. Free Cloudflare account: https://dash.cloudflare.com/sign-up
-2. Free TDX account: https://tdx.transportdata.tw/
+2. (TDX only) Free TDX account: https://tdx.transportdata.tw/
 
-## Step 1: Get TDX API Credentials (Free)
+## Quick Deploy (All Workers)
 
-1. Go to https://tdx.transportdata.tw/
-2. Click **會員申請** (Register) in the top right
-3. Fill in the registration form and verify your email
-4. After login, click **會員中心** (Member Center)
-5. Go to **應用程式管理** (Application Management)
-6. Click **新增應用程式** (Add Application)
-   - Application Name: `bus-proxy` (or any name)
-   - Description: `Bus data proxy`
-7. After creation, you'll see:
-   - **Client Id**: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-   - **Client Secret**: `xxxx-xxxx-xxxx-xxxx` (click to reveal)
-8. **Save these credentials** - you'll need them in Step 3
+Each worker follows the same deployment steps. Repeat for each worker you want to deploy.
 
-## Step 2: Create Cloudflare Worker
-
-### Option A: Using Cloudflare Dashboard (Easiest)
+### Option A: Cloudflare Dashboard (Easiest)
 
 1. Go to https://dash.cloudflare.com/
-2. Select your account
-3. Click **Workers & Pages** in the left sidebar
-4. Click **Create application** → **Create Worker**
-5. Name it `tdx-proxy` and click **Deploy**
-6. Click **Edit code**
-7. Delete all the default code
-8. Copy and paste the entire contents of `tdx-proxy.js` into the editor
-9. Click **Save and Deploy**
+2. Select your account → **Workers & Pages** → **Create application** → **Create Worker**
+3. Name it (e.g., `oil-price-proxy`) and click **Deploy**
+4. Click **Edit code**
+5. Delete all default code, paste the contents of the corresponding `.js` file
+6. Click **Save and Deploy**
 
-### Option B: Using Wrangler CLI
+### Option B: Wrangler CLI
 
 ```bash
-# Install Wrangler
+# Install Wrangler (one-time)
 npm install -g wrangler
-
-# Login to Cloudflare
 wrangler login
 
-# Create project directory
-mkdir tdx-proxy && cd tdx-proxy
+# Deploy a worker (repeat for each)
+cd /path/to/ubike/workers
+wrangler deploy --name oil-price-proxy oil-price-proxy.js
+wrangler deploy --name twse-etf-proxy twse-etf-proxy.js
+wrangler deploy --name earthquake-notify earthquake-notify.js
+wrangler deploy --name tdx-proxy tdx-proxy.js
+```
 
-# Copy worker file
-cp /path/to/workers/tdx-proxy.js ./index.js
+Or with a `wrangler.toml` per worker:
 
-# Create wrangler.toml
-cat > wrangler.toml << EOF
-name = "tdx-proxy"
+```bash
+mkdir oil-price-proxy && cd oil-price-proxy
+cp ../oil-price-proxy.js ./index.js
+cat > wrangler.toml << 'EOF'
+name = "oil-price-proxy"
 main = "index.js"
 compatibility_date = "2024-01-01"
 EOF
-
-# Deploy
 wrangler deploy
 ```
 
-## Step 3: Configure Environment Variables
+---
 
-**This is the critical step to protect your credentials!**
+## 1. Oil Price Proxy (`oil-price-proxy.js`)
 
-### Using Dashboard:
+Proxies Taiwan CPC (中油) oil price data with CORS headers. Caches for 1 hour.
 
-1. In your Worker page, click **Settings** tab
-2. Click **Variables** in the left menu
-3. Under **Environment Variables**, click **Add variable**
-4. Add these two variables:
+### Environment Variables
 
-| Variable Name | Value |
-|--------------|-------|
-| `TDX_CLIENT_ID` | Your Client Id from Step 1 |
-| `TDX_CLIENT_SECRET` | Your Client Secret from Step 1 |
+**None required.** This worker fetches from the public CPC endpoint.
 
-5. Click **Encrypt** for `TDX_CLIENT_SECRET` (recommended)
-6. Click **Save and Deploy**
+### Endpoints
 
-### Using Wrangler CLI:
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /oil-price` | Current CPC oil prices (92/95/98/diesel) |
+
+### Test
+
+```
+https://oil-price-proxy.YOUR-SUBDOMAIN.workers.dev/health
+https://oil-price-proxy.YOUR-SUBDOMAIN.workers.dev/oil-price
+```
+
+### Connect to `oil.html`
+
+Edit `oil.html` and set the `WORKER_URL` constant:
+
+```javascript
+const WORKER_URL = 'https://oil-price-proxy.YOUR-SUBDOMAIN.workers.dev';
+```
+
+When set, the page fetches live CPC prices instead of showing demo data.
+
+---
+
+## 2. TWSE ETF Proxy (`twse-etf-proxy.js`)
+
+Proxies Taiwan Stock Exchange OpenAPI for ETF price/yield data. Caches for 1 hour.
+
+### Environment Variables
+
+**None required.** This worker fetches from the public TWSE OpenAPI.
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /etf-list` | All Taiwan-listed ETFs with price, yield, P/E |
+
+### Test
+
+```
+https://twse-etf-proxy.YOUR-SUBDOMAIN.workers.dev/health
+https://twse-etf-proxy.YOUR-SUBDOMAIN.workers.dev/etf-list
+```
+
+### Connect to `etf.html`
+
+Edit `etf.html` and set the `WORKER_URL` constant:
+
+```javascript
+const WORKER_URL = 'https://twse-etf-proxy.YOUR-SUBDOMAIN.workers.dev';
+```
+
+**Note:** `etf.html` also tries fetching directly from `openapi.twse.com.tw` (which works from most browsers). The Worker is a fallback for environments where CORS is blocked.
+
+---
+
+## 3. Earthquake Notify (`earthquake-notify.js`)
+
+Cloudflare Worker that periodically checks USGS for new earthquakes and sends push notifications and/or email alerts to subscribers.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VAPID_PUBLIC_KEY` | For push | VAPID public key for web push |
+| `VAPID_PRIVATE_KEY` | For push | VAPID private key for web push |
+| `VAPID_EMAIL` | For push | Contact email for VAPID |
+| `MAILGUN_API_KEY` | For email | Mailgun API key (or any email service) |
+| `MAILGUN_DOMAIN` | For email | Mailgun sending domain |
+
+### Generate VAPID Keys
 
 ```bash
-# Set secrets (will prompt for values)
+# Using web-push library
+npx web-push generate-vapid-keys
+```
+
+This outputs:
+```
+Public Key:  BNx...
+Private Key: abc...
+```
+
+### Set Secrets via Wrangler
+
+```bash
+wrangler secret put VAPID_PUBLIC_KEY
+wrangler secret put VAPID_PRIVATE_KEY
+wrangler secret put VAPID_EMAIL
+```
+
+### Set Up Cron Trigger
+
+The earthquake notify worker uses a scheduled trigger to check for new earthquakes. Add to `wrangler.toml`:
+
+```toml
+name = "earthquake-notify"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/10 * * * *"]  # Every 10 minutes
+```
+
+Or configure via Dashboard: Worker → **Triggers** → **Cron Triggers** → Add `*/10 * * * *`.
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `POST /push/subscribe` | Subscribe to push notifications |
+| `POST /push/unsubscribe` | Unsubscribe from push |
+| `POST /email/subscribe` | Subscribe to email alerts |
+| `POST /email/unsubscribe` | Unsubscribe from email |
+
+### Connect to `earthquake.html`
+
+Edit `earthquake.html` and set the `WORKER_URL` constant:
+
+```javascript
+const WORKER_URL = 'https://earthquake-notify.YOUR-SUBDOMAIN.workers.dev';
+```
+
+Also update the VAPID public key in the push subscription code if using browser push.
+
+---
+
+## 4. TDX Proxy (`tdx-proxy.js`)
+
+Proxies Taiwan TDX (Transport Data eXchange) API for bus/rail real-time data. Requires TDX credentials.
+
+### Get TDX API Credentials (Free)
+
+1. Go to https://tdx.transportdata.tw/
+2. Click **會員申請** (Register) and verify your email
+3. After login → **會員中心** → **應用程式管理** → **新增應用程式**
+4. Save the **Client Id** and **Client Secret**
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TDX_CLIENT_ID` | Yes | TDX application Client Id |
+| `TDX_CLIENT_SECRET` | Yes | TDX application Client Secret |
+
+### Set Secrets
+
+**Dashboard:** Worker → **Settings** → **Variables** → Add variables → Click **Encrypt** for the secret.
+
+**CLI:**
+```bash
 wrangler secret put TDX_CLIENT_ID
 wrangler secret put TDX_CLIENT_SECRET
 ```
 
-## Step 4: Test Your Worker
+### Endpoints
 
-Your worker URL will be: `https://tdx-proxy.<your-subdomain>.workers.dev`
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /api` | List available API endpoints |
+| `GET /v2/Bus/Stop/City/{City}` | Bus stops in a city |
+| `GET /v2/Bus/EstimatedTimeOfArrival/City/{City}` | Arrival times |
+| `GET /v2/Bus/Route/City/{City}` | Bus routes |
+| `GET /v2/Bus/RealTimeByFrequency/City/{City}` | Real-time bus positions |
 
-Test it in your browser:
+### Query Parameters (OData)
+
+- `$top=N` — Limit results
+- `$skip=N` — Pagination
+- `$filter=...` — Filter expression
+- `$spatialFilter=nearby(lat,lng,radius)` — Find nearby
+- `$format=JSON` — Response format
+
+### Test
 
 ```
-https://tdx-proxy.xxxxx.workers.dev/health
+https://tdx-proxy.YOUR-SUBDOMAIN.workers.dev/health
+https://tdx-proxy.YOUR-SUBDOMAIN.workers.dev/v2/Bus/Stop/City/Taipei?$top=5&$format=JSON
 ```
 
-Should return:
-```json
-{"status":"ok","service":"TDX Proxy","timestamp":"..."}
-```
+### Connect to `bus.html`
 
-Test bus stops:
-```
-https://tdx-proxy.xxxxx.workers.dev/v2/Bus/Stop/City/Taipei?$top=5&$format=JSON
-```
-
-## Step 5: Update bus.html
-
-Edit `bus.html` and update the configuration at the top of the `<script>` section:
-
-```javascript
-// TDX Proxy Configuration
-const TDX_PROXY_URL = 'https://tdx-proxy.YOUR-SUBDOMAIN.workers.dev';
-
-// Set this to true to use the proxy
-const USE_PROXY = true;
-```
-
-Or simply update the `TDX_CONFIG.proxyUrl` value:
+Update the TDX proxy URL configuration in `bus.html`:
 
 ```javascript
 const TDX_CONFIG = {
-    proxyUrl: 'https://tdx-proxy.YOUR-SUBDOMAIN.workers.dev', // Your worker URL
-    // ... rest of config
+    proxyUrl: 'https://tdx-proxy.YOUR-SUBDOMAIN.workers.dev',
 };
 ```
 
-## Free Tier Limits
+---
 
-Cloudflare Workers free tier includes:
-- **100,000 requests/day**
-- **10ms CPU time per request**
-- Unlimited bandwidth
+## Cloudflare Free Tier Limits
 
-This is more than enough for personal use!
+| Resource | Limit |
+|----------|-------|
+| Requests | 100,000/day |
+| CPU time | 10ms/request |
+| Bandwidth | Unlimited |
+| Workers | 30 per account |
+| Cron triggers | 5 per worker |
+| KV storage | 1GB (if using KV for subscriptions) |
+
+More than enough for personal use.
+
+## Caching Behavior
+
+All workers use Cloudflare's edge cache:
+
+| Worker | Cache TTL | Reason |
+|--------|-----------|--------|
+| `oil-price-proxy` | 1 hour | Prices change weekly |
+| `twse-etf-proxy` | 1 hour | Market data updates after close |
+| `earthquake-notify` | N/A | Real-time checks via cron |
+| `tdx-proxy` | 30s–24h | Varies by endpoint type |
 
 ## Troubleshooting
 
 ### "TDX credentials not configured"
-- Make sure you added both `TDX_CLIENT_ID` and `TDX_CLIENT_SECRET` in Worker Settings → Variables
-- Click "Save and Deploy" after adding variables
+- Add both `TDX_CLIENT_ID` and `TDX_CLIENT_SECRET` in Worker Settings → Variables
+- Click "Save and Deploy" after adding
 
 ### "TDX auth failed: 401"
-- Double-check your Client ID and Secret from TDX
-- Make sure you copied them without extra spaces
+- Double-check credentials from TDX member center
+- Ensure no extra whitespace
 
 ### CORS errors
-- The worker already includes CORS headers
-- If issues persist, check browser console for specific error
+- All workers include `Access-Control-Allow-Origin: *` headers
+- Check browser console for the specific blocked URL
 
 ### "429 Too Many Requests"
-- TDX has rate limits; the proxy caches tokens to minimize auth calls
-- If you hit limits, wait a few minutes
+- TDX has rate limits; the proxy caches tokens
+- TWSE OpenAPI may throttle during market hours
+- Wait a few minutes and retry
 
-## API Endpoints Available
-
-Once deployed, you can access any TDX Bus API through your proxy:
-
-| Endpoint | Description |
-|----------|-------------|
-| `/v2/Bus/Stop/City/{City}` | Bus stops in a city |
-| `/v2/Bus/EstimatedTimeOfArrival/City/{City}` | Arrival times |
-| `/v2/Bus/Route/City/{City}` | Bus routes |
-| `/v2/Bus/RealTimeByFrequency/City/{City}` | Real-time bus positions |
-| `/v2/Bus/Stop/InterCity` | Intercity bus stops |
-
-### Query Parameters
-
-TDX supports OData query parameters:
-- `$top=N` - Limit results
-- `$skip=N` - Skip results (pagination)
-- `$filter=...` - Filter results
-- `$spatialFilter=nearby(lat,lng,radius)` - Find nearby
-- `$format=JSON` - Response format
-
-Example:
-```
-/v2/Bus/Stop/City/Taipei?$spatialFilter=nearby(25.033,121.565,500)&$top=20&$format=JSON
-```
+### Worker returns 502
+- The upstream API (CPC/TWSE/USGS) may be temporarily down
+- Check the worker's **Real-time Logs** in the Dashboard for details
 
 ## Security Notes
 
-1. **Never commit credentials** to your git repository
-2. Environment variables in Cloudflare Workers are **encrypted at rest**
-3. The proxy only exposes the data, not your credentials
-4. Consider adding rate limiting or authentication to your proxy for production use
+1. **Never commit credentials** to git
+2. Use Cloudflare's **Encrypt** option for secret variables
+3. Workers expose only the data, never your credentials
+4. Consider adding rate limiting or authentication for production use

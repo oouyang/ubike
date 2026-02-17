@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#1976d2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Taiwan Oil Prices</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="icon" type="image/png" href="favicon.ico">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
+      color: white;
+      flex-shrink: 0;
+    }
+    h1 { margin: 0; font-size: 1.5em; }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 12px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+    .nav-btn.home:hover { background: #F57C00; }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #panel {
+      width: 420px;
+      height: 100%;
+      background: #f9f9f9;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sheet-handle { display: none; }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 12px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { background: #f0f0f0; }
+    .tab-btn.active {
+      color: #1976d2;
+      border-bottom-color: #1976d2;
+    }
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    /* Price Info Tab */
+    .price-section {
+      padding: 16px;
+    }
+    .price-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .price-date {
+      font-size: 0.85em;
+      color: #888;
+    }
+    .demo-badge {
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .price-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .price-table th {
+      background: #f5f5f5;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.85em;
+      color: #666;
+      border-bottom: 2px solid #ddd;
+    }
+    .price-table td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 0.95em;
+    }
+    .price-table tr:hover { background: #f9f9f9; }
+    .fuel-icon {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .fuel-92 { background: #4CAF50; }
+    .fuel-95 { background: #2196F3; }
+    .fuel-98 { background: #9C27B0; }
+    .fuel-diesel { background: #795548; }
+    .price-value {
+      font-weight: 700;
+      font-size: 1.1em;
+    }
+    .price-change {
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+    .price-up { color: #d32f2f; }
+    .price-down { color: #2e7d32; }
+    .price-same { color: #888; }
+
+    /* Next week prediction */
+    .predict-section {
+      background: #e3f2fd;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .predict-title {
+      font-weight: 600;
+      font-size: 0.95em;
+      margin-bottom: 8px;
+      color: #1565c0;
+    }
+
+    /* Share buttons */
+    .share-section {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .share-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .share-fb {
+      background: #1877f2;
+      color: white;
+    }
+    .share-fb:hover { background: #166fe5; }
+    .share-copy {
+      background: #eee;
+      color: #333;
+    }
+    .share-copy:hover { background: #ddd; }
+
+    /* Price history chart */
+    .chart-section {
+      margin-bottom: 16px;
+    }
+    .chart-title {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 100px;
+      padding: 0 4px;
+    }
+    .bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      transition: height 0.3s;
+    }
+    .bar-label {
+      font-size: 10px;
+      color: #888;
+      white-space: nowrap;
+    }
+    .bar-value {
+      font-size: 9px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    /* Map container */
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .search-area-btn {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      padding: 8px 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1976d2;
+      transition: background 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+    .search-area-btn:hover {
+      background: #e3f2fd;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .search-area-btn:active { background: #bbdefb; }
+    .search-area-btn.loading {
+      color: #888;
+      pointer-events: none;
+    }
+
+    .float-btn-container {
+      position: fixed;
+      bottom: 20px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .float-btn {
+      width: 44px;
+      height: 44px;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.2s;
+    }
+    .float-btn:hover { background: #f4f4f4; }
+    .float-btn:active { background: #e0e0e0; }
+    .locate-btn { font-size: 20px; }
+    .locate-btn.locating { animation: pulse-locate 1s infinite; }
+    @keyframes pulse-locate {
+      0%, 100% { background: white; }
+      50% { background: #e3f2fd; }
+    }
+
+    /* Station list in panel */
+    .station-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .station-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .station-item:hover { background: #e3f2fd; }
+    .station-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .badge-cpc { background: #e8f5e9; }
+    .badge-formosa { background: #e3f2fd; }
+    .badge-other { background: #f5f5f5; }
+    .station-info { flex: 1; min-width: 0; }
+    .station-name {
+      font-weight: 600;
+      font-size: 0.95em;
+      margin-bottom: 2px;
+    }
+    .station-detail {
+      font-size: 0.82em;
+      color: #666;
+    }
+    .station-count {
+      padding: 8px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.85em;
+      color: #666;
+    }
+
+    /* ===== MOBILE: Bottom Sheet ===== */
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.2em;
+        width: 100%;
+      }
+      .header-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .main-content {
+        flex-direction: column;
+      }
+
+      #map-container {
+        position: fixed;
+        top: 74px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+      }
+
+      #panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: auto;
+        max-height: 90vh;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+      }
+
+      #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+      #panel.snap-half { transform: translateY(40vh); }
+      #panel.snap-full { transform: translateY(0); }
+      #panel.dragging { transition: none; }
+      #panel.no-transition { transition: none; }
+
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 56px;
+        padding: 8px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        background: white;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .sheet-pill {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+      }
+
+      .sheet-summary {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+
+      .sheet-content {
+        height: calc(90vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .float-btn-container {
+        bottom: 70px;
+        z-index: 1001;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title">Oil Prices</h1>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
+      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震">Quake</a>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div id="panel">
+      <div class="sheet-handle">
+        <div class="sheet-pill"></div>
+        <div class="sheet-summary" id="sheet-summary">Loading...</div>
+      </div>
+      <div class="sheet-content">
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="prices" id="tab-prices" data-en="Price Info" data-zh="油價資訊">Price Info</button>
+          <button class="tab-btn" data-tab="stations" id="tab-stations" data-en="Nearby Stations" data-zh="附近加油站">Nearby Stations</button>
+        </div>
+
+        <!-- Price Info Tab -->
+        <div class="tab-content active" id="tab-prices-content">
+          <div class="price-section">
+            <div class="price-header">
+              <span class="price-date" id="price-date"></span>
+              <span class="demo-badge" id="demo-badge" data-en="Demo Data" data-zh="示範資料">Demo Data</span>
+            </div>
+
+            <div class="predict-section" id="predict-section">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="predict-title" id="predict-title" data-en="Next Week Forecast" data-zh="下週預測">Next Week Forecast</div>
+                <span class="predict-date" id="predict-date" style="font-size:0.8em;color:#1565c0;"></span>
+              </div>
+              <table class="price-table" style="margin-bottom:0">
+                <thead>
+                  <tr>
+                    <th data-en="Fuel Type" data-zh="油品">Fuel Type</th>
+                    <th data-en="Predicted" data-zh="預測價格">Predicted</th>
+                    <th data-en="Change" data-zh="漲跌">Change</th>
+                  </tr>
+                </thead>
+                <tbody id="predict-tbody"></tbody>
+              </table>
+            </div>
+
+            <div id="current-prices">
+              <table class="price-table">
+                <thead>
+                  <tr>
+                    <th id="th-fuel" data-en="Fuel Type" data-zh="油品">Fuel Type</th>
+                    <th id="th-price" data-en="Price (NT$/L)" data-zh="價格 (NT$/L)">Price (NT$/L)</th>
+                  </tr>
+                </thead>
+                <tbody id="price-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="share-section">
+              <button class="share-btn share-fb" onclick="shareFB()" id="share-fb-btn">FB Share</button>
+              <button class="share-btn share-copy" onclick="copyPrices()" id="share-copy-btn" data-en="Copy" data-zh="複製">Copy</button>
+            </div>
+
+            <div class="chart-section">
+              <div class="chart-title" id="chart-title" data-en="95 Unleaded - Last 8 Weeks" data-zh="95無鉛 - 近8週走勢">95 Unleaded - Last 8 Weeks</div>
+              <div class="bar-chart" id="bar-chart"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nearby Stations Tab -->
+        <div class="tab-content" id="tab-stations-content">
+          <div class="station-count" id="station-count"></div>
+          <ul class="station-list" id="station-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="map-canvas"></div>
+      <button class="search-area-btn" id="search-area-btn" onclick="searchThisArea()" style="display:none;">
+        <span id="search-area-text" data-en="Search this area" data-zh="搜尋此區域">Search this area</span>
+      </button>
+    </div>
+
+    <div class="float-btn-container">
+      <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+      <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+    </div>
+  </div>
+
+  <script src="js/bottom-sheet.js"></script>
+  <script>
+'use strict';
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const WORKER_URL = ''; // Set to Cloudflare Worker URL when deployed
+const CPC_API = 'https://www.cpc.com.tw/GetOilPriceJson.aspx';
+const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
+const SEARCH_RADIUS = 5000; // 5km
+
+// ============================================================
+// DEMO DATA - Recent CPC prices (fallback when no Worker)
+// ============================================================
+const DEMO_PRICES = {
+  date: '2026-02-10',
+  dateEnd: '2026-02-16',
+  products: [
+    { name: '92 Unleaded', nameZh: '92無鉛汽油', key: '92', price: 28.3, unit: 'NT$/L' },
+    { name: '95 Unleaded', nameZh: '95無鉛汽油', key: '95', price: 29.8, unit: 'NT$/L' },
+    { name: '98 Unleaded', nameZh: '98無鉛汽油', key: '98', price: 31.8, unit: 'NT$/L' },
+    { name: 'Diesel', nameZh: '超級柴油', key: 'diesel', price: 26.5, unit: 'NT$/L' }
+  ],
+  predictDate: '2026-02-17',
+  predictDateEnd: '2026-02-23',
+  predictUpdated: '2026-02-14 17:00',
+  predict: [
+    { key: '92', price: 28.5, change: 0.2 },
+    { key: '95', price: 30.0, change: 0.2 },
+    { key: '98', price: 32.0, change: 0.2 },
+    { key: 'diesel', price: 26.7, change: 0.2 }
+  ],
+  history: [
+    { week: '01/06', price95: 29.2 },
+    { week: '01/13', price95: 29.5 },
+    { week: '01/20', price95: 29.3 },
+    { week: '01/27', price95: 29.6 },
+    { week: '02/03', price95: 29.9 },
+    { week: '02/10', price95: 29.8 },
+    { week: '02/17', price95: 30.0 },
+    { week: '02/24', price95: 30.2 }
+  ]
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let map = null;
+let stationMarkers = {};
+let priceData = null;
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let userLocation = null;
+let bottomSheet = null;
+let isDemo = true;
+let lastSearchCenter = null;
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+async function initialize() {
+  console.log('[Oil] Initializing oil price page...');
+
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) isZh = savedLang === 'zh';
+
+  updateUI();
+
+  // Initialize map
+  map = L.map('map-canvas').setView([25.033, 121.565], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Show "Search this area" button when user pans/zooms the map
+  map.on('moveend', () => {
+    const center = map.getCenter();
+    if (!lastSearchCenter) {
+      lastSearchCenter = center;
+      return;
+    }
+    const dist = map.distance(center, lastSearchCenter);
+    // Show button if moved more than 500m from last search location
+    if (dist > 500) {
+      document.getElementById('search-area-btn').style.display = '';
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Try getting user location
+  if ('geolocation' in navigator) {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+      map.setView([userLocation.lat, userLocation.lng], 14);
+      console.log('[Oil] User location:', userLocation);
+    } catch (error) {
+      console.warn('[Oil] Could not get location:', error.message);
+    }
+  }
+
+  // Load price data
+  await loadPrices();
+
+  // Load nearby stations
+  await loadNearbyStations();
+
+  // Initialize bottom sheet (mobile only)
+  const panel = document.getElementById('panel');
+  if (panel && typeof BottomSheet !== 'undefined') {
+    bottomSheet = new BottomSheet(panel, {
+      initialSnap: 'half',
+      onSnapChange: (snap) => console.log('[Oil] Sheet snap:', snap)
+    });
+  }
+
+  console.log('[Oil] Oil price page initialized');
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById(`tab-${tabName}-content`).classList.add('active');
+
+  if (tabName === 'stations' && map) {
+    setTimeout(() => map.invalidateSize(), 100);
+  }
+}
+
+// ============================================================
+// PRICE DATA
+// ============================================================
+async function loadPrices() {
+  if (WORKER_URL) {
+    try {
+      const response = await fetch(`${WORKER_URL}/oil-price`);
+      if (response.ok) {
+        priceData = await response.json();
+        isDemo = false;
+        console.log('[Oil] Loaded live price data');
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.warn('[Oil] Worker fetch failed, using demo data:', error.message);
+      priceData = DEMO_PRICES;
+      isDemo = true;
+    }
+  } else {
+    priceData = DEMO_PRICES;
+    isDemo = true;
+    console.log('[Oil] No worker configured, using demo data');
+  }
+
+  renderPrices();
+  renderPredictions();
+  renderChart();
+  updateSheetSummary();
+}
+
+function renderPrices() {
+  if (!priceData) return;
+
+  const demoBadge = document.getElementById('demo-badge');
+  demoBadge.style.display = isDemo ? '' : 'none';
+
+  const dateEl = document.getElementById('price-date');
+  dateEl.textContent = isZh
+    ? `${priceData.date} ~ ${priceData.dateEnd}`
+    : `${priceData.date} ~ ${priceData.dateEnd}`;
+
+  const tbody = document.getElementById('price-tbody');
+  tbody.innerHTML = priceData.products.map(p => {
+    const fuelClass = `fuel-${p.key}`;
+    const name = isZh ? p.nameZh : p.name;
+    return `<tr>
+      <td><span class="fuel-icon ${fuelClass}"></span>${name}</td>
+      <td class="price-value">${p.price.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPredictions() {
+  if (!priceData || !priceData.predict) return;
+
+  // Render prediction date info
+  const predictDateEl = document.getElementById('predict-date');
+  if (predictDateEl && priceData.predictDate) {
+    const range = priceData.predictDateEnd
+      ? `${priceData.predictDate} ~ ${priceData.predictDateEnd}`
+      : priceData.predictDate;
+    const updated = priceData.predictUpdated
+      ? (isZh ? ` (${priceData.predictUpdated} 更新)` : ` (Updated ${priceData.predictUpdated})`)
+      : '';
+    predictDateEl.textContent = range + updated;
+  }
+
+  const tbody = document.getElementById('predict-tbody');
+  tbody.innerHTML = priceData.predict.map(p => {
+    const product = priceData.products.find(pr => pr.key === p.key);
+    if (!product) return '';
+    const name = isZh ? product.nameZh : product.name;
+    const fuelClass = `fuel-${p.key}`;
+    const change = p.change;
+    let changeClass, changeText;
+    if (change > 0) {
+      changeClass = 'price-up';
+      changeText = `▲ ${change.toFixed(1)}`;
+    } else if (change < 0) {
+      changeClass = 'price-down';
+      changeText = `▼ ${Math.abs(change).toFixed(1)}`;
+    } else {
+      changeClass = 'price-same';
+      changeText = '-';
+    }
+    return `<tr>
+      <td><span class="fuel-icon ${fuelClass}"></span>${name}</td>
+      <td class="price-value">${p.price.toFixed(1)}</td>
+      <td><span class="price-change ${changeClass}">${changeText}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderChart() {
+  if (!priceData || !priceData.history) return;
+
+  const chart = document.getElementById('bar-chart');
+  const prices = priceData.history.map(h => h.price95);
+  const minPrice = Math.min(...prices) - 0.5;
+  const maxPrice = Math.max(...prices) + 0.5;
+  const range = maxPrice - minPrice;
+
+  chart.innerHTML = priceData.history.map(h => {
+    const pct = ((h.price95 - minPrice) / range) * 100;
+    return `<div class="bar-group">
+      <div class="bar-value">${h.price95.toFixed(1)}</div>
+      <div class="bar" style="height:${pct}%;background:#2196F3;"></div>
+      <div class="bar-label">${h.week}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// SHARE
+// ============================================================
+function shareFB() {
+  const text = getPriceShareText();
+  const url = encodeURIComponent(window.location.href);
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodeURIComponent(text)}`;
+  window.open(fbUrl, '_blank', 'width=600,height=400');
+}
+
+function copyPrices() {
+  const text = getPriceShareText();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('share-copy-btn');
+      const orig = btn.textContent;
+      btn.textContent = isZh ? '已複製!' : 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  }
+}
+
+function getPriceShareText() {
+  if (!priceData) return '';
+  const lines = priceData.products.map(p => {
+    const name = isZh ? p.nameZh : p.name;
+    return `${name}: ${p.price.toFixed(1)} ${p.unit}`;
+  });
+
+  const header = isZh ? '台灣中油油價' : 'Taiwan CPC Oil Prices';
+  const dateRange = `${priceData.date} ~ ${priceData.dateEnd}`;
+  return `${header} (${dateRange})\n${lines.join('\n')}`;
+}
+
+// ============================================================
+// NEARBY STATIONS (Overpass API)
+// ============================================================
+async function loadNearbyStations(center) {
+  if (!center) center = userLocation || { lat: 25.033, lng: 121.565 };
+  const r = SEARCH_RADIUS;
+  const bbox = `${center.lat - r/111000},${center.lng - r/111000},${center.lat + r/111000},${center.lng + r/111000}`;
+
+  const query = `[out:json][timeout:10];node[amenity=fuel](${bbox});out body;`;
+
+  try {
+    const response = await fetch(OVERPASS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const stations = (data.elements || []).map(parseStation);
+    renderStations(stations);
+    renderStationMarkers(stations);
+    // Update last search center and hide button
+    if (map) lastSearchCenter = map.getCenter();
+    document.getElementById('search-area-btn').style.display = 'none';
+    console.log(`[Oil] Found ${stations.length} nearby stations`);
+  } catch (error) {
+    console.error('[Oil] Overpass API error:', error);
+    document.getElementById('station-count').textContent = isZh
+      ? '載入失敗，請稍後再試'
+      : 'Failed to load, please try again';
+  }
+}
+
+async function searchThisArea() {
+  const btn = document.getElementById('search-area-btn');
+  btn.classList.add('loading');
+  btn.querySelector('span').textContent = isZh ? '搜尋中...' : 'Searching...';
+  const center = map.getCenter();
+  await loadNearbyStations({ lat: center.lat, lng: center.lng });
+  btn.classList.remove('loading');
+  btn.querySelector('span').textContent = isZh ? '搜尋此區域' : 'Search this area';
+}
+
+function parseStation(el) {
+  const tags = el.tags || {};
+  const brand = tags.brand || tags.operator || tags.name || '';
+  let type = 'other';
+  if (/中油|CPC|台灣中油/i.test(brand)) type = 'cpc';
+  else if (/台塑|Formosa/i.test(brand)) type = 'formosa';
+
+  const name = tags['name:zh'] || tags.name || (isZh ? '加油站' : 'Gas Station');
+  const nameEn = tags['name:en'] || tags.name || 'Gas Station';
+
+  return {
+    id: el.id,
+    lat: el.lat,
+    lng: el.lon,
+    name,
+    nameEn,
+    brand,
+    type,
+    distance: userLocation
+      ? getDistanceInMeters(userLocation.lat, userLocation.lng, el.lat, el.lon)
+      : null
+  };
+}
+
+function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(meters) {
+  if (meters == null) return '';
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
+function renderStations(stations) {
+  // Sort by distance if available
+  if (stations.length > 0 && stations[0].distance != null) {
+    stations.sort((a, b) => a.distance - b.distance);
+  }
+
+  const countEl = document.getElementById('station-count');
+  countEl.textContent = isZh
+    ? `找到 ${stations.length} 個加油站`
+    : `Found ${stations.length} gas stations`;
+
+  const listEl = document.getElementById('station-list');
+  listEl.innerHTML = stations.map(s => {
+    const displayName = isZh ? s.name : s.nameEn;
+    const badgeClass = s.type === 'cpc' ? 'badge-cpc' : s.type === 'formosa' ? 'badge-formosa' : 'badge-other';
+    const icon = s.type === 'cpc' ? '🟢' : s.type === 'formosa' ? '🔵' : '⚪';
+    const dist = s.distance != null ? ` · ${formatDistance(s.distance)}` : '';
+    const brandLabel = s.brand || (isZh ? '其他' : 'Other');
+    const priceTag = getStationPriceTag(s.type);
+    return `<li class="station-item" data-lat="${s.lat}" data-lng="${s.lng}" data-id="${s.id}">
+      <div class="station-badge ${badgeClass}">${icon}</div>
+      <div class="station-info">
+        <div class="station-name">${displayName}</div>
+        <div class="station-detail">${brandLabel}${dist}</div>
+      </div>
+      ${priceTag}
+    </li>`;
+  }).join('');
+
+  listEl.querySelectorAll('.station-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const lat = parseFloat(item.dataset.lat);
+      const lng = parseFloat(item.dataset.lng);
+      const id = item.dataset.id;
+      if (map) {
+        map.flyTo([lat, lng], 17, { duration: 1 });
+        // Open popup after fly animation completes
+        map.once('moveend', () => {
+          const marker = stationMarkers[id];
+          if (marker) marker.openPopup();
+        });
+      }
+    });
+  });
+}
+
+function renderStationMarkers(stations) {
+  // Clear existing
+  Object.values(stationMarkers).forEach(m => map.removeLayer(m));
+  stationMarkers = {};
+
+  const colors = { cpc: '#4CAF50', formosa: '#2196F3', other: '#9E9E9E' };
+
+  stations.forEach(s => {
+    const color = colors[s.type] || colors.other;
+    const marker = L.circleMarker([s.lat, s.lng], {
+      radius: 8,
+      fillColor: color,
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    });
+
+    const displayName = isZh ? s.name : s.nameEn;
+    const dist = s.distance != null ? `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(s.distance)}` : '';
+    const navHtml = getNavigationHtml(s.lat, s.lng);
+    const priceHtml = getPricePopupHtml(s.type);
+
+    marker.bindPopup(`<div style="max-width:220px;">
+      <strong>${displayName}</strong><br>
+      ${s.brand || ''}${dist}
+      ${priceHtml}
+      <div style="margin-top:6px;">${navHtml}</div>
+    </div>`);
+
+    marker.addTo(map);
+    stationMarkers[s.id] = marker;
+  });
+}
+
+function getNavigationHtml(lat, lng) {
+  const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const aUrl = `https://maps.apple.com/?daddr=${lat},${lng}`;
+  const style = 'display:inline-block;padding:3px 8px;margin:2px;background:#1976d2;color:white;text-decoration:none;border-radius:4px;font-size:11px;';
+  return `<a href="${gUrl}" target="_blank" style="${style}">Google</a>
+    <a href="${aUrl}" target="_blank" style="${style}">Apple</a>`;
+}
+
+function getStationPriceTag(stationType) {
+  if (!priceData || !priceData.products) return '';
+  const p95 = priceData.products.find(p => p.key === '95');
+  if (!p95) return '';
+  if (stationType === 'cpc') {
+    return `<div style="text-align:right;font-size:12px;font-weight:700;color:#2e7d32;white-space:nowrap;">95: ${p95.price.toFixed(1)}</div>`;
+  }
+  if (stationType === 'formosa') {
+    return `<div style="text-align:right;font-size:11px;color:#888;white-space:nowrap;">${isZh ? '價格不同' : 'Diff. price'}</div>`;
+  }
+  return '';
+}
+
+function getPricePopupHtml(stationType) {
+  if (!priceData || !priceData.products) return '';
+  // Only show CPC prices for CPC stations; for others show generic prices
+  if (stationType === 'formosa') {
+    return `<div style="margin-top:6px;font-size:11px;color:#888;">${isZh ? '(台塑油價可能不同)' : '(Formosa prices may differ)'}</div>`;
+  }
+  const rows = priceData.products.map(p => {
+    const name = isZh ? p.nameZh : p.name;
+    return `<tr><td style="padding:2px 6px;font-size:11px;">${name}</td><td style="padding:2px 6px;font-size:11px;font-weight:700;text-align:right;">${p.price.toFixed(1)}</td></tr>`;
+  }).join('');
+  const title = isZh ? '中油參考價' : 'CPC Ref. Price';
+  return `<div style="margin-top:6px;border-top:1px solid #eee;padding-top:4px;">
+    <div style="font-size:11px;color:#666;font-weight:600;">${title}</div>
+    <table style="width:100%;border-collapse:collapse;">${rows}</table>
+  </div>`;
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  updateUI();
+  renderPrices();
+  renderPredictions();
+  renderChart();
+  updateSheetSummary();
+  // Reload stations to update names
+  loadNearbyStations();
+}
+
+function updateUI() {
+  document.title = isZh ? '台灣油價' : 'Taiwan Oil Prices';
+  document.getElementById('page-title').textContent = isZh ? '油價資訊' : 'Oil Prices';
+
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+  });
+
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) langBtn.textContent = isZh ? '中' : 'EN';
+
+  const locateBtn = document.querySelector('.locate-btn');
+  if (locateBtn) locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
+}
+
+function updateSheetSummary() {
+  const summaryEl = document.getElementById('sheet-summary');
+  if (!summaryEl) return;
+  if (priceData) {
+    const p95 = priceData.products.find(p => p.key === '95');
+    const price = p95 ? p95.price.toFixed(1) : '?';
+    summaryEl.textContent = isZh
+      ? `⛽ 95無鉛 ${price} 元/L`
+      : `⛽ 95 Unleaded ${price} NT$/L`;
+  } else {
+    summaryEl.textContent = isZh ? '載入中...' : 'Loading...';
+  }
+}
+
+// ============================================================
+// LOCATE
+// ============================================================
+async function centerToUserLocation() {
+  const btn = document.querySelector('.locate-btn');
+  if (btn) btn.classList.add('locating');
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000
+      });
+    });
+    userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+    if (map) map.setView([userLocation.lat, userLocation.lng], 14);
+    // Reload nearby stations for new location
+    await loadNearbyStations();
+    console.log('[Oil] Centered to user location:', userLocation);
+  } catch (error) {
+    console.warn('[Oil] Could not get location:', error.code, error.message);
+    let msg;
+    if (error.code === 1) msg = isZh ? '請允許位置權限' : 'Please allow location permission';
+    else if (error.code === 2) msg = isZh ? '無法取得位置資訊' : 'Location unavailable';
+    else if (error.code === 3) msg = isZh ? '定位逾時，請重試' : 'Location timeout, please retry';
+    else msg = isZh ? '無法取得您的位置' : 'Could not get your location';
+    alert(msg);
+  } finally {
+    if (btn) btn.classList.remove('locating');
+  }
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L !== 'undefined') {
+    initialize();
+  } else {
+    const checkLeaflet = setInterval(() => {
+      if (typeof L !== 'undefined') {
+        clearInterval(checkLeaflet);
+        initialize();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkLeaflet), 10000);
+  }
+});
+  </script>
+</body>
+</html>

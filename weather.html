@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#1976d2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Weather</title>
+  <link rel="icon" type="image/png" href="favicon.ico">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f2f5;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
+      color: white;
+      flex-shrink: 0;
+    }
+    h1 { margin: 0; font-size: 1.5em; }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 12px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+    .nav-btn.home:hover { background: #F57C00; }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Location bar */
+    .location-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .loc-btn {
+      padding: 8px 14px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .loc-btn:hover { background: #e3f2fd; }
+    .loc-btn.active { background: #1976d2; color: white; border-color: #1976d2; }
+    .loc-btn.locating { animation: pulse-loc 1s infinite; }
+    @keyframes pulse-loc {
+      0%, 100% { background: white; }
+      50% { background: #e3f2fd; }
+    }
+    .city-select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 150px;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 13px;
+      outline: none;
+    }
+    .search-input:focus { border-color: #1976d2; }
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 100;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .search-results.open { display: block; }
+    .search-result-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #eee;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #e3f2fd; }
+
+    /* Current weather card */
+    .current-weather {
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
+      color: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .cw-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .cw-location {
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+    .cw-updated {
+      font-size: 0.8em;
+      opacity: 0.8;
+    }
+    .cw-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .cw-icon {
+      font-size: 4em;
+      line-height: 1;
+    }
+    .cw-temp-block { flex: 1; }
+    .cw-temp {
+      font-size: 3em;
+      font-weight: 300;
+      line-height: 1;
+    }
+    .cw-desc {
+      font-size: 1em;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+    .cw-feels {
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+    .cw-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+    .cw-detail-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+    }
+    .cw-detail-icon { font-size: 1.2em; }
+    .cw-detail-label { opacity: 0.7; font-size: 0.85em; }
+    .cw-detail-value { font-weight: 600; }
+    .cw-sun {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 0.85em;
+      opacity: 0.8;
+    }
+
+    /* Loading state */
+    .loading-msg {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+      font-size: 1.1em;
+    }
+
+    /* 7-day forecast */
+    .forecast-section {
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+    }
+    .forecast-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .forecast-card {
+      flex: 0 0 100px;
+      background: white;
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .fc-day {
+      font-size: 0.85em;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    .fc-icon {
+      font-size: 2em;
+      margin-bottom: 6px;
+    }
+    .fc-temps {
+      font-size: 0.9em;
+      color: #333;
+    }
+    .fc-hi { font-weight: 700; }
+    .fc-lo { color: #888; }
+    .fc-precip {
+      font-size: 0.75em;
+      color: #1976d2;
+      margin-top: 4px;
+    }
+    .fc-wind {
+      font-size: 0.75em;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    /* World cities */
+    .world-section {
+      margin-bottom: 16px;
+    }
+    .world-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 8px;
+    }
+    .world-toggle {
+      font-size: 0.9em;
+      color: #1976d2;
+    }
+    .world-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    .world-grid.collapsed { display: none; }
+    .world-city-btn {
+      padding: 10px 12px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85em;
+      text-align: center;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .world-city-btn:hover { background: #e3f2fd; border-color: #90caf9; }
+    .world-city-btn.active { background: #1976d2; color: white; border-color: #1976d2; }
+
+    /* Float button */
+    .float-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1000;
+      transition: background 0.2s;
+    }
+    .float-btn:hover { background: #f4f4f4; }
+
+    /* Error display */
+    .error-msg {
+      background: #fff3e0;
+      color: #e65100;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9em;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 { font-size: 1.2em; width: 100%; }
+      .header-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn { padding: 4px 8px; font-size: 11px; }
+      .container { padding: 12px; }
+      .cw-icon { font-size: 3em; }
+      .cw-temp { font-size: 2.5em; }
+      .forecast-card { flex: 0 0 85px; padding: 10px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title">Weather</h1>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
+      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震">Quake</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Location bar -->
+    <div class="location-bar">
+      <button class="loc-btn" id="auto-btn" onclick="detectLocation()">📍 Auto</button>
+      <select class="city-select" id="taiwan-select" onchange="onTaiwanCityChange()">
+        <option value="" data-en="Taiwan ▼" data-zh="台灣 ▼">Taiwan ▼</option>
+      </select>
+      <div class="search-box">
+        <input class="search-input" id="search-input" type="text" placeholder="Search city..." oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- Loading -->
+    <div class="loading-msg" id="loading-msg">
+      <span data-en="Loading weather..." data-zh="載入天氣中...">Loading weather...</span>
+    </div>
+
+    <!-- Current Weather -->
+    <div class="current-weather" id="current-weather" style="display:none">
+      <div class="cw-header">
+        <span class="cw-location" id="cw-location"></span>
+        <span class="cw-updated" id="cw-updated"></span>
+      </div>
+      <div class="cw-main">
+        <span class="cw-icon" id="cw-icon"></span>
+        <div class="cw-temp-block">
+          <div class="cw-temp" id="cw-temp"></div>
+          <div class="cw-desc" id="cw-desc"></div>
+          <div class="cw-feels" id="cw-feels"></div>
+        </div>
+      </div>
+      <div class="cw-details">
+        <div class="cw-detail-item">
+          <span class="cw-detail-icon">💨</span>
+          <div>
+            <div class="cw-detail-label" id="lbl-wind" data-en="Wind" data-zh="風速">Wind</div>
+            <div class="cw-detail-value" id="cw-wind"></div>
+          </div>
+        </div>
+        <div class="cw-detail-item">
+          <span class="cw-detail-icon">💧</span>
+          <div>
+            <div class="cw-detail-label" id="lbl-humidity" data-en="Humidity" data-zh="濕度">Humidity</div>
+            <div class="cw-detail-value" id="cw-humidity"></div>
+          </div>
+        </div>
+        <div class="cw-detail-item">
+          <span class="cw-detail-icon">🌡️</span>
+          <div>
+            <div class="cw-detail-label" id="lbl-pressure" data-en="Pressure" data-zh="氣壓">Pressure</div>
+            <div class="cw-detail-value" id="cw-pressure"></div>
+          </div>
+        </div>
+        <div class="cw-detail-item">
+          <span class="cw-detail-icon">🌧️</span>
+          <div>
+            <div class="cw-detail-label" id="lbl-precip" data-en="Precipitation" data-zh="降水">Precipitation</div>
+            <div class="cw-detail-value" id="cw-precip"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cw-sun" id="cw-sun"></div>
+    </div>
+
+    <!-- 7-Day Forecast -->
+    <div class="forecast-section" id="forecast-section" style="display:none">
+      <div class="section-title" id="forecast-title" data-en="7-Day Forecast" data-zh="7天預報">7-Day Forecast</div>
+      <div class="forecast-row" id="forecast-row"></div>
+    </div>
+
+    <!-- World Cities -->
+    <div class="world-section">
+      <div class="world-header" onclick="toggleWorldCities()">
+        <span class="section-title" id="world-title" data-en="World Cities" data-zh="世界城市">World Cities</span>
+        <span class="world-toggle" id="world-toggle" data-en="Show ▼" data-zh="展開 ▼">Show ▼</span>
+      </div>
+      <div class="world-grid collapsed" id="world-grid"></div>
+    </div>
+  </div>
+
+  <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+
+  <script>
+'use strict';
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const FORECAST_API = 'https://api.open-meteo.com/v1/forecast';
+const GEOCODING_API = 'https://geocoding-api.open-meteo.com/v1/search';
+const CACHE_KEY = 'weather-cache';
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+
+// Taiwan cities with coordinates (from CITIES in common.js but self-contained)
+const TAIWAN_CITIES = [
+  { key: 'taipei', name: { en: 'Taipei', zh: '台北市' }, lat: 25.0330, lng: 121.5654 },
+  { key: 'newtaipei', name: { en: 'New Taipei', zh: '新北市' }, lat: 25.0119, lng: 121.4650 },
+  { key: 'taoyuan', name: { en: 'Taoyuan', zh: '桃園市' }, lat: 24.9936, lng: 121.3010 },
+  { key: 'hsinchu', name: { en: 'Hsinchu', zh: '新竹市' }, lat: 24.8138, lng: 120.9675 },
+  { key: 'taichung', name: { en: 'Taichung', zh: '台中市' }, lat: 24.1477, lng: 120.6736 },
+  { key: 'chiayi', name: { en: 'Chiayi', zh: '嘉義市' }, lat: 23.4800, lng: 120.4491 },
+  { key: 'tainan', name: { en: 'Tainan', zh: '台南市' }, lat: 22.9998, lng: 120.2270 },
+  { key: 'kaohsiung', name: { en: 'Kaohsiung', zh: '高雄市' }, lat: 22.6273, lng: 120.3014 },
+  { key: 'pingtung', name: { en: 'Pingtung', zh: '屏東縣' }, lat: 22.6762, lng: 120.4929 },
+  { key: 'yilan', name: { en: 'Yilan', zh: '宜蘭縣' }, lat: 24.7570, lng: 121.7533 },
+  { key: 'hualien', name: { en: 'Hualien', zh: '花蓮縣' }, lat: 23.9910, lng: 121.6011 },
+  { key: 'taitung', name: { en: 'Taitung', zh: '台東縣' }, lat: 22.7583, lng: 121.1444 },
+  { key: 'keelung', name: { en: 'Keelung', zh: '基隆市' }, lat: 25.1276, lng: 121.7392 },
+];
+
+const WORLD_CITIES = [
+  { name: { en: 'Tokyo', zh: '東京' }, lat: 35.6762, lng: 139.6503 },
+  { name: { en: 'Seoul', zh: '首爾' }, lat: 37.5665, lng: 126.9780 },
+  { name: { en: 'Hong Kong', zh: '香港' }, lat: 22.3193, lng: 114.1694 },
+  { name: { en: 'Singapore', zh: '新加坡' }, lat: 1.3521, lng: 103.8198 },
+  { name: { en: 'Bangkok', zh: '曼谷' }, lat: 13.7563, lng: 100.5018 },
+  { name: { en: 'New York', zh: '紐約' }, lat: 40.7128, lng: -74.0060 },
+  { name: { en: 'Los Angeles', zh: '洛杉磯' }, lat: 34.0522, lng: -118.2437 },
+  { name: { en: 'London', zh: '倫敦' }, lat: 51.5074, lng: -0.1278 },
+  { name: { en: 'Paris', zh: '巴黎' }, lat: 48.8566, lng: 2.3522 },
+  { name: { en: 'Berlin', zh: '柏林' }, lat: 52.5200, lng: 13.4050 },
+  { name: { en: 'Sydney', zh: '雪梨' }, lat: -33.8688, lng: 151.2093 },
+  { name: { en: 'Dubai', zh: '杜拜' }, lat: 25.2048, lng: 55.2708 },
+  { name: { en: 'Shanghai', zh: '上海' }, lat: 31.2304, lng: 121.4737 },
+  { name: { en: 'Beijing', zh: '北京' }, lat: 39.9042, lng: 116.4074 },
+  { name: { en: 'Mumbai', zh: '孟買' }, lat: 19.0760, lng: 72.8777 },
+  { name: { en: 'São Paulo', zh: '聖保羅' }, lat: -23.5505, lng: -46.6333 },
+  { name: { en: 'Cairo', zh: '開羅' }, lat: 30.0444, lng: 31.2357 },
+  { name: { en: 'Moscow', zh: '莫斯科' }, lat: 55.7558, lng: 37.6173 },
+  { name: { en: 'Vancouver', zh: '溫哥華' }, lat: 49.2827, lng: -123.1207 },
+  { name: { en: 'Amsterdam', zh: '阿姆斯特丹' }, lat: 52.3676, lng: 4.9041 },
+];
+
+// WMO weather code → emoji + description
+const WMO_CODES = {
+  0:  { icon: '☀️', en: 'Clear sky', zh: '晴天' },
+  1:  { icon: '🌤️', en: 'Mainly clear', zh: '大致晴朗' },
+  2:  { icon: '⛅', en: 'Partly cloudy', zh: '局部多雲' },
+  3:  { icon: '☁️', en: 'Overcast', zh: '陰天' },
+  45: { icon: '🌫️', en: 'Fog', zh: '霧' },
+  48: { icon: '🌫️', en: 'Rime fog', zh: '霧凇' },
+  51: { icon: '🌦️', en: 'Light drizzle', zh: '小毛雨' },
+  53: { icon: '🌦️', en: 'Moderate drizzle', zh: '毛雨' },
+  55: { icon: '🌦️', en: 'Dense drizzle', zh: '大毛雨' },
+  56: { icon: '🌦️', en: 'Freezing drizzle', zh: '凍毛雨' },
+  57: { icon: '🌦️', en: 'Heavy freezing drizzle', zh: '大凍毛雨' },
+  61: { icon: '🌧️', en: 'Slight rain', zh: '小雨' },
+  63: { icon: '🌧️', en: 'Moderate rain', zh: '中雨' },
+  65: { icon: '🌧️', en: 'Heavy rain', zh: '大雨' },
+  66: { icon: '🌧️', en: 'Freezing rain', zh: '凍雨' },
+  67: { icon: '🌧️', en: 'Heavy freezing rain', zh: '大凍雨' },
+  71: { icon: '🌨️', en: 'Slight snow', zh: '小雪' },
+  73: { icon: '🌨️', en: 'Moderate snow', zh: '中雪' },
+  75: { icon: '🌨️', en: 'Heavy snow', zh: '大雪' },
+  77: { icon: '🌨️', en: 'Snow grains', zh: '雪粒' },
+  80: { icon: '🌧️', en: 'Slight rain showers', zh: '小陣雨' },
+  81: { icon: '🌧️', en: 'Moderate rain showers', zh: '陣雨' },
+  82: { icon: '🌧️', en: 'Violent rain showers', zh: '暴雨' },
+  85: { icon: '🌨️', en: 'Slight snow showers', zh: '小陣雪' },
+  86: { icon: '🌨️', en: 'Heavy snow showers', zh: '大陣雪' },
+  95: { icon: '⛈️', en: 'Thunderstorm', zh: '雷暴' },
+  96: { icon: '⛈️', en: 'Thunderstorm with hail', zh: '雷暴伴冰雹' },
+  99: { icon: '⛈️', en: 'Thunderstorm with heavy hail', zh: '強雷暴冰雹' },
+};
+
+// Wind direction from degrees
+const WIND_DIRS = {
+  en: ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'],
+  zh: ['北','北北東','東北','東北東','東','東南東','東南','南南東','南','南南西','西南','西南西','西','西北西','西北','北北西']
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let currentLocation = null; // { lat, lng, name }
+let weatherData = null;
+let searchTimeout = null;
+let refreshTimer = null;
+let worldExpanded = false;
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+function initialize() {
+  console.log('[Weather] Initializing...');
+
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) isZh = savedLang === 'zh';
+
+  populateTaiwanSelect();
+  renderWorldCities();
+  updateUI();
+
+  // Try cache first, then auto-detect
+  const cached = getCachedWeather();
+  if (cached) {
+    currentLocation = cached.location;
+    weatherData = cached.data;
+    renderWeather();
+    console.log('[Weather] Loaded from cache');
+  }
+
+  detectLocation();
+
+  // Auto-refresh
+  refreshTimer = setInterval(() => {
+    if (currentLocation) {
+      console.log('[Weather] Auto-refreshing...');
+      fetchWeather(currentLocation.lat, currentLocation.lng, currentLocation.name, true);
+    }
+  }, AUTO_REFRESH_MS);
+}
+
+// ============================================================
+// CACHING
+// ============================================================
+function getCachedWeather() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    if (Date.now() - cache.timestamp > CACHE_TTL) return null;
+    return cache;
+  } catch { return null; }
+}
+
+function setCachedWeather(location, data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      location: location,
+      data: data
+    }));
+  } catch (e) {
+    console.warn('[Weather] Cache write failed:', e);
+  }
+}
+
+// ============================================================
+// LOCATION
+// ============================================================
+async function detectLocation() {
+  const btn = document.getElementById('auto-btn');
+  btn.classList.add('locating');
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+    });
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const name = isZh ? '目前位置' : 'Current Location';
+    btn.classList.add('active');
+    await fetchWeather(lat, lng, name);
+    console.log('[Weather] Auto-detected:', lat, lng);
+  } catch (error) {
+    console.warn('[Weather] Geolocation failed:', error.message);
+    // Fallback to Taipei if no cached data
+    if (!weatherData) {
+      const taipei = TAIWAN_CITIES[0];
+      await fetchWeather(taipei.lat, taipei.lng, isZh ? taipei.name.zh : taipei.name.en);
+    }
+  } finally {
+    btn.classList.remove('locating');
+  }
+}
+
+function onTaiwanCityChange() {
+  const sel = document.getElementById('taiwan-select');
+  const idx = parseInt(sel.value);
+  if (isNaN(idx)) return;
+  const city = TAIWAN_CITIES[idx];
+  clearActiveStates();
+  fetchWeather(city.lat, city.lng, isZh ? city.name.zh : city.name.en);
+}
+
+function selectWorldCity(index) {
+  const city = WORLD_CITIES[index];
+  clearActiveStates();
+  document.querySelectorAll('.world-city-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+  fetchWeather(city.lat, city.lng, isZh ? city.name.zh : city.name.en);
+}
+
+function clearActiveStates() {
+  document.getElementById('auto-btn').classList.remove('active');
+  document.getElementById('taiwan-select').value = '';
+  document.querySelectorAll('.world-city-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+function onSearchInput() {
+  const query = document.getElementById('search-input').value.trim();
+  if (query.length < 2) {
+    closeSearchResults();
+    return;
+  }
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => searchCity(query), 300);
+}
+
+function onSearchKeydown(e) {
+  if (e.key === 'Escape') closeSearchResults();
+}
+
+async function searchCity(query) {
+  try {
+    const response = await fetch(`${GEOCODING_API}?name=${encodeURIComponent(query)}&count=5&language=en`);
+    if (!response.ok) return;
+    const data = await response.json();
+    renderSearchResults(data.results || []);
+  } catch (error) {
+    console.warn('[Weather] Search error:', error);
+  }
+}
+
+function renderSearchResults(results) {
+  const container = document.getElementById('search-results');
+  if (!results.length) {
+    container.innerHTML = `<div class="search-result-item">${isZh ? '無結果' : 'No results'}</div>`;
+    container.classList.add('open');
+    return;
+  }
+  container.innerHTML = results.map((r, i) =>
+    `<div class="search-result-item" onclick="selectSearchResult(${i})" data-lat="${r.latitude}" data-lng="${r.longitude}" data-name="${r.name}">${r.name}${r.admin1 ? ', ' + r.admin1 : ''}${r.country ? ', ' + r.country : ''}</div>`
+  ).join('');
+  container.classList.add('open');
+}
+
+function selectSearchResult(index) {
+  const items = document.querySelectorAll('.search-result-item');
+  const item = items[index];
+  if (!item) return;
+  const lat = parseFloat(item.dataset.lat);
+  const lng = parseFloat(item.dataset.lng);
+  const name = item.dataset.name;
+  clearActiveStates();
+  closeSearchResults();
+  document.getElementById('search-input').value = name;
+  fetchWeather(lat, lng, name);
+}
+
+function closeSearchResults() {
+  document.getElementById('search-results').classList.remove('open');
+}
+
+// Close search on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-box')) closeSearchResults();
+});
+
+// ============================================================
+// WEATHER FETCHING
+// ============================================================
+async function fetchWeather(lat, lng, name, skipLoadingUI) {
+  if (!skipLoadingUI) {
+    document.getElementById('loading-msg').style.display = '';
+    document.getElementById('current-weather').style.display = 'none';
+    document.getElementById('forecast-section').style.display = 'none';
+  }
+  document.getElementById('error-msg').classList.remove('visible');
+
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lng,
+    current: 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset',
+    timezone: 'auto',
+    forecast_days: 7
+  });
+
+  try {
+    const response = await fetch(`${FORECAST_API}?${params}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+
+    currentLocation = { lat, lng, name };
+    weatherData = data;
+    setCachedWeather(currentLocation, data);
+    renderWeather();
+    console.log(`[Weather] Fetched for ${name} (${lat}, ${lng})`);
+  } catch (error) {
+    console.error('[Weather] Fetch error:', error);
+    const errEl = document.getElementById('error-msg');
+    errEl.textContent = isZh ? '載入天氣失敗，請稍後再試' : 'Failed to load weather, please try again';
+    errEl.classList.add('visible');
+    document.getElementById('loading-msg').style.display = 'none';
+  }
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function renderWeather() {
+  if (!weatherData) return;
+
+  document.getElementById('loading-msg').style.display = 'none';
+  document.getElementById('current-weather').style.display = '';
+  document.getElementById('forecast-section').style.display = '';
+
+  renderCurrentWeather();
+  renderForecast();
+}
+
+function renderCurrentWeather() {
+  const c = weatherData.current;
+  const d = weatherData.daily;
+  const wmo = WMO_CODES[c.weather_code] || WMO_CODES[0];
+  const windDir = getWindDirection(c.wind_direction_10m);
+
+  document.getElementById('cw-location').textContent = currentLocation.name;
+  document.getElementById('cw-updated').textContent = formatUpdatedTime(c.time);
+  document.getElementById('cw-icon').textContent = wmo.icon;
+  document.getElementById('cw-temp').textContent = `${Math.round(c.temperature_2m)}°C`;
+  document.getElementById('cw-desc').textContent = isZh ? wmo.zh : wmo.en;
+  document.getElementById('cw-feels').textContent = isZh
+    ? `體感 ${Math.round(c.apparent_temperature)}°C`
+    : `Feels like ${Math.round(c.apparent_temperature)}°C`;
+  document.getElementById('cw-wind').textContent = `${c.wind_speed_10m} km/h ${windDir}`;
+  document.getElementById('cw-humidity').textContent = `${c.relative_humidity_2m}%`;
+  document.getElementById('cw-pressure').textContent = `${Math.round(c.surface_pressure)} hPa`;
+  document.getElementById('cw-precip').textContent = `${c.precipitation} mm`;
+
+  // Sunrise/sunset
+  if (d && d.sunrise && d.sunset) {
+    const sunrise = d.sunrise[0].split('T')[1];
+    const sunset = d.sunset[0].split('T')[1];
+    document.getElementById('cw-sun').innerHTML =
+      `<span>🌅 ${isZh ? '日出' : 'Sunrise'} ${sunrise}</span>` +
+      `<span>🌇 ${isZh ? '日落' : 'Sunset'} ${sunset}</span>`;
+  }
+}
+
+function renderForecast() {
+  const d = weatherData.daily;
+  if (!d || !d.time) return;
+
+  const row = document.getElementById('forecast-row');
+  row.innerHTML = d.time.map((date, i) => {
+    const wmo = WMO_CODES[d.weather_code[i]] || WMO_CODES[0];
+    const dayName = getDayName(date, i);
+    const hi = Math.round(d.temperature_2m_max[i]);
+    const lo = Math.round(d.temperature_2m_min[i]);
+    const precip = d.precipitation_sum[i];
+    const wind = Math.round(d.wind_speed_10m_max[i]);
+
+    return `<div class="forecast-card">
+      <div class="fc-day">${dayName}</div>
+      <div class="fc-icon">${wmo.icon}</div>
+      <div class="fc-temps"><span class="fc-hi">${hi}°</span> <span class="fc-lo">${lo}°</span></div>
+      ${precip > 0 ? `<div class="fc-precip">🌧 ${precip}mm</div>` : ''}
+      <div class="fc-wind">💨 ${wind} km/h</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function getWeatherInfo(code) {
+  return WMO_CODES[code] || WMO_CODES[0];
+}
+
+function getWindDirection(degrees) {
+  const dirs = isZh ? WIND_DIRS.zh : WIND_DIRS.en;
+  const index = Math.round(degrees / 22.5) % 16;
+  return dirs[index];
+}
+
+function formatUpdatedTime(isoString) {
+  try {
+    const d = new Date(isoString);
+    const hh = d.getHours().toString().padStart(2, '0');
+    const mm = d.getMinutes().toString().padStart(2, '0');
+    return `${isZh ? '更新' : 'Updated'} ${hh}:${mm}`;
+  } catch {
+    return '';
+  }
+}
+
+function getDayName(dateStr, index) {
+  if (index === 0) return isZh ? '今天' : 'Today';
+  if (index === 1) return isZh ? '明天' : 'Tomorrow';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isZh) {
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    return '週' + days[d.getDay()];
+  }
+  return d.toLocaleDateString('en-US', { weekday: 'short' });
+}
+
+function populateTaiwanSelect() {
+  const sel = document.getElementById('taiwan-select');
+  // Clear existing options except the first placeholder
+  while (sel.options.length > 1) sel.remove(1);
+  TAIWAN_CITIES.forEach((city, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = isZh ? city.name.zh : city.name.en;
+    sel.appendChild(opt);
+  });
+}
+
+function renderWorldCities() {
+  const grid = document.getElementById('world-grid');
+  grid.innerHTML = WORLD_CITIES.map((city, i) =>
+    `<button class="world-city-btn" onclick="selectWorldCity(${i})">${isZh ? city.name.zh : city.name.en}</button>`
+  ).join('');
+}
+
+function toggleWorldCities() {
+  worldExpanded = !worldExpanded;
+  const grid = document.getElementById('world-grid');
+  const toggle = document.getElementById('world-toggle');
+  grid.classList.toggle('collapsed', !worldExpanded);
+  if (worldExpanded) {
+    toggle.textContent = isZh ? '收起 ▲' : 'Hide ▲';
+  } else {
+    toggle.textContent = isZh ? '展開 ▼' : 'Show ▼';
+  }
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  updateUI();
+  // Re-render with new language
+  populateTaiwanSelect();
+  renderWorldCities();
+  if (weatherData) renderWeather();
+}
+
+function updateUI() {
+  document.title = isZh ? '天氣' : 'Weather';
+  document.getElementById('page-title').textContent = isZh ? '天氣' : 'Weather';
+
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+  });
+
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) langBtn.textContent = isZh ? '中' : 'EN';
+
+  // Auto button
+  document.getElementById('auto-btn').textContent = '📍 ' + (isZh ? '自動' : 'Auto');
+
+  // Search placeholder
+  document.getElementById('search-input').placeholder = isZh ? '搜尋城市...' : 'Search city...';
+
+  // Taiwan select placeholder
+  const sel = document.getElementById('taiwan-select');
+  if (sel.options[0]) {
+    sel.options[0].textContent = isZh ? '台灣 ▼' : 'Taiwan ▼';
+  }
+
+  // World toggle
+  const toggle = document.getElementById('world-toggle');
+  if (worldExpanded) {
+    toggle.textContent = isZh ? '收起 ▲' : 'Hide ▲';
+  } else {
+    toggle.textContent = isZh ? '展開 ▼' : 'Show ▼';
+  }
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+document.addEventListener('DOMContentLoaded', initialize);
+  </script>
+</body>
+</html>

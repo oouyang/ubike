@@ -10,6 +10,9 @@ Taiwan Transport PWA - a comprehensive public transportation app displaying:
 - **TRA** Taiwan Rail stations (13 lines, 200+ stations)
 - **THSR** High Speed Rail (12 stations with schedules)
 - **City Bus** nearby stops with real-time arrivals
+- **Oil Prices** CPC gasoline & diesel prices with nearby gas stations
+- **Weather** current conditions & 7-day forecast
+- **Earthquake** real-time seismic activity map
 
 All displayed on interactive Leaflet/OpenStreetMap maps with bilingual support (EN/中文).
 
@@ -49,6 +52,10 @@ All displayed on interactive Leaflet/OpenStreetMap maps with bilingual support (
 |-----|----------|------|---------|
 | YouBike Official | `apis.youbike.com.tw/json/station-yb2.json` | None | Real-time bike station data |
 | TDX (optional) | `tdx.transportdata.tw/api/...` | OAuth 2.0 | Real-time train/bus arrivals |
+| CPC Oil (via Worker) | `www.cpc.com.tw/GetOilPriceJson.aspx` | None | Weekly oil prices |
+| Overpass API | `overpass-api.de/api/interpreter` | None | Nearby gas stations (OSM) |
+| Open-Meteo | `api.open-meteo.com/v1/forecast` | None | Weather data & geocoding |
+| USGS Earthquake | `earthquake.usgs.gov/fdsnws/event/1/query` | None | Seismic activity data |
 
 ## Development
 
@@ -77,6 +84,9 @@ ubike/
 ├── rail.html           # TRA - Train schedules, line/class filters
 ├── thsr.html           # THSR - Train schedules, station info
 ├── bus.html            # Bus - Route schedules, nearby stops, arrivals
+├── oil.html            # Oil Prices - CPC prices, predictions, nearby stations
+├── weather.html        # Weather - Current & 7-day forecast
+├── earthquake.html     # Earthquake - Real-time seismic activity map
 ├── js/
 │   ├── common.js       # Shared utilities (CITIES, distance, language)
 │   ├── ubike.js        # YouBike page logic
@@ -91,7 +101,9 @@ ubike/
 │   ├── air.html        # Airports (static)
 │   └── bus.html        # Intercity bus terminals (static)
 ├── workers/
-│   └── tdx-proxy.js    # Cloudflare Worker for TDX API proxy
+│   ├── tdx-proxy.js    # Cloudflare Worker for TDX API proxy
+│   ├── oil-price-proxy.js # Cloudflare Worker for CPC oil prices
+│   └── earthquake-notify.js # Cloudflare Worker for earthquake notifications
 ├── sw.js               # Service worker
 ├── manifest.webapp     # PWA manifest
 └── img/                # Icons (180px, etc.)
@@ -137,6 +149,34 @@ ubike/
   - Distance-sorted stop list
   - Arrival badges with countdown
 - **Locate Button**: Center map to user location
+
+### Oil Prices (`oil.html`)
+- **Price Info Tab** (default):
+  - Current week prices: 92/95/98 unleaded + diesel (NT$/L)
+  - Next week predicted prices with ▲/▼ change indicators (red up, green down)
+  - Share button: FB share + copy to clipboard
+  - Price history mini-chart (last 8 weeks, CSS bar chart)
+  - Demo data by default; live data via Cloudflare Worker proxy
+- **Nearby Stations Tab**:
+  - Leaflet map centered on user location
+  - Gas station markers from Overpass API (CPC=green, Formosa=blue, other=gray)
+  - Popup with station name, brand, navigation links
+  - Locate button (📍)
+- **Not in nav header**: Oil link only appears as card in `index.html`, not in other pages' nav headers
+
+### Weather (`weather.html`)
+- **Current Weather**: Temperature, feels-like, wind, humidity, pressure, precipitation
+- **7-Day Forecast**: Scrollable cards with hi/lo temps, weather icons, precipitation
+- **Location**: Auto-detect GPS, Taiwan city selector (13 cities), world cities (20), search
+- **Caching**: localStorage with 30-min TTL, auto-refresh every 30 min
+- **Data Source**: Open-Meteo API (free, no auth)
+
+### Earthquake (`earthquake.html`)
+- **Map**: Leaflet with magnitude-scaled circle markers (color-coded)
+- **List**: Sortable by time, unread (NEW) badges, FB share per event
+- **Filters**: Magnitude slider (2-7), time range buttons (1d/7d/30d/90d)
+- **Notifications**: Browser push + email subscription modal
+- **Data Source**: USGS Earthquake API
 
 ### Common UI Features (All Pages)
 - **Navigation Bar**: Links to all transport pages
@@ -276,6 +316,9 @@ dragging                 // Disables transition during drag
 | Map tiles (OSM) | Cache-first | 7 days |
 | YouBike API | Stale-while-revalidate | 5 minutes |
 | TDX API | Network-first | 30 seconds |
+| USGS Earthquake API | Stale-while-revalidate | 10 minutes |
+| Open-Meteo API | Stale-while-revalidate | 30 minutes |
+| Overpass API (gas stations) | Cache-first | 24 hours |
 
 ## localStorage Keys
 
@@ -287,6 +330,9 @@ dragging                 // Disables transition during drag
 | `mrt-system` | MRT system | System code |
 | `rail-line` | TRA line | Line code |
 | `bus-city` | Bus city | City code |
+| `weather-cache` | Weather cache | JSON (location + data + timestamp) |
+| `earthquake-last-seen` | Last viewed time | Timestamp (ms) |
+| `earthquake-notify-settings` | Notification prefs | JSON |
 
 ## Data Schemas
 

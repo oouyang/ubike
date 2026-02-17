@@ -18,6 +18,10 @@ const STATIC_ASSETS = [
     '/rail.html',
     '/thsr.html',
     '/bus.html',
+    '/earthquake.html',
+    '/weather.html',
+    '/oil.html',
+    '/etf.html',
     '/js/common.js',
     '/js/ubike.js',
     '/js/bus.js',
@@ -43,6 +47,26 @@ const API_PATTERNS = {
     'tdx.transportdata.tw': {
         strategy: 'network-first',
         maxAge: 30 * 1000 // 30 seconds
+    },
+    // USGS Earthquake API - stale-while-revalidate (10 min cache)
+    'earthquake.usgs.gov': {
+        strategy: 'stale-while-revalidate',
+        maxAge: 10 * 60 * 1000 // 10 minutes
+    },
+    // Open-Meteo API - stale-while-revalidate (30 min cache)
+    'api.open-meteo.com': {
+        strategy: 'stale-while-revalidate',
+        maxAge: 30 * 60 * 1000 // 30 minutes
+    },
+    // Open-Meteo Geocoding API - stale-while-revalidate (30 min cache)
+    'geocoding-api.open-meteo.com': {
+        strategy: 'stale-while-revalidate',
+        maxAge: 30 * 60 * 1000 // 30 minutes
+    },
+    // Overpass API (gas stations) - cache first, stations rarely change
+    'overpass-api.de': {
+        strategy: 'cache-first',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
     // OpenStreetMap tiles - cache first
     'tile.openstreetmap.org': {
@@ -273,6 +297,49 @@ async function staleWhileRevalidate(request, maxAge = 5 * 60 * 1000) {
     // No cache, wait for network
     return fetchPromise;
 }
+
+// Handle push notifications (earthquake alerts)
+self.addEventListener('push', (event) => {
+    let data = { title: 'Earthquake Alert', body: 'New earthquake detected near Taiwan' };
+    try {
+        data = event.data.json();
+    } catch (e) {
+        console.warn('[SW] Could not parse push data:', e);
+    }
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: 'img/icon-180.png',
+            badge: 'img/icon-180.png',
+            vibrate: [200, 100, 200],
+            tag: data.data?.quakeId || 'earthquake-alert',
+            renotify: true,
+            data: { url: data.url || '/earthquake.html' }
+        })
+    );
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const url = event.notification.data?.url || '/earthquake.html';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then((clientList) => {
+                // Focus existing window if available
+                for (const client of clientList) {
+                    if (client.url.includes('earthquake') && 'focus' in client) {
+                        return client.focus();
+                    }
+                }
+                // Otherwise open new window
+                return clients.openWindow(url);
+            })
+    );
+});
 
 // Handle messages from clients
 self.addEventListener('message', (event) => {

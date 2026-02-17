@@ -92,6 +92,7 @@ function createLeafletStub() {
     map() { return chainable(); },
     tileLayer() { return chainable(); },
     marker() { return chainable(); },
+    circleMarker() { return chainable(); },
     polyline() { return chainable(); },
     divIcon(opts) { return { options: opts }; },
     latLngBounds() { return chainable(); }

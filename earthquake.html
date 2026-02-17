@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#1976d2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Taiwan Earthquake Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="icon" type="image/png" href="favicon.ico">
+  <link rel="manifest" href="manifest.webapp">
+  <link rel="apple-touch-icon" href="img/icon-180.png">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: linear-gradient(135deg, #1976d2, #0d47a1);
+      color: white;
+      flex-shrink: 0;
+    }
+    h1 { margin: 0; font-size: 1.5em; }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .nav-btn {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 12px;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
+    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
+    .nav-btn.home:hover { background: #F57C00; }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #panel {
+      width: 380px;
+      height: 100%;
+      background: #f9f9f9;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sheet-handle { display: none; }
+
+    .filter-box {
+      padding: 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .filter-row:last-child { margin-bottom: 0; }
+    .filter-label {
+      font-size: 13px;
+      color: #555;
+      white-space: nowrap;
+      min-width: 60px;
+    }
+    .filter-row input[type="range"] {
+      flex: 1;
+      cursor: pointer;
+    }
+    .filter-value {
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+      min-width: 30px;
+      text-align: center;
+    }
+    .time-btns {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+    .time-btn {
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    .time-btn:hover { background: #e3f2fd; }
+    .time-btn.active {
+      background: #1976d2;
+      color: white;
+      border-color: #1976d2;
+    }
+
+    .quake-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .quake-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .quake-item:hover { background: #e3f2fd; }
+    .quake-item.selected { background: #bbdefb; }
+    .quake-item.unread { background: #fff8e1; }
+    .quake-item.unread:hover { background: #fff3c4; }
+
+    .mag-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+      flex-shrink: 0;
+    }
+    .mag-red { background: #d32f2f; }
+    .mag-orange { background: #f57c00; }
+    .mag-yellow { background: #fbc02d; color: #333; }
+    .mag-green { background: #388e3c; }
+
+    .quake-info { flex: 1; min-width: 0; }
+    .quake-title {
+      font-weight: bold;
+      font-size: 0.95em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .new-badge {
+      background: #d32f2f;
+      color: white;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    .quake-detail {
+      font-size: 0.82em;
+      color: #666;
+      line-height: 1.4;
+    }
+    .quake-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .share-btn-small {
+      background: none;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+      color: #555;
+      transition: background 0.2s;
+    }
+    .share-btn-small:hover { background: #e3f2fd; }
+
+    .result-count {
+      padding: 8px 15px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.85em;
+      color: #666;
+    }
+
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .float-btn-container {
+      position: fixed;
+      bottom: 20px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .float-btn {
+      width: 44px;
+      height: 44px;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.2s;
+    }
+    .float-btn:hover { background: #f4f4f4; }
+    .float-btn:active { background: #e0e0e0; }
+    .locate-btn { font-size: 20px; }
+    .locate-btn.locating { animation: pulse-locate 1s infinite; }
+    .notify-btn { font-size: 18px; position: relative; }
+    .notify-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #d32f2f;
+      color: white;
+      font-size: 9px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @keyframes pulse-locate {
+      0%, 100% { background: white; }
+      50% { background: #e3f2fd; }
+    }
+
+    /* Pulsing selected marker */
+    @keyframes pulse-marker {
+      0% { box-shadow: 0 0 0 0 rgba(211,47,47,0.5); }
+      70% { box-shadow: 0 0 0 12px rgba(211,47,47,0); }
+      100% { box-shadow: 0 0 0 0 rgba(211,47,47,0); }
+    }
+    .quake-marker-selected {
+      animation: pulse-marker 1.5s infinite;
+    }
+
+    /* Notification settings modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .modal-section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    .modal-section:last-child { border-bottom: none; }
+    .modal-label {
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      cursor: pointer;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background: #1976d2;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    .modal-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .modal-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .modal-btn-primary {
+      background: #1976d2;
+      color: white;
+    }
+    .modal-btn-primary:hover { background: #1565c0; }
+    .modal-btn-secondary {
+      background: #eee;
+      color: #333;
+    }
+    .modal-btn-secondary:hover { background: #ddd; }
+    .modal-close {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #888;
+      padding: 0;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #333; }
+    .modal-hint {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 4px;
+    }
+    .quiet-hours-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .quiet-hours-row input[type="time"] {
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    /* ===== MOBILE: Bottom Sheet ===== */
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.2em;
+        width: 100%;
+      }
+      .header-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-start;
+      }
+      .nav-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .main-content {
+        flex-direction: column;
+      }
+
+      #map-container {
+        position: fixed;
+        top: 74px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+      }
+
+      #panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: auto;
+        max-height: 90vh;
+        background: white;
+        border-radius: 16px 16px 0 0;
+        border-right: none;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+      }
+
+      #panel.snap-collapsed { transform: translateY(calc(100% - 56px)); }
+      #panel.snap-half { transform: translateY(40vh); }
+      #panel.snap-full { transform: translateY(0); }
+      #panel.dragging { transition: none; }
+      #panel.no-transition { transition: none; }
+
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 56px;
+        padding: 8px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        background: white;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .sheet-pill {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+      }
+
+      .sheet-summary {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+
+      .sheet-content {
+        height: calc(90vh - 56px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .quake-list {
+        flex: 1;
+        min-height: 0;
+      }
+
+      .filter-box {
+        padding: 8px;
+      }
+      .quake-item {
+        padding: 10px 12px;
+      }
+
+      .float-btn-container {
+        bottom: 70px;
+        z-index: 1001;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="page-title">Earthquake Map</h1>
+    <div class="header-controls">
+      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
+      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
+      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
+      <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
+      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+      <a href="earthquake.html" class="nav-btn active" data-en="Quake" data-zh="地震">Quake</a>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div id="panel">
+      <div class="sheet-handle">
+        <div class="sheet-pill"></div>
+        <div class="sheet-summary" id="sheet-summary">Loading...</div>
+      </div>
+      <div class="sheet-content">
+        <div class="filter-box">
+          <div class="filter-row">
+            <span class="filter-label" id="lbl-mag" data-en="Min Mag" data-zh="最小規模">Min Mag</span>
+            <input type="range" id="mag-slider" min="2" max="7" step="0.5" value="2">
+            <span class="filter-value" id="mag-value">2.0</span>
+          </div>
+          <div class="filter-row">
+            <span class="filter-label" id="lbl-time" data-en="Period" data-zh="期間">Period</span>
+            <div class="time-btns">
+              <button class="time-btn" data-days="1" data-en="1d" data-zh="1天">1d</button>
+              <button class="time-btn active" data-days="7" data-en="7d" data-zh="7天">7d</button>
+              <button class="time-btn" data-days="30" data-en="30d" data-zh="30天">30d</button>
+              <button class="time-btn" data-days="90" data-en="90d" data-zh="90天">90d</button>
+            </div>
+          </div>
+        </div>
+        <div id="result-count" class="result-count"></div>
+        <ul id="quake-list" class="quake-list"></ul>
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="map-canvas"></div>
+    </div>
+
+    <div class="float-btn-container">
+      <button class="float-btn lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+      <button class="float-btn notify-btn" onclick="openNotifySettings()" title="Notification settings" id="notify-btn">
+        🔔
+      </button>
+      <button class="float-btn locate-btn" onclick="centerToUserLocation()" title="Center to my location">📍</button>
+    </div>
+  </div>
+
+  <!-- Notification Settings Modal -->
+  <div class="modal-overlay" id="notify-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeNotifySettings()">&times;</button>
+      <div class="modal-title" id="modal-title" data-en="Notification Settings" data-zh="通知設定">Notification Settings</div>
+
+      <div class="modal-section">
+        <div class="modal-label">
+          <span data-en="Browser Push Notifications" data-zh="瀏覽器推播通知">Browser Push Notifications</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="push-toggle" onchange="togglePush()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="modal-hint" id="push-status" data-en="Enable to receive earthquake alerts" data-zh="啟用以接收地震警報">Enable to receive earthquake alerts</div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-label">
+          <span data-en="Email Alerts" data-zh="電子郵件通知">Email Alerts</span>
+        </div>
+        <input type="email" class="modal-input" id="email-input" placeholder="your@email.com">
+        <div style="display:flex;gap:8px;">
+          <button class="modal-btn modal-btn-primary" id="email-sub-btn" onclick="subscribeEmail()" data-en="Subscribe" data-zh="訂閱">Subscribe</button>
+          <button class="modal-btn modal-btn-secondary" id="email-unsub-btn" onclick="unsubscribeEmail()" data-en="Unsubscribe" data-zh="取消訂閱">Unsubscribe</button>
+        </div>
+        <div class="modal-hint" id="email-status"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-label">
+          <span data-en="Minimum Magnitude for Alerts" data-zh="通知最低規模">Minimum Magnitude for Alerts</span>
+        </div>
+        <div class="filter-row">
+          <input type="range" id="notify-mag-slider" min="3" max="7" step="0.5" value="4" oninput="updateNotifyMag()">
+          <span class="filter-value" id="notify-mag-value">4.0</span>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-label">
+          <span data-en="Quiet Hours" data-zh="安靜時段">Quiet Hours</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="quiet-toggle" onchange="updateQuietHours()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="quiet-hours-row">
+          <input type="time" id="quiet-start" value="22:00" onchange="updateQuietHours()">
+          <span>~</span>
+          <input type="time" id="quiet-end" value="07:00" onchange="updateQuietHours()">
+        </div>
+        <div class="modal-hint" data-en="Suppress notifications during these hours" data-zh="此時段不發送通知">Suppress notifications during these hours</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/bottom-sheet.js"></script>
+  <script>
+'use strict';
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const USGS_API = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
+const LAST_SEEN_KEY = 'earthquake-last-seen';
+const NOTIFY_SETTINGS_KEY = 'earthquake-notify-settings';
+const WORKER_URL = ''; // Set to your Cloudflare Worker URL when deployed
+const AUTO_REFRESH_MS = 10 * 60 * 1000; // 10 minutes
+
+// Taiwan place name translations (USGS → Chinese)
+const PLACE_ZH = {
+  // Cities/Regions
+  'Taipei': '台北', 'Taichung': '台中', 'Kaohsiung': '高雄', 'Tainan': '台南',
+  'Hsinchu': '新竹', 'Keelung': '基隆', 'Chiayi': '嘉義', 'Taitung': '台東',
+  'Hualien': '花蓮', 'Yilan': '宜蘭', 'Pingtung': '屏東', 'Miaoli': '苗栗',
+  'Changhua': '彰化', 'Nantou': '南投', 'Yunlin': '雲林', 'Hengchun': '恆春',
+  'Su\u2019ao': '蘇澳', 'Suao': '蘇澳', 'Taoyuan': '桃園',
+  'Taiwan': '台灣', 'Japan': '日本', 'Philippines': '菲律賓',
+  'Okinawa': '沖繩', 'Ishigaki': '石垣', 'Yonaguni': '與那國',
+};
+
+// Compass directions
+const DIR_ZH = {
+  'N': '北', 'S': '南', 'E': '東', 'W': '西',
+  'NE': '東北', 'NW': '西北', 'SE': '東南', 'SW': '西南',
+  'NNE': '北北東', 'NNW': '北北西', 'SSE': '南南東', 'SSW': '南南西',
+  'ENE': '東北東', 'ESE': '東南東', 'WNW': '西北西', 'WSW': '西南西',
+};
+
+function translatePlace(place) {
+  if (!place || !isZh) return place;
+  // Pattern: "34 km ESE of Yilan, Taiwan"
+  const match = place.match(/^(\d+)\s*km\s+([NSEW]+)\s+of\s+(.+)$/i);
+  if (!match) return place;
+  const [, dist, dir, location] = match;
+  const dirZh = DIR_ZH[dir] || dir;
+  // Split "City, Country" and translate each part, then reverse for Chinese order
+  const parts = location.split(/,\s*/);
+  const translated = parts.map(p => PLACE_ZH[p.trim()] || p.trim());
+  const locZh = translated.reverse().join('');
+  return `${locZh}${dirZh}方 ${dist} 公里`;
+}
+
+const MAG_COLORS = {
+  getColor(mag) {
+    if (mag >= 6) return '#d32f2f';
+    if (mag >= 4) return '#f57c00';
+    if (mag >= 2) return '#fbc02d';
+    return '#388e3c';
+  },
+  getClass(mag) {
+    if (mag >= 6) return 'mag-red';
+    if (mag >= 4) return 'mag-orange';
+    if (mag >= 2) return 'mag-yellow';
+    return 'mag-green';
+  }
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let map = null;
+let markers = {};
+let earthquakes = [];
+let filteredQuakes = [];
+let selectedQuakeId = null;
+let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
+let userLocation = null;
+let bottomSheet = null;
+let currentTimeDays = 7;
+let currentMinMag = 2;
+let lastSeenTime = 0;
+let refreshTimer = null;
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+async function initialize() {
+  console.log('[Quake] Initializing earthquake map...');
+
+  const savedLang = localStorage.getItem('ubike-lang');
+  if (savedLang) isZh = savedLang === 'zh';
+
+  lastSeenTime = parseInt(localStorage.getItem(LAST_SEEN_KEY)) || 0;
+
+  // Try getting user location
+  if ('geolocation' in navigator) {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+      console.log('[Quake] User location:', userLocation);
+    } catch (error) {
+      console.warn('[Quake] Could not get location:', error.message);
+    }
+  }
+
+  updateUI();
+
+  // Initialize map
+  map = L.map('map-canvas').setView([23.5, 121], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | USGS',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Bind filter controls
+  document.getElementById('mag-slider').addEventListener('input', onMagSliderChange);
+  document.querySelectorAll('.time-btn').forEach(btn => {
+    btn.addEventListener('click', onTimeBtnClick);
+  });
+
+  // Load notification settings
+  loadNotifySettings();
+
+  // Fetch data
+  await fetchEarthquakes();
+
+  // Update last seen timestamp
+  localStorage.setItem(LAST_SEEN_KEY, Date.now().toString());
+
+  // Initialize bottom sheet (mobile only)
+  const panel = document.getElementById('panel');
+  if (panel && typeof BottomSheet !== 'undefined') {
+    bottomSheet = new BottomSheet(panel, {
+      initialSnap: 'collapsed',
+      onSnapChange: (snap) => console.log('[Quake] Sheet snap:', snap)
+    });
+  }
+
+  // Auto-refresh
+  refreshTimer = setInterval(async () => {
+    console.log('[Quake] Auto-refreshing...');
+    await fetchEarthquakes();
+    localStorage.setItem(LAST_SEEN_KEY, Date.now().toString());
+  }, AUTO_REFRESH_MS);
+
+  console.log('[Quake] Earthquake map initialized');
+}
+
+// ============================================================
+// DATA FETCHING
+// ============================================================
+async function fetchEarthquakes() {
+  const now = new Date();
+  const startTime = new Date(now.getTime() - currentTimeDays * 24 * 60 * 60 * 1000);
+
+  const params = new URLSearchParams({
+    format: 'geojson',
+    minlatitude: 18,
+    maxlatitude: 30,
+    minlongitude: 116,
+    maxlongitude: 130,
+    minmagnitude: currentMinMag,
+    orderby: 'time',
+    limit: 200,
+    starttime: startTime.toISOString()
+  });
+
+  try {
+    const response = await fetch(`${USGS_API}?${params}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    earthquakes = data.features || [];
+    console.log(`[Quake] Fetched ${earthquakes.length} earthquakes`);
+    applyFilters();
+  } catch (error) {
+    console.error('[Quake] Fetch error:', error);
+    document.getElementById('result-count').textContent = isZh
+      ? '載入失敗，請稍後再試'
+      : 'Failed to load, please try again';
+  }
+}
+
+// ============================================================
+// FILTERING & RENDERING
+// ============================================================
+function applyFilters() {
+  filteredQuakes = earthquakes.filter(q => q.properties.mag >= currentMinMag);
+  renderList();
+  renderMarkers();
+  updateSheetSummary();
+}
+
+function renderList() {
+  const listEl = document.getElementById('quake-list');
+  const countEl = document.getElementById('result-count');
+  const newCount = filteredQuakes.filter(q => q.properties.time > lastSeenTime).length;
+
+  const countText = isZh
+    ? `顯示 ${filteredQuakes.length} 筆地震${newCount > 0 ? ` (${newCount} 筆新)` : ''}`
+    : `Showing ${filteredQuakes.length} earthquakes${newCount > 0 ? ` (${newCount} new)` : ''}`;
+  countEl.textContent = countText;
+
+  listEl.innerHTML = filteredQuakes.map(q => {
+    const p = q.properties;
+    const mag = p.mag.toFixed(1);
+    const isNew = p.time > lastSeenTime;
+    const isSelected = q.id === selectedQuakeId;
+    const timeAgo = getTimeAgo(p.time);
+    const depth = q.geometry.coordinates[2];
+    const placeRaw = p.place || (isZh ? '未知位置' : 'Unknown location');
+    const place = isZh ? translatePlace(placeRaw) : placeRaw;
+    const usgsUrl = p.url;
+
+    return `
+      <li class="quake-item${isSelected ? ' selected' : ''}${isNew ? ' unread' : ''}" data-id="${q.id}">
+        <div class="mag-badge ${MAG_COLORS.getClass(p.mag)}">${mag}</div>
+        <div class="quake-info">
+          <div class="quake-title">
+            ${place}
+            ${isNew ? `<span class="new-badge">NEW</span>` : ''}
+          </div>
+          <div class="quake-detail">
+            ${isZh ? '深度' : 'Depth'}: ${depth.toFixed(1)} km &middot; ${timeAgo}
+          </div>
+          <div class="quake-actions">
+            <button class="share-btn-small" onclick="event.stopPropagation();shareFB('${encodeURIComponent(usgsUrl)}','${encodeURIComponent(`M${mag} - ${place}`)}')" title="Share on Facebook">FB</button>
+            <a class="share-btn-small" href="${usgsUrl}" target="_blank" onclick="event.stopPropagation()" title="USGS">USGS</a>
+          </div>
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.quake-item').forEach(item => {
+    item.addEventListener('click', () => selectQuake(item.dataset.id));
+  });
+}
+
+function renderMarkers() {
+  // Remove existing markers
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  filteredQuakes.forEach(q => {
+    const [lng, lat, depth] = q.geometry.coordinates;
+    const mag = q.properties.mag;
+    const radius = Math.max(4, Math.pow(2, mag) * 0.8);
+
+    const marker = L.circleMarker([lat, lng], {
+      radius: radius,
+      fillColor: MAG_COLORS.getColor(mag),
+      color: '#fff',
+      weight: 1.5,
+      opacity: 1,
+      fillOpacity: 0.8
+    });
+
+    marker.bindPopup(() => getPopupContent(q));
+    marker.on('click', () => selectQuake(q.id));
+    marker.addTo(map);
+    markers[q.id] = marker;
+  });
+
+  console.log(`[Quake] Rendered ${Object.keys(markers).length} markers`);
+}
+
+function getPopupContent(q) {
+  const p = q.properties;
+  const [lng, lat, depth] = q.geometry.coordinates;
+  const mag = p.mag.toFixed(1);
+  const placeRaw = p.place || (isZh ? '未知位置' : 'Unknown location');
+  const place = isZh ? translatePlace(placeRaw) : placeRaw;
+  const time = new Date(p.time).toLocaleString(isZh ? 'zh-TW' : 'en-US');
+  const usgsUrl = p.url;
+  const shareText = encodeURIComponent(`M${mag} - ${place}`);
+  const shareUrl = encodeURIComponent(usgsUrl);
+
+  const btnStyle = 'display:inline-block;padding:4px 8px;margin:2px;background:#0072c6;color:white;text-decoration:none;border-radius:4px;font-size:11px;';
+  const fbStyle = 'display:inline-block;padding:4px 8px;margin:2px;background:#1877f2;color:white;text-decoration:none;border-radius:4px;font-size:11px;cursor:pointer;border:none;';
+
+  return `<div style="max-width:260px;">
+    <strong>M ${mag}</strong> — ${place}<br>
+    ${isZh ? '深度' : 'Depth'}: ${depth.toFixed(1)} km<br>
+    ${isZh ? '時間' : 'Time'}: ${time}<br>
+    ${isZh ? '座標' : 'Coords'}: ${lat.toFixed(3)}, ${lng.toFixed(3)}<br>
+    <div style="margin-top:8px;">
+      <a href="${usgsUrl}" target="_blank" style="${btnStyle}">USGS ${isZh ? '詳情' : 'Details'}</a>
+      <button onclick="shareFB('${shareUrl}','${shareText}')" style="${fbStyle}">FB ${isZh ? '分享' : 'Share'}</button>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// INTERACTION
+// ============================================================
+function selectQuake(id) {
+  selectedQuakeId = id;
+  const q = filteredQuakes.find(q => q.id === id);
+  if (!q) return;
+
+  // Update list selection
+  document.querySelectorAll('.quake-item.selected').forEach(el => el.classList.remove('selected'));
+  const listItem = document.querySelector(`.quake-item[data-id="${id}"]`);
+  if (listItem) {
+    listItem.classList.add('selected');
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Remove pulse from previous markers
+  document.querySelectorAll('.quake-marker-selected').forEach(el => el.classList.remove('quake-marker-selected'));
+
+  // Fly to marker
+  const marker = markers[id];
+  if (marker) {
+    const [lng, lat] = q.geometry.coordinates;
+    map.flyTo([lat, lng], 8, { duration: 1 });
+    marker.openPopup();
+
+    // Add pulse effect
+    const el = marker.getElement();
+    if (el) el.classList.add('quake-marker-selected');
+  }
+
+  console.log(`[Quake] Selected: ${id}`);
+}
+
+// ============================================================
+// FILTER HANDLERS
+// ============================================================
+function onMagSliderChange(e) {
+  currentMinMag = parseFloat(e.target.value);
+  document.getElementById('mag-value').textContent = currentMinMag.toFixed(1);
+  applyFilters();
+}
+
+function onTimeBtnClick(e) {
+  const btn = e.target;
+  currentTimeDays = parseInt(btn.dataset.days);
+
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  fetchEarthquakes();
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function getTimeAgo(timestamp) {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  const hrs = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (mins < 1) return isZh ? '剛剛' : 'just now';
+  if (mins < 60) return isZh ? `${mins} 分鐘前` : `${mins}m ago`;
+  if (hrs < 24) return isZh ? `${hrs} 小時前` : `${hrs}h ago`;
+  if (days < 30) return isZh ? `${days} 天前` : `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString(isZh ? 'zh-TW' : 'en-US');
+}
+
+function shareFB(encodedUrl, encodedText) {
+  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
+  window.open(url, '_blank', 'width=600,height=400');
+}
+
+function updateSheetSummary() {
+  const summaryEl = document.getElementById('sheet-summary');
+  if (!summaryEl) return;
+  const newCount = filteredQuakes.filter(q => q.properties.time > lastSeenTime).length;
+  const timeLabel = isZh
+    ? `${currentTimeDays}天`
+    : `${currentTimeDays} day${currentTimeDays > 1 ? 's' : ''}`;
+  const newText = newCount > 0 ? (isZh ? ` (${newCount} 筆新)` : ` (${newCount} new)`) : '';
+  summaryEl.textContent = `🌍 ${isZh ? '地震' : 'Earthquakes'} · ${filteredQuakes.length} ${isZh ? '筆' : 'events'} (${timeLabel})${newText}`;
+}
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+function toggleLang() {
+  isZh = !isZh;
+  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
+  updateUI();
+  applyFilters();
+}
+
+function updateUI() {
+  document.title = isZh ? '台灣地震地圖' : 'Taiwan Earthquake Map';
+  document.getElementById('page-title').textContent = isZh ? '地震地圖' : 'Earthquake Map';
+
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+  });
+
+  // Update time buttons
+  document.querySelectorAll('.time-btn').forEach(btn => {
+    btn.textContent = isZh ? btn.dataset.zh : btn.dataset.en;
+  });
+
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) langBtn.textContent = isZh ? '中' : 'EN';
+
+  const locateBtn = document.querySelector('.locate-btn');
+  if (locateBtn) locateBtn.title = isZh ? '定位我的位置' : 'Center to my location';
+
+  const notifyBtn = document.getElementById('notify-btn');
+  if (notifyBtn) notifyBtn.title = isZh ? '通知設定' : 'Notification settings';
+}
+
+// ============================================================
+// LOCATE
+// ============================================================
+async function centerToUserLocation() {
+  const btn = document.querySelector('.locate-btn');
+  if (btn) btn.classList.add('locating');
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000
+      });
+    });
+    userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+    if (map) map.setView([userLocation.lat, userLocation.lng], 8);
+    console.log('[Quake] Centered to user location:', userLocation);
+  } catch (error) {
+    console.warn('[Quake] Could not get location:', error.code, error.message);
+    let msg;
+    if (error.code === 1) msg = isZh ? '請允許位置權限' : 'Please allow location permission';
+    else if (error.code === 2) msg = isZh ? '無法取得位置資訊' : 'Location unavailable';
+    else if (error.code === 3) msg = isZh ? '定位逾時，請重試' : 'Location timeout, please retry';
+    else msg = isZh ? '無法取得您的位置' : 'Could not get your location';
+    alert(msg);
+  } finally {
+    if (btn) btn.classList.remove('locating');
+  }
+}
+
+// ============================================================
+// NOTIFICATION SETTINGS
+// ============================================================
+function getNotifySettings() {
+  try {
+    return JSON.parse(localStorage.getItem(NOTIFY_SETTINGS_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveNotifySettings(settings) {
+  localStorage.setItem(NOTIFY_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadNotifySettings() {
+  const settings = getNotifySettings();
+  const magSlider = document.getElementById('notify-mag-slider');
+  const magValue = document.getElementById('notify-mag-value');
+  if (settings.minMag) {
+    magSlider.value = settings.minMag;
+    magValue.textContent = parseFloat(settings.minMag).toFixed(1);
+  }
+  if (settings.quietEnabled) {
+    document.getElementById('quiet-toggle').checked = true;
+  }
+  if (settings.quietStart) document.getElementById('quiet-start').value = settings.quietStart;
+  if (settings.quietEnd) document.getElementById('quiet-end').value = settings.quietEnd;
+  if (settings.email) document.getElementById('email-input').value = settings.email;
+
+  // Check push subscription status
+  updatePushStatus();
+}
+
+function updateNotifyMag() {
+  const val = document.getElementById('notify-mag-slider').value;
+  document.getElementById('notify-mag-value').textContent = parseFloat(val).toFixed(1);
+  const settings = getNotifySettings();
+  settings.minMag = val;
+  saveNotifySettings(settings);
+}
+
+function updateQuietHours() {
+  const settings = getNotifySettings();
+  settings.quietEnabled = document.getElementById('quiet-toggle').checked;
+  settings.quietStart = document.getElementById('quiet-start').value;
+  settings.quietEnd = document.getElementById('quiet-end').value;
+  saveNotifySettings(settings);
+}
+
+function openNotifySettings() {
+  document.getElementById('notify-modal').classList.add('open');
+}
+
+function closeNotifySettings() {
+  document.getElementById('notify-modal').classList.remove('open');
+}
+
+// Close modal on overlay click
+document.getElementById('notify-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeNotifySettings();
+});
+
+// ============================================================
+// PUSH NOTIFICATIONS
+// ============================================================
+async function updatePushStatus() {
+  const toggle = document.getElementById('push-toggle');
+  const statusEl = document.getElementById('push-status');
+
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    toggle.disabled = true;
+    statusEl.textContent = isZh ? '此瀏覽器不支援推播通知' : 'Push notifications not supported in this browser';
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      toggle.checked = !!sub;
+      statusEl.textContent = sub
+        ? (isZh ? '推播通知已啟用' : 'Push notifications enabled')
+        : (isZh ? '啟用以接收地震警報' : 'Enable to receive earthquake alerts');
+    } catch {
+      toggle.checked = false;
+    }
+  } else if (Notification.permission === 'denied') {
+    toggle.disabled = true;
+    statusEl.textContent = isZh ? '推播通知已被封鎖，請在瀏覽器設定中允許' : 'Push notifications blocked. Allow in browser settings.';
+  }
+}
+
+async function togglePush() {
+  const toggle = document.getElementById('push-toggle');
+  const statusEl = document.getElementById('push-status');
+
+  if (toggle.checked) {
+    // Subscribe
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        toggle.checked = false;
+        statusEl.textContent = isZh ? '需要通知權限' : 'Notification permission required';
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      // Note: VAPID public key should come from your Worker config
+      // For now, we just request permission and show status
+      statusEl.textContent = isZh
+        ? '推播通知已啟用（需部署 Worker 才能接收推播）'
+        : 'Push enabled (deploy Worker to receive push notifications)';
+
+      const settings = getNotifySettings();
+      settings.pushEnabled = true;
+      saveNotifySettings(settings);
+    } catch (error) {
+      console.error('[Quake] Push subscribe error:', error);
+      toggle.checked = false;
+      statusEl.textContent = isZh ? '訂閱失敗' : 'Subscription failed';
+    }
+  } else {
+    // Unsubscribe
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      statusEl.textContent = isZh ? '推播通知已停用' : 'Push notifications disabled';
+
+      const settings = getNotifySettings();
+      settings.pushEnabled = false;
+      saveNotifySettings(settings);
+    } catch (error) {
+      console.error('[Quake] Push unsubscribe error:', error);
+    }
+  }
+}
+
+// ============================================================
+// EMAIL SUBSCRIPTION
+// ============================================================
+async function subscribeEmail() {
+  const email = document.getElementById('email-input').value.trim();
+  const statusEl = document.getElementById('email-status');
+  if (!email || !email.includes('@')) {
+    statusEl.textContent = isZh ? '請輸入有效的電子郵件' : 'Please enter a valid email';
+    return;
+  }
+
+  if (!WORKER_URL) {
+    statusEl.textContent = isZh
+      ? '已儲存（需部署 Worker 才能接收郵件通知）'
+      : 'Saved (deploy Worker to receive email alerts)';
+    const settings = getNotifySettings();
+    settings.email = email;
+    saveNotifySettings(settings);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${WORKER_URL}/email/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, minMag: document.getElementById('notify-mag-slider').value })
+    });
+    if (response.ok) {
+      statusEl.textContent = isZh ? '訂閱成功！' : 'Subscribed!';
+      const settings = getNotifySettings();
+      settings.email = email;
+      saveNotifySettings(settings);
+    } else {
+      statusEl.textContent = isZh ? '訂閱失敗' : 'Subscription failed';
+    }
+  } catch (error) {
+    statusEl.textContent = isZh ? '網路錯誤' : 'Network error';
+  }
+}
+
+async function unsubscribeEmail() {
+  const email = document.getElementById('email-input').value.trim();
+  const statusEl = document.getElementById('email-status');
+  if (!email) {
+    statusEl.textContent = isZh ? '請輸入電子郵件' : 'Please enter email';
+    return;
+  }
+
+  if (!WORKER_URL) {
+    statusEl.textContent = isZh ? '已取消' : 'Unsubscribed';
+    const settings = getNotifySettings();
+    delete settings.email;
+    saveNotifySettings(settings);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${WORKER_URL}/email/unsubscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (response.ok) {
+      statusEl.textContent = isZh ? '已取消訂閱' : 'Unsubscribed';
+      const settings = getNotifySettings();
+      delete settings.email;
+      saveNotifySettings(settings);
+    }
+  } catch (error) {
+    statusEl.textContent = isZh ? '網路錯誤' : 'Network error';
+  }
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof L !== 'undefined') {
+    initialize();
+  } else {
+    const checkLeaflet = setInterval(() => {
+      if (typeof L !== 'undefined') {
+        clearInterval(checkLeaflet);
+        initialize();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkLeaflet), 10000);
+  }
+});
+  </script>
+</body>
+</html>
