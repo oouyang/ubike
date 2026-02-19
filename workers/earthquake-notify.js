@@ -13,17 +13,15 @@
  *   - VAPID_PUBLIC_KEY     — VAPID public key for Web Push
  *   - VAPID_PRIVATE_KEY    — VAPID private key for Web Push
  *   - VAPID_SUBJECT        — mailto: URL for VAPID
- *   - EMAIL_API_KEY        — API key for email provider (Resend/Mailgun/Brevo)
- *   - EMAIL_API_URL        — Email provider API endpoint
- *   - EMAIL_FROM           — Sender email address
+ *   - EMAIL_API_BASE       — Email API base URL (e.g. https://m.taleon.work.gd/xsw/api/admin/email)
  *
  * Deploy:
  *   npx wrangler deploy workers/earthquake-notify.js
- *
- * Cron Trigger (wrangler.toml):
- *   [triggers]
- *   crons = ["*/30 * * * *"]  # Every 30 minutes
  */
+ //* Cron Trigger (wrangler.toml):
+ //*   [triggers]
+ //*   crons = ["*/30 * * * *"]  # Every 30 minutes
+ 
 
 const USGS_API = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 const DEFAULT_MIN_MAG = 4.0;
@@ -189,11 +187,7 @@ async function notifyPushSubscribers(quake, env) {
  * Send email notification for an earthquake
  */
 async function sendEmailNotification(email, quake, env) {
-  if (!env.EMAIL_API_KEY || !env.EMAIL_API_URL || !env.EMAIL_FROM) {
-    console.warn('Email not configured, skipping');
-    return { skipped: true };
-  }
-
+  const apiBase = env.EMAIL_API_BASE || 'https://m.taleon.work.gd/xsw/api/admin/email';
   const mag = quake.properties.mag.toFixed(1);
   const place = quake.properties.place || 'Near Taiwan';
   const depth = quake.geometry.coordinates[2].toFixed(1);
@@ -203,44 +197,45 @@ async function sendEmailNotification(email, quake, env) {
 
   const subject = `Earthquake Alert: M${mag} - ${place}`;
   const htmlBody = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-      <div style="background:#d32f2f;color:white;padding:16px 24px;border-radius:8px 8px 0 0;">
-        <h2 style="margin:0;">Earthquake Alert</h2>
-      </div>
-      <div style="padding:24px;border:1px solid #eee;border-top:none;border-radius:0 0 8px 8px;">
-        <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:8px 0;font-weight:bold;width:120px;">Magnitude</td><td style="padding:8px 0;"><strong style="font-size:1.3em;color:#d32f2f;">M ${mag}</strong></td></tr>
-          <tr><td style="padding:8px 0;font-weight:bold;">Location</td><td style="padding:8px 0;">${place}</td></tr>
-          <tr><td style="padding:8px 0;font-weight:bold;">Depth</td><td style="padding:8px 0;">${depth} km</td></tr>
-          <tr><td style="padding:8px 0;font-weight:bold;">Time</td><td style="padding:8px 0;">${time} (Taipei)</td></tr>
-          <tr><td style="padding:8px 0;font-weight:bold;">Coordinates</td><td style="padding:8px 0;">${lat.toFixed(3)}, ${lng.toFixed(3)}</td></tr>
-        </table>
-        <div style="margin-top:16px;">
-          <a href="${usgsUrl}" style="display:inline-block;padding:10px 20px;background:#1976d2;color:white;text-decoration:none;border-radius:4px;margin-right:8px;">View on USGS</a>
-          <a href="https://oouyang.github.io/ubike/earthquake.html" style="display:inline-block;padding:10px 20px;background:#388e3c;color:white;text-decoration:none;border-radius:4px;">Open Earthquake Map</a>
-        </div>
-        <p style="margin-top:16px;font-size:0.85em;color:#888;">
-          Data from USGS Earthquake Hazards Program. To unsubscribe, visit the earthquake map and update your notification settings.
-        </p>
-      </div>
+<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:#d32f2f;color:white;padding:16px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;">Earthquake Alert</h2>
+  </div>
+  <div style="padding:24px;border:1px solid #eee;border-top:none;border-radius:0 0 8px 8px;">
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:8px 0;font-weight:bold;width:120px;">Magnitude</td><td style="padding:8px 0;"><strong style="font-size:1.3em;color:#d32f2f;">M ${mag}</strong></td></tr>
+      <tr><td style="padding:8px 0;font-weight:bold;">Location</td><td style="padding:8px 0;">${place}</td></tr>
+      <tr><td style="padding:8px 0;font-weight:bold;">Depth</td><td style="padding:8px 0;">${depth} km</td></tr>
+      <tr><td style="padding:8px 0;font-weight:bold;">Time</td><td style="padding:8px 0;">${time} (Taipei)</td></tr>
+      <tr><td style="padding:8px 0;font-weight:bold;">Coordinates</td><td style="padding:8px 0;">${lat.toFixed(3)}, ${lng.toFixed(3)}</td></tr>
+    </table>
+    <div style="margin-top:16px;">
+      <a href="${usgsUrl}" style="display:inline-block;padding:10px 20px;background:#1976d2;color:white;text-decoration:none;border-radius:4px;margin-right:8px;">View on USGS</a>
+      <a href="https://oouyang.github.io/ubike/earthquake.html" style="display:inline-block;padding:10px 20px;background:#388e3c;color:white;text-decoration:none;border-radius:4px;">Open Earthquake Map</a>
     </div>
-  `;
+    <p style="margin-top:16px;font-size:0.85em;color:#888;">
+      Data from USGS Earthquake Hazards Program. To unsubscribe, visit the earthquake map and update your notification settings.
+    </p>
+  </div>
+</div>`;
 
   try {
-    // Generic email API call - adapt for your provider (Resend, Mailgun, Brevo)
-    const response = await fetch(env.EMAIL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.EMAIL_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: env.EMAIL_FROM,
-        to: [email],
-        subject: subject,
-        html: htmlBody,
-      }),
+    const params = new URLSearchParams({
+      to_email: email,
+      subject: subject,
+      body: htmlBody,
+      is_html: 'true',
     });
+
+    const response = await fetch(`${apiBase}/send?${params}`, {
+      method: 'POST',
+      headers: { 'accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`Email API error ${response.status}: ${errText}`);
+    }
 
     return { success: response.ok, status: response.status };
   } catch (error) {

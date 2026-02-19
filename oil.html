@@ -578,7 +578,7 @@
 // ============================================================
 // CONFIGURATION
 // ============================================================
-const WORKER_URL = ''; // Set to Cloudflare Worker URL when deployed
+const WORKER_URL = 'https://oil-price.owen-ouyang.workers.dev'; // Set to Cloudflare Worker URL when deployed
 const CPC_API = 'https://www.cpc.com.tw/GetOilPriceJson.aspx';
 const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
 const SEARCH_RADIUS = 5000; // 5km
@@ -721,8 +721,12 @@ async function loadPrices() {
       const response = await fetch(`${WORKER_URL}/oil-price`);
       if (response.ok) {
         priceData = await response.json();
-        isDemo = false;
-        console.log('[Oil] Loaded live price data');
+        if (priceData.products && priceData.products.length > 0) {
+          isDemo = false;
+          console.log('[Oil] Loaded live price data from worker');
+        } else {
+          throw new Error('Worker returned empty products');
+        }
       } else {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -1006,17 +1010,19 @@ function renderStationMarkers(stations) {
       fillOpacity: 0.8
     });
 
-    const displayName = isZh ? s.name : s.nameEn;
-    const dist = s.distance != null ? `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(s.distance)}` : '';
-    const navHtml = getNavigationHtml(s.lat, s.lng);
-    const priceHtml = getPricePopupHtml(s.type);
-
-    marker.bindPopup(`<div style="max-width:220px;">
-      <strong>${displayName}</strong><br>
-      ${s.brand || ''}${dist}
-      ${priceHtml}
-      <div style="margin-top:6px;">${navHtml}</div>
-    </div>`);
+    // Use a function so popup reads current priceData at click time
+    marker.bindPopup(() => {
+      const displayName = isZh ? s.name : s.nameEn;
+      const dist = s.distance != null ? `<br>${isZh ? '距離' : 'Distance'}: ${formatDistance(s.distance)}` : '';
+      const navHtml = getNavigationHtml(s.lat, s.lng);
+      const priceHtml = getPricePopupHtml(s.type);
+      return `<div style="max-width:220px;">
+        <strong>${displayName}</strong><br>
+        ${s.brand || ''}${dist}
+        ${priceHtml}
+        <div style="margin-top:6px;">${navHtml}</div>
+      </div>`;
+    });
 
     marker.addTo(map);
     stationMarkers[s.id] = marker;
@@ -1034,7 +1040,7 @@ function getNavigationHtml(lat, lng) {
 function getStationPriceTag(stationType) {
   if (!priceData || !priceData.products) return '';
   const p95 = priceData.products.find(p => p.key === '95');
-  if (!p95) return '';
+  if (!p95 || !p95.price || p95.price <= 0) return '';
   if (stationType === 'cpc') {
     return `<div style="text-align:right;font-size:12px;font-weight:700;color:#2e7d32;white-space:nowrap;">95: ${p95.price.toFixed(1)}</div>`;
   }
@@ -1046,11 +1052,14 @@ function getStationPriceTag(stationType) {
 
 function getPricePopupHtml(stationType) {
   if (!priceData || !priceData.products) return '';
+  // Check if we have valid prices (not all zeros)
+  const hasValidPrices = priceData.products.some(p => p.price > 0);
+  if (!hasValidPrices) return '';
   // Only show CPC prices for CPC stations; for others show generic prices
   if (stationType === 'formosa') {
     return `<div style="margin-top:6px;font-size:11px;color:#888;">${isZh ? '(台塑油價可能不同)' : '(Formosa prices may differ)'}</div>`;
   }
-  const rows = priceData.products.map(p => {
+  const rows = priceData.products.filter(p => p.price > 0).map(p => {
     const name = isZh ? p.nameZh : p.name;
     return `<tr><td style="padding:2px 6px;font-size:11px;">${name}</td><td style="padding:2px 6px;font-size:11px;font-weight:700;text-align:right;">${p.price.toFixed(1)}</td></tr>`;
   }).join('');

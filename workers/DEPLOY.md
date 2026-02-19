@@ -135,55 +135,125 @@ Cloudflare Worker that periodically checks USGS for new earthquakes and sends pu
 |----------|----------|-------------|
 | `VAPID_PUBLIC_KEY` | For push | VAPID public key for web push |
 | `VAPID_PRIVATE_KEY` | For push | VAPID private key for web push |
-| `VAPID_EMAIL` | For push | Contact email for VAPID |
-| `MAILGUN_API_KEY` | For email | Mailgun API key (or any email service) |
-| `MAILGUN_DOMAIN` | For email | Mailgun sending domain |
+| `VAPID_SUBJECT` | For push | `mailto:` URL (e.g. `mailto:you@example.com`) |
+| `EMAIL_API_BASE` | For email | Email API base URL (default: `https://m.taleon.work.gd/xsw/api/admin/email`) |
 
-### Generate VAPID Keys
+### KV Namespaces
 
-```bash
-# Using web-push library
-npx web-push generate-vapid-keys
-```
-
-This outputs:
-```
-Public Key:  BNx...
-Private Key: abc...
-```
-
-### Set Secrets via Wrangler
+The worker uses three Cloudflare KV namespaces to store subscriptions and processed earthquake IDs. Create them and bind in `wrangler.toml`:
 
 ```bash
-wrangler secret put VAPID_PUBLIC_KEY
-wrangler secret put VAPID_PRIVATE_KEY
-wrangler secret put VAPID_EMAIL
+# Create KV namespaces
+wrangler kv:namespace create PUSH_SUBSCRIPTIONS
+wrangler kv:namespace create EMAIL_SUBSCRIPTIONS
+wrangler kv:namespace create PROCESSED_QUAKES
 ```
 
-### Set Up Cron Trigger
-
-The earthquake notify worker uses a scheduled trigger to check for new earthquakes. Add to `wrangler.toml`:
+Each command outputs a binding ID. Add them to `wrangler.toml`:
 
 ```toml
 name = "earthquake-notify"
 main = "index.js"
 compatibility_date = "2024-01-01"
 
+[[kv_namespaces]]
+binding = "PUSH_SUBSCRIPTIONS"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[kv_namespaces]]
+binding = "EMAIL_SUBSCRIPTIONS"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[kv_namespaces]]
+binding = "PROCESSED_QUAKES"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[triggers]
+crons = ["*/10 * * * *"]
+```
+
+Or via Dashboard: Worker → **Settings** → **KV Namespace Bindings** → Add binding.
+
+### Set Up Email Alerts
+
+Email alerts use a custom API endpoint. The default is `https://m.taleon.work.gd/xsw/api/admin/email`.
+
+**API format:**
+```
+POST {EMAIL_API_BASE}/send?to_email={email}&subject={subject}&body={html}&is_html=true
+```
+
+**To use the default API**, no configuration is needed — it works out of the box.
+
+**To use a custom email API**, set the environment variable:
+
+**Dashboard:** Worker → Settings → Variables → Add:
+
+| Variable | Value | Encrypt? |
+|----------|-------|----------|
+| `EMAIL_API_BASE` | `https://your-api.example.com/email` | No |
+
+**CLI:**
+```bash
+wrangler secret put EMAIL_API_BASE
+# Paste: https://your-api.example.com/email
+```
+
+Your custom API must accept the same query parameter format:
+- `to_email` — Recipient email address
+- `subject` — Email subject line
+- `body` — Email body (HTML)
+- `is_html` — `true` for HTML emails
+
+**Test** by subscribing an email on the earthquake page, then wait for a M4+ earthquake (or temporarily lower `DEFAULT_MIN_MAG` in the worker to test with smaller events).
+
+### Generate VAPID Keys (Push Notifications)
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Output:
+```
+Public Key:  BNxGMn...
+Private Key: abc123...
+```
+
+```bash
+wrangler secret put VAPID_PUBLIC_KEY
+wrangler secret put VAPID_PRIVATE_KEY
+wrangler secret put VAPID_SUBJECT
+# Paste: mailto:you@example.com
+```
+
+### Set Up Cron Trigger
+
+The worker checks USGS for new earthquakes on a schedule.
+
+**In `wrangler.toml`:**
+```toml
 [triggers]
 crons = ["*/10 * * * *"]  # Every 10 minutes
 ```
 
-Or configure via Dashboard: Worker → **Triggers** → **Cron Triggers** → Add `*/10 * * * *`.
+**Or via Dashboard:** Worker → **Triggers** → **Cron Triggers** → Add `*/10 * * * *`.
+
+The cron handler:
+1. Fetches M4.0+ earthquakes from the last hour
+2. Skips already-processed events (tracked in KV with 7-day TTL)
+3. Sends push + email notifications to all matching subscribers
+4. Respects per-subscriber min magnitude and quiet hours settings
 
 ### Endpoints
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Health check |
-| `POST /push/subscribe` | Subscribe to push notifications |
-| `POST /push/unsubscribe` | Unsubscribe from push |
-| `POST /email/subscribe` | Subscribe to email alerts |
-| `POST /email/unsubscribe` | Unsubscribe from email |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/subscribe` | POST | Subscribe to push (`{ subscription, minMag, quietEnabled, quietStart, quietEnd }`) |
+| `/unsubscribe` | POST | Unsubscribe from push (`{ endpoint }`) |
+| `/email/subscribe` | POST | Subscribe to email (`{ email, minMag }`) |
+| `/email/unsubscribe` | POST | Unsubscribe from email (`{ email }`) |
+| `/subscriptions/status` | GET | Check status (`?endpoint=...&email=...`) |
 
 ### Connect to `earthquake.html`
 
@@ -194,6 +264,26 @@ const WORKER_URL = 'https://earthquake-notify.YOUR-SUBDOMAIN.workers.dev';
 ```
 
 Also update the VAPID public key in the push subscription code if using browser push.
+
+### How It Works
+
+```
+Every 10 min (cron) → Fetch USGS API → New M4+ earthquake?
+                                            │
+                        ┌───────────────────┤
+                        ▼                   ▼
+                  Push subscribers     Email subscribers
+                  (KV: PUSH_SUBS)     (KV: EMAIL_SUBS)
+                        │                   │
+                   Check minMag        Check minMag
+                   Check quiet hrs          │
+                        │                   │
+                   Web Push API       Email API
+                   (VAPID signed)     (POST /send?to_email=...)
+                        │                   │
+                        ▼                   ▼
+                  Browser notif        Email inbox
+```
 
 ---
 
