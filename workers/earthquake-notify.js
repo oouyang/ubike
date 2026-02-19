@@ -309,6 +309,9 @@ async function handleRequest(request, env) {
 
   // Subscribe to push notifications
   if (path === '/subscribe' && request.method === 'POST') {
+    if (!env.PUSH_SUBSCRIPTIONS) {
+      return jsonResponse({ error: 'KV namespace PUSH_SUBSCRIPTIONS not bound. Add it in Worker Settings → Bindings.' }, 503);
+    }
     try {
       const body = await request.json();
       if (!body.subscription || !body.subscription.endpoint) {
@@ -333,6 +336,9 @@ async function handleRequest(request, env) {
 
   // Unsubscribe from push notifications
   if (path === '/unsubscribe' && request.method === 'POST') {
+    if (!env.PUSH_SUBSCRIPTIONS) {
+      return jsonResponse({ error: 'KV namespace PUSH_SUBSCRIPTIONS not bound' }, 503);
+    }
     try {
       const body = await request.json();
       if (!body.endpoint) {
@@ -350,6 +356,9 @@ async function handleRequest(request, env) {
 
   // Subscribe to email alerts
   if (path === '/email/subscribe' && request.method === 'POST') {
+    if (!env.EMAIL_SUBSCRIPTIONS) {
+      return jsonResponse({ error: 'KV namespace EMAIL_SUBSCRIPTIONS not bound. Add it in Worker Settings → Bindings.' }, 503);
+    }
     try {
       const body = await request.json();
       if (!body.email || !body.email.includes('@')) {
@@ -371,6 +380,9 @@ async function handleRequest(request, env) {
 
   // Unsubscribe from email alerts
   if (path === '/email/unsubscribe' && request.method === 'POST') {
+    if (!env.EMAIL_SUBSCRIPTIONS) {
+      return jsonResponse({ error: 'KV namespace EMAIL_SUBSCRIPTIONS not bound' }, 503);
+    }
     try {
       const body = await request.json();
       if (!body.email) {
