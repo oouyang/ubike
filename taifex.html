@@ -360,12 +360,11 @@
       "use strict";
 
       // ============================================================
-      // TAIFEX OpenAPI endpoints
+      // TAIFEX OpenAPI via Cloudflare Worker proxy (CORS)
       // ============================================================
-      const FUTURES_API =
-        "https://openapi.taifex.com.tw/v1/DailyMarketReportFut";
-      const OPTIONS_API =
-        "https://openapi.taifex.com.tw/v1/DailyMarketReportOpt";
+      const WORKER_URL = "https://taifex-proxy.owen-ouyang.workers.dev";
+      const FUTURES_API = `${WORKER_URL}/futures`;
+      const OPTIONS_API = `${WORKER_URL}/options`;
 
       // ============================================================
       // STATE
