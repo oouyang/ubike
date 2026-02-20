@@ -2095,11 +2095,13 @@
             const monthAvg = parseFloat(live.monthAvg) || 0;
 
             // Build live-sourced fields
+            const source = live.source || 'twse';
             const liveFields = {
               price,
               monthAvg,
               category,
               _live: true,
+              _source: source,
               // OHLCV from STOCK_DAY_ALL
               volume: live.volume ? formatVolume(live.volume) : "",
               open: live.open || "",
@@ -2242,7 +2244,9 @@
 
             const staleBadge = etf._live === false
               ? `<span class="stale-badge">${isZh ? "靜態" : "Static"}</span>`
-              : "";
+              : etf._source === 'tpex'
+                ? `<span class="stale-badge" style="background:#e3f2fd;color:#1565c0;border-color:#90caf9">OTC</span>`
+                : "";
 
             return `<div class="etf-row${isExpanded ? " expanded" : ""}" data-ticker="${etf.ticker}">
         <span class="etf-ticker">${etf.ticker}</span>
@@ -2389,7 +2393,9 @@
 
         const staleBanner = etf._live === false
           ? `<div class="stale-banner">${isZh ? "⚠ 此ETF目前未納入TWSE即時資料，以下為靜態參考資訊，可能已過時。" : "⚠ This ETF is not currently in TWSE live data. Info below is static and may be outdated."}</div>`
-          : "";
+          : etf._source === 'tpex'
+            ? `<div class="stale-banner" style="background:#e3f2fd;border-color:#90caf9;color:#1565c0">${isZh ? "ℹ 此為櫃買(OTC)ETF，價格資料來自櫃買中心。" : "ℹ This is an OTC-listed ETF. Price data sourced from TPEX."}</div>`
+            : "";
 
         return `${staleBanner}<div class="detail-grid">
       ${priceHtml}${changeHtml}${openHtml}${highHtml}${lowHtml}${navHtml}${discountHtml}${monthAvgHtml}${high52Html}${low52Html}${volumeHtml}${transactionsHtml}${yieldHtml}${expenseHtml}${freqHtml}${divMonthsHtml}${aumHtml}${inceptionHtml}${issuerHtml}${custodianHtml}${fundManagerHtml}

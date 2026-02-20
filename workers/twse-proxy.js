@@ -6,8 +6,8 @@
  * Caches each endpoint for 1 hour (market data updates daily after close).
  *
  * Note: OTC-listed ETFs (bond ETFs ending in B like 00679B, 00937B) are not
- * available from TWSE APIs. TPEX (tpex.org.tw) has the data but blocks
- * Cloudflare Workers. These ETFs fall back to static data on the client side.
+ * available from TWSE APIs. TPEX (tpex.org.tw) blocks Cloudflare Workers
+ * directly, so OTC data is fetched via an external FastAPI proxy.
  *
  * Endpoints:
  *   GET /etf-list    — All ETFs with price, yield, PE, fund info
@@ -19,6 +19,7 @@ const TWSE_AVG_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AV
 const TWSE_DAY_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
 const TWSE_YIELD_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL';
 const TWSE_FUND_URL = 'https://openapi.twse.com.tw/v1/opendata/t187ap47_L';
+const TPEX_PROXY_URL = 'https://m.taleon.work.gd/tpex/etf-list';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -94,9 +95,24 @@ async function fetchAllData(includeEtfExtras) {
 }
 
 /**
+ * Fetch OTC-listed ETFs from TPEX via external proxy.
+ * Returns array of ETF objects or empty array on failure.
+ */
+async function fetchOtcEtfs() {
+  try {
+    const res = await fetch(TPEX_PROXY_URL);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.etfs || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
  * Build ETF list from fetched data
  */
-function buildEtfList({ dayData, yieldMap, avgData, fundMap }) {
+function buildEtfList({ dayData, yieldMap, avgData, fundMap, otcEtfs }) {
   // Build day map for OHLCV
   const dayMap = {};
   for (const item of dayData) {
@@ -161,6 +177,16 @@ function buildEtfList({ dayData, yieldMap, avgData, fundMap }) {
         aum: (shares && price) ? Math.round(shares * price) : '',
       };
     });
+
+  // Append OTC ETFs from TPEX proxy
+  if (otcEtfs && otcEtfs.length) {
+    for (const otc of otcEtfs) {
+      if (!seen.has(otc.code)) {
+        seen.add(otc.code);
+        etfs.push(otc);
+      }
+    }
+  }
 
   return {
     count: etfs.length,
@@ -255,8 +281,11 @@ async function handleRequest(request, env, ctx) {
   if (path === '/etf-list') {
     try {
       return await cachedFetch(url, ctx, async () => {
-        const raw = await fetchAllData(true);
-        return buildEtfList(raw);
+        const [raw, otcEtfs] = await Promise.all([
+          fetchAllData(true),
+          fetchOtcEtfs(),
+        ]);
+        return buildEtfList({ ...raw, otcEtfs });
       });
     } catch (error) {
       return new Response(JSON.stringify({ error: 'Fetch error', message: error.message }), {
