@@ -2132,6 +2132,19 @@
             }
           });
 
+          // Append any enrichment-only ETFs missing from live data
+          const liveCodes = new Set(allEtfs.map((e) => e.ticker));
+          for (const code of Object.keys(ENRICHMENT)) {
+            if (!liveCodes.has(code)) {
+              const rich = ENRICHMENT[code];
+              allEtfs.push({
+                ...rich,
+                ticker: code,
+                _live: false,
+              });
+            }
+          }
+
           isLive = true;
           console.log(
             `[ETF] Loaded ${allEtfs.length} ETFs from ${WORKER_URL ? "Worker" : "TWSE API"}`,

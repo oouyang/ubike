@@ -106,13 +106,30 @@ function buildEtfList({ dayData, yieldMap, avgData, fundMap }) {
     };
   }
 
-  // Use AVG data as primary source (has MonthlyAveragePrice), filter to ETFs
-  const source = avgData || dayData;
-  const etfs = source
-    .filter(d => d.Code && d.Code.startsWith('00'))
-    .map(d => {
+  // Build AVG map for MonthlyAveragePrice lookup
+  const avgMap = {};
+  if (avgData) {
+    for (const item of avgData) {
+      avgMap[item.Code] = item;
+    }
+  }
+
+  // Union AVG and DAY sources so ETFs in either API are included
+  const seen = new Set();
+  const combined = [];
+  for (const source of [avgData || [], dayData]) {
+    for (const d of source) {
+      if (d.Code && d.Code.startsWith('00') && !seen.has(d.Code)) {
+        seen.add(d.Code);
+        combined.push(d);
+      }
+    }
+  }
+
+  const etfs = combined.map(d => {
       const y = yieldMap[d.Code] || {};
       const day = dayMap[d.Code] || {};
+      const avg = avgMap[d.Code] || {};
       const fund = fundMap[d.Code] || {};
       const price = parseFloat(d.ClosingPrice) || 0;
       const shares = parseFloat(fund.sharesOutstanding) || 0;
@@ -121,7 +138,7 @@ function buildEtfList({ dayData, yieldMap, avgData, fundMap }) {
         code: d.Code,
         name: d.Name,
         price: d.ClosingPrice || '',
-        monthAvg: d.MonthlyAveragePrice || '',
+        monthAvg: avg.MonthlyAveragePrice || d.MonthlyAveragePrice || '',
         yield: y.yield || '',
         pe: y.pe || '',
         pb: y.pb || '',
