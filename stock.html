@@ -1,0 +1,682 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#1976d2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>TWSE Stocks</title>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <link rel="manifest" href="manifest.webapp" />
+    <link rel="apple-touch-icon" href="img/icon-180.png" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f0f2f5;
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
+        color: white;
+        flex-shrink: 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
+      .header-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+      }
+      .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .nav-btn.active {
+        background: rgba(255, 255, 255, 0.4);
+        font-weight: bold;
+      }
+      .nav-btn.home {
+        background: #ff9800;
+        border-color: #ff9800;
+      }
+      .nav-btn.home:hover {
+        background: #f57c00;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      /* Stock table */
+      .stock-list {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+      .stock-row {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.15s;
+        gap: 12px;
+      }
+      .stock-row:hover {
+        background: #f5f8ff;
+      }
+      .stock-row:last-child {
+        border-bottom: none;
+      }
+      .stock-row.expanded {
+        background: #e8f0fe;
+      }
+
+      .stock-ticker {
+        font-weight: 700;
+        font-size: 1em;
+        color: #1976d2;
+        min-width: 55px;
+      }
+      .stock-name {
+        flex: 1;
+        font-size: 0.92em;
+        color: #333;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .stock-price {
+        font-size: 0.85em;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: right;
+        color: #333;
+      }
+      .stock-change {
+        font-size: 0.8em;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: right;
+      }
+      .stock-arrow {
+        font-size: 12px;
+        color: #aaa;
+        transition: transform 0.2s;
+        flex-shrink: 0;
+      }
+      .stock-row.expanded .stock-arrow {
+        transform: rotate(180deg);
+      }
+
+      /* Expanded detail panel */
+      .stock-detail {
+        display: none;
+        padding: 0 16px 16px;
+        background: #f8fafd;
+        border-bottom: 1px solid #e8e8e8;
+        animation: slideDown 0.2s ease;
+      }
+      .stock-detail.open {
+        display: block;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          max-height: 0;
+        }
+        to {
+          opacity: 1;
+          max-height: 1200px;
+        }
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .detail-item {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .detail-label {
+        font-size: 0.75em;
+        color: #888;
+        margin-bottom: 2px;
+      }
+      .detail-value {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .detail-section-title {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #666;
+        margin: 10px 0 6px;
+      }
+
+      .result-count {
+        font-size: 0.85em;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #888;
+      }
+      .empty-state .icon {
+        font-size: 2em;
+        margin-bottom: 12px;
+      }
+
+      /* Float button */
+      .float-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+        background: white;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        transition: background 0.2s;
+      }
+      .float-btn:hover {
+        background: #f4f4f4;
+      }
+
+      @media (max-width: 768px) {
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
+        .container {
+          padding: 12px;
+        }
+        .stock-row {
+          padding: 12px;
+          gap: 8px;
+        }
+        .stock-change {
+          min-width: 50px;
+        }
+        .detail-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">TWSE Stocks</h1>
+      <div class="header-controls">
+        <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁"
+          >Home</a
+        >
+        <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車"
+          >UBike</a
+        >
+        <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+        <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵"
+          >Rail</a
+        >
+        <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵"
+          >THSR</a
+        >
+        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+        <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震"
+          >Quake</a
+        >
+      </div>
+    </header>
+
+    <div class="container">
+      <div style="margin-bottom: 12px">
+        <input
+          type="text"
+          id="stock-search"
+          placeholder="Search stock code or name..."
+          style="
+            width: 100%;
+            padding: 9px 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+          "
+        />
+      </div>
+      <div class="result-count" id="result-count"></div>
+      <div class="stock-list" id="stock-list"></div>
+    </div>
+
+    <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+
+    <script>
+      "use strict";
+
+      // ============================================================
+      // TWSE API — fetch live stock data
+      // ============================================================
+      const TWSE_DAY_API =
+        "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
+      const TWSE_YIELD_API =
+        "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL";
+      const WORKER_URL = "https://twse-proxy.owen-ouyang.workers.dev"; // Unified TWSE proxy worker
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let isZh = (navigator.language || navigator.userLanguage).startsWith(
+        "zh",
+      );
+      let expandedCode = null;
+      let allStocks = [];
+      let searchQuery = "";
+      let isLive = false;
+
+      // ============================================================
+      // INITIALIZATION
+      // ============================================================
+      async function initialize() {
+        console.log("[Stock] Initializing...");
+
+        const savedLang = localStorage.getItem("ubike-lang");
+        if (savedLang) isZh = savedLang === "zh";
+
+        // Bind search
+        const searchInput = document.getElementById("stock-search");
+        if (searchInput) {
+          searchInput.addEventListener("input", (e) => {
+            searchQuery = e.target.value.trim().toLowerCase();
+            expandedCode = null;
+            renderList();
+          });
+        }
+
+        updateUI();
+        renderList(); // show empty state initially
+        await fetchLiveData();
+      }
+
+      // Format volume number with K/M suffix
+      function formatVolume(vol) {
+        const n = parseInt(vol, 10);
+        if (!n) return vol;
+        if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+        if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+        return n.toLocaleString();
+      }
+
+      async function fetchLiveData() {
+        try {
+          let stocks;
+
+          if (WORKER_URL) {
+            // Try worker first
+            const response = await fetch(`${WORKER_URL}/stock-list`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (!data.stocks) throw new Error("Unexpected response format");
+            stocks = data.stocks;
+          } else {
+            // Direct TWSE API fallback — fetch both APIs
+            const [dayRes, yieldRes] = await Promise.all([
+              fetch(TWSE_DAY_API),
+              fetch(TWSE_YIELD_API),
+            ]);
+
+            if (!dayRes.ok) throw new Error(`Day API: ${dayRes.status}`);
+            const dayData = await dayRes.json();
+
+            let yieldMap = {};
+            if (yieldRes.ok) {
+              try {
+                const yieldData = await yieldRes.json();
+                for (const item of yieldData) {
+                  yieldMap[item.Code] = {
+                    pe: item.PEratio || "",
+                    yield: item.DividendYield || "",
+                    pb: item.PBratio || "",
+                  };
+                }
+              } catch (e) {
+                // Yield data optional
+              }
+            }
+
+            stocks = dayData
+              .filter((d) => d.Code && !d.Code.startsWith("00"))
+              .map((d) => {
+                const y = yieldMap[d.Code] || {};
+                return {
+                  code: d.Code,
+                  name: d.Name,
+                  price: d.ClosingPrice || "",
+                  open: d.OpeningPrice || "",
+                  high: d.HighestPrice || "",
+                  low: d.LowestPrice || "",
+                  volume: d.TradeVolume || "",
+                  change: d.Change || "",
+                  transactions: d.Transaction || "",
+                  monthAvg: d.MonthlyAveragePrice || "",
+                  pe: y.pe || "",
+                  yield: y.yield || "",
+                  pb: y.pb || "",
+                };
+              });
+          }
+
+          allStocks = stocks;
+          isLive = true;
+          console.log(
+            `[Stock] Loaded ${allStocks.length} stocks from ${WORKER_URL ? "Worker" : "TWSE API"}`,
+          );
+          renderList();
+        } catch (error) {
+          console.warn("[Stock] Live fetch failed:", error.message);
+          renderList(); // show empty state with error
+        }
+      }
+
+      // ============================================================
+      // RENDERING
+      // ============================================================
+      function getFilteredStocks() {
+        if (!searchQuery) return allStocks;
+
+        return allStocks.filter((s) => {
+          const code = (s.code || "").toLowerCase();
+          const name = (s.name || "").toLowerCase();
+          return code.includes(searchQuery) || name.includes(searchQuery);
+        });
+      }
+
+      function renderList() {
+        const filtered = getFilteredStocks();
+
+        const countEl = document.getElementById("result-count");
+        const liveTag = isLive
+          ? isZh
+            ? " (TWSE即時)"
+            : " (TWSE Live)"
+          : allStocks.length === 0
+            ? isZh
+              ? " (載入中...)"
+              : " (Loading...)"
+            : isZh
+              ? " (靜態資料)"
+              : " (Static)";
+        countEl.textContent = isZh
+          ? `顯示 ${filtered.length} 檔股票${liveTag}`
+          : `Showing ${filtered.length} stocks${liveTag}`;
+
+        const listEl = document.getElementById("stock-list");
+
+        if (allStocks.length === 0 && !isLive) {
+          listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">📊</div>
+            <div>${isZh ? "正在載入股票資料..." : "Loading stock data..."}</div>
+          </div>`;
+          return;
+        }
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">🔍</div>
+            <div>${isZh ? "找不到符合的股票" : "No matching stocks found"}</div>
+          </div>`;
+          return;
+        }
+
+        listEl.innerHTML = filtered
+          .map((stock) => {
+            const changeVal = parseFloat(stock.change);
+            const changeColor = changeVal > 0 ? "#d32f2f" : changeVal < 0 ? "#2e7d32" : "#888";
+            const changePrefix = changeVal > 0 ? "▲+" : changeVal < 0 ? "▼" : "";
+            const changeText = !isNaN(changeVal) ? `${changePrefix}${stock.change}` : "";
+            const isExpanded = expandedCode === stock.code;
+
+            return `<div class="stock-row${isExpanded ? " expanded" : ""}" data-code="${stock.code}">
+        <span class="stock-ticker">${stock.code}</span>
+        <span class="stock-name">${stock.name}</span>
+        <span class="stock-price">${stock.price ? "$" + stock.price : ""}</span>
+        <span class="stock-change" style="color:${changeColor}">${changeText}</span>
+        <span class="stock-arrow">▼</span>
+      </div>
+      <div class="stock-detail${isExpanded ? " open" : ""}" id="detail-${stock.code}">
+        ${renderDetail(stock)}
+      </div>`;
+          })
+          .join("");
+
+        // Bind row click
+        listEl.querySelectorAll(".stock-row").forEach((row) => {
+          row.addEventListener("click", () => toggleDetail(row.dataset.code));
+        });
+      }
+
+      function renderDetail(stock) {
+        function item(label, value) {
+          if (!value && value !== 0) return "";
+          return `<div class="detail-item">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${value}</div>
+      </div>`;
+        }
+
+        // Price section
+        const priceHtml = stock.price
+          ? item(isZh ? "收盤價" : "Close", `$${stock.price}`)
+          : "";
+        const changeVal = parseFloat(stock.change);
+        const changeHtml = !isNaN(changeVal)
+          ? item(
+              isZh ? "漲跌" : "Change",
+              `<span style="color:${changeVal > 0 ? "#d32f2f" : changeVal < 0 ? "#2e7d32" : "#888"};font-weight:600">${changeVal > 0 ? "▲+" : changeVal < 0 ? "▼" : ""}${stock.change}</span>`,
+            )
+          : "";
+        const openHtml = stock.open
+          ? item(isZh ? "開盤" : "Open", `$${stock.open}`)
+          : "";
+        const highHtml = stock.high
+          ? item(isZh ? "最高" : "High", `$${stock.high}`)
+          : "";
+        const lowHtml = stock.low
+          ? item(isZh ? "最低" : "Low", `$${stock.low}`)
+          : "";
+        const monthAvgHtml = stock.monthAvg
+          ? item(isZh ? "月均價" : "Month Avg", `$${stock.monthAvg}`)
+          : "";
+
+        // Volume section
+        const volumeHtml = stock.volume
+          ? item(isZh ? "成交量" : "Volume", formatVolume(stock.volume))
+          : "";
+        const transactionsHtml = stock.transactions
+          ? item(
+              isZh ? "成交筆數" : "Transactions",
+              parseInt(stock.transactions, 10).toLocaleString(),
+            )
+          : "";
+
+        // Valuation section
+        const peHtml = stock.pe
+          ? item(isZh ? "本益比" : "P/E Ratio", stock.pe)
+          : "";
+        const yieldHtml = stock.yield
+          ? item(isZh ? "殖利率" : "Dividend Yield", `${stock.yield}%`)
+          : "";
+        const pbHtml = stock.pb
+          ? item(isZh ? "股價淨值比" : "P/B Ratio", stock.pb)
+          : "";
+
+        let html = "";
+
+        // Price section
+        const priceSection =
+          priceHtml + changeHtml + openHtml + highHtml + lowHtml + monthAvgHtml;
+        if (priceSection) {
+          html += `<div class="detail-section-title">${isZh ? "價格" : "Price"}</div>
+          <div class="detail-grid">${priceSection}</div>`;
+        }
+
+        // Volume section
+        const volumeSection = volumeHtml + transactionsHtml;
+        if (volumeSection) {
+          html += `<div class="detail-section-title">${isZh ? "交易量" : "Volume"}</div>
+          <div class="detail-grid">${volumeSection}</div>`;
+        }
+
+        // Valuation section
+        const valuationSection = peHtml + yieldHtml + pbHtml;
+        if (valuationSection) {
+          html += `<div class="detail-section-title">${isZh ? "估值指標" : "Valuation"}</div>
+          <div class="detail-grid">${valuationSection}</div>`;
+        }
+
+        return html || `<div style="padding:10px;color:#888;font-size:0.85em">${isZh ? "無詳細資料" : "No detail available"}</div>`;
+      }
+
+      // ============================================================
+      // EXPAND / COLLAPSE
+      // ============================================================
+      function toggleDetail(code) {
+        if (expandedCode === code) {
+          // Collapse
+          expandedCode = null;
+          const row = document.querySelector(
+            `.stock-row[data-code="${code}"]`,
+          );
+          const detail = document.getElementById(`detail-${code}`);
+          if (row) row.classList.remove("expanded");
+          if (detail) detail.classList.remove("open");
+        } else {
+          // Collapse previous
+          if (expandedCode) {
+            const prevRow = document.querySelector(
+              `.stock-row[data-code="${expandedCode}"]`,
+            );
+            const prevDetail = document.getElementById(
+              `detail-${expandedCode}`,
+            );
+            if (prevRow) prevRow.classList.remove("expanded");
+            if (prevDetail) prevDetail.classList.remove("open");
+          }
+          // Expand new
+          expandedCode = code;
+          const row = document.querySelector(
+            `.stock-row[data-code="${code}"]`,
+          );
+          const detail = document.getElementById(`detail-${code}`);
+          if (row) row.classList.add("expanded");
+          if (detail) {
+            detail.classList.add("open");
+            setTimeout(
+              () =>
+                detail.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+              50,
+            );
+          }
+        }
+      }
+
+      // ============================================================
+      // LANGUAGE
+      // ============================================================
+      function toggleLang() {
+        isZh = !isZh;
+        localStorage.setItem("ubike-lang", isZh ? "zh" : "en");
+        updateUI();
+        renderList();
+      }
+
+      function updateUI() {
+        document.title = isZh ? "台股個股查詢" : "TWSE Stocks";
+        document.getElementById("page-title").textContent = isZh
+          ? "台股個股查詢"
+          : "TWSE Stocks";
+
+        document.querySelectorAll("[data-en]").forEach((el) => {
+          el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+        });
+
+        const langBtn = document.getElementById("lang-btn");
+        if (langBtn) langBtn.textContent = isZh ? "中" : "EN";
+
+        const searchInput = document.getElementById("stock-search");
+        if (searchInput)
+          searchInput.placeholder = isZh
+            ? "搜尋股票代號或名稱..."
+            : "Search stock code or name...";
+      }
+
+      // ============================================================
+      // STARTUP
+      // ============================================================
+      document.addEventListener("DOMContentLoaded", initialize);
+    </script>
+  </body>
+</html>
