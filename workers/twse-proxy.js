@@ -12,6 +12,8 @@
  * Endpoints:
  *   GET /etf-list    — All ETFs with price, yield, PE, fund info
  *   GET /stock-list  — All stocks (non-ETF) with price, OHLCV, PE, yield, PB
+ *   GET /taifex/futures — TAIFEX daily futures report (proxied for CORS)
+ *   GET /taifex/options — TAIFEX daily options report (proxied for CORS)
  *   GET /health      — Health check
  */
 
@@ -20,6 +22,12 @@ const TWSE_DAY_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AL
 const TWSE_YIELD_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL';
 const TWSE_FUND_URL = 'https://openapi.twse.com.tw/v1/opendata/t187ap47_L';
 const TPEX_PROXY_URL = 'https://m.taleon.work.gd/tpex/etf-list';
+
+const TAIFEX_BASE = 'https://openapi.taifex.com.tw/v1';
+const TAIFEX_ENDPOINTS = {
+  '/taifex/futures': `${TAIFEX_BASE}/DailyMarketReportFut`,
+  '/taifex/options': `${TAIFEX_BASE}/DailyMarketReportOpt`,
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -271,7 +279,7 @@ async function handleRequest(request, env, ctx) {
     return new Response(JSON.stringify({
       status: 'ok',
       service: 'TWSE Proxy',
-      endpoints: ['/etf-list', '/stock-list', '/health'],
+      endpoints: ['/etf-list', '/stock-list', '/taifex/futures', '/taifex/options', '/health'],
       timestamp: new Date().toISOString(),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -309,7 +317,26 @@ async function handleRequest(request, env, ctx) {
     }
   }
 
-  return new Response(JSON.stringify({ error: 'Not found', message: 'Use /etf-list or /stock-list' }), {
+  // TAIFEX proxy routes
+  const taifexUpstream = TAIFEX_ENDPOINTS[path];
+  if (taifexUpstream) {
+    try {
+      return await cachedFetch(url, ctx, async () => {
+        const res = await fetch(taifexUpstream, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        });
+        if (!res.ok) throw new Error(`TAIFEX returned ${res.status}`);
+        return await res.json();
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Fetch error', message: error.message }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'Not found', message: 'Use /etf-list, /stock-list, /taifex/futures, or /taifex/options' }), {
     status: 404,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
