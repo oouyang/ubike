@@ -1,1081 +1,2453 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="initial-scale=1.0, user-scalable=yes">
-  <meta name="theme-color" content="#1976d2">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Taiwan ETFs</title>
-  <link rel="icon" type="image/png" href="favicon.ico">
-  <link rel="manifest" href="manifest.webapp">
-  <link rel="apple-touch-icon" href="img/icon-180.png">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f0f2f5;
-      min-height: 100vh;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 15px;
-      background: linear-gradient(135deg, #1976d2, #0d47a1);
-      color: white;
-      flex-shrink: 0;
-    }
-    h1 { margin: 0; font-size: 1.5em; }
-    .header-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .nav-btn {
-      padding: 6px 10px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 4px;
-      cursor: pointer;
-      text-decoration: none;
-      color: white;
-      font-size: 12px;
-    }
-    .nav-btn:hover { background: rgba(255,255,255,0.3); }
-    .nav-btn.active { background: rgba(255,255,255,0.4); font-weight: bold; }
-    .nav-btn.home { background: #FF9800; border-color: #FF9800; }
-    .nav-btn.home:hover { background: #F57C00; }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    /* Filter bar */
-    .filter-bar {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .filter-btn {
-      padding: 7px 14px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      background: white;
-      cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s;
-      white-space: nowrap;
-    }
-    .filter-btn:hover { background: #e3f2fd; }
-    .filter-btn.active { background: #1976d2; color: white; border-color: #1976d2; }
-
-    /* ETF table */
-    .etf-list {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      overflow: hidden;
-    }
-    .etf-row {
-      display: flex;
-      align-items: center;
-      padding: 14px 16px;
-      border-bottom: 1px solid #f0f0f0;
-      cursor: pointer;
-      transition: background 0.15s;
-      gap: 12px;
-    }
-    .etf-row:hover { background: #f5f8ff; }
-    .etf-row:last-child { border-bottom: none; }
-    .etf-row.expanded { background: #e8f0fe; }
-
-    .etf-ticker {
-      font-weight: 700;
-      font-size: 1em;
-      color: #1976d2;
-      min-width: 55px;
-    }
-    .etf-name {
-      flex: 1;
-      font-size: 0.92em;
-      color: #333;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .etf-yield {
-      font-size: 0.85em;
-      font-weight: 600;
-      min-width: 50px;
-      text-align: right;
-    }
-    .yield-high { color: #2e7d32; }
-    .yield-med { color: #f57c00; }
-    .yield-low { color: #888; }
-    .etf-expense {
-      font-size: 0.8em;
-      color: #888;
-      min-width: 50px;
-      text-align: right;
-    }
-    .etf-arrow {
-      font-size: 12px;
-      color: #aaa;
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
-    .etf-row.expanded .etf-arrow { transform: rotate(180deg); }
-
-    /* Expanded detail panel */
-    .etf-detail {
-      display: none;
-      padding: 0 16px 16px;
-      background: #f8fafd;
-      border-bottom: 1px solid #e8e8e8;
-      animation: slideDown 0.2s ease;
-    }
-    .etf-detail.open { display: block; }
-    @keyframes slideDown {
-      from { opacity: 0; max-height: 0; }
-      to { opacity: 1; max-height: 500px; }
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .detail-item {
-      background: white;
-      border-radius: 8px;
-      padding: 10px 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .detail-label {
-      font-size: 0.75em;
-      color: #888;
-      margin-bottom: 2px;
-    }
-    .detail-value {
-      font-size: 0.95em;
-      font-weight: 600;
-      color: #333;
-    }
-
-    .detail-section-title {
-      font-size: 0.8em;
-      font-weight: 600;
-      color: #666;
-      margin: 10px 0 6px;
-    }
-    .holdings-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .holding-tag {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 0.8em;
-      color: #333;
-    }
-    .detail-desc {
-      font-size: 0.85em;
-      color: #555;
-      line-height: 1.5;
-      margin-top: 8px;
-    }
-
-    .result-count {
-      font-size: 0.85em;
-      color: #888;
-      margin-bottom: 12px;
-    }
-
-    /* Float button */
-    .float-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 44px;
-      height: 44px;
-      background: white;
-      border: 2px solid rgba(0,0,0,0.2);
-      border-radius: 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      transition: background 0.2s;
-    }
-    .float-btn:hover { background: #f4f4f4; }
-
-    @media (max-width: 768px) {
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#1976d2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>Taiwan ETFs</title>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <link rel="manifest" href="manifest.webapp" />
+    <link rel="apple-touch-icon" href="img/icon-180.png" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f0f2f5;
+        min-height: 100vh;
+      }
       header {
-        padding: 8px 10px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
+        color: white;
+        flex-shrink: 0;
       }
-      h1 { font-size: 1.2em; width: 100%; }
+      h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
       .header-controls {
-        width: 100%;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+      }
+      .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .nav-btn.active {
+        background: rgba(255, 255, 255, 0.4);
+        font-weight: bold;
+      }
+      .nav-btn.home {
+        background: #ff9800;
+        border-color: #ff9800;
+      }
+      .nav-btn.home:hover {
+        background: #f57c00;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      /* Filter bar */
+      .filter-bar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
         flex-wrap: wrap;
-        gap: 4px;
-        justify-content: flex-start;
       }
-      .nav-btn { padding: 4px 8px; font-size: 11px; }
-      .container { padding: 12px; }
-      .etf-row { padding: 12px; gap: 8px; }
-      .etf-expense { display: none; }
+      .filter-btn {
+        padding: 7px 14px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.2s;
+        white-space: nowrap;
+      }
+      .filter-btn:hover {
+        background: #e3f2fd;
+      }
+      .filter-btn.active {
+        background: #1976d2;
+        color: white;
+        border-color: #1976d2;
+      }
+
+      /* ETF table */
+      .etf-list {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+      .etf-row {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.15s;
+        gap: 12px;
+      }
+      .etf-row:hover {
+        background: #f5f8ff;
+      }
+      .etf-row:last-child {
+        border-bottom: none;
+      }
+      .etf-row.expanded {
+        background: #e8f0fe;
+      }
+
+      .etf-ticker {
+        font-weight: 700;
+        font-size: 1em;
+        color: #1976d2;
+        min-width: 55px;
+      }
+      .etf-name {
+        flex: 1;
+        font-size: 0.92em;
+        color: #333;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .etf-yield {
+        font-size: 0.85em;
+        font-weight: 600;
+        min-width: 50px;
+        text-align: right;
+      }
+      .yield-high {
+        color: #2e7d32;
+      }
+      .yield-med {
+        color: #f57c00;
+      }
+      .yield-low {
+        color: #888;
+      }
+      .etf-expense {
+        font-size: 0.8em;
+        color: #888;
+        min-width: 50px;
+        text-align: right;
+      }
+      .etf-arrow {
+        font-size: 12px;
+        color: #aaa;
+        transition: transform 0.2s;
+        flex-shrink: 0;
+      }
+      .etf-row.expanded .etf-arrow {
+        transform: rotate(180deg);
+      }
+
+      /* Expanded detail panel */
+      .etf-detail {
+        display: none;
+        padding: 0 16px 16px;
+        background: #f8fafd;
+        border-bottom: 1px solid #e8e8e8;
+        animation: slideDown 0.2s ease;
+      }
+      .etf-detail.open {
+        display: block;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          max-height: 0;
+        }
+        to {
+          opacity: 1;
+          max-height: 1200px;
+        }
+      }
+
       .detail-grid {
-        grid-template-columns: repeat(2, 1fr);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
       }
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1 id="page-title">Taiwan ETFs</h1>
-    <div class="header-controls">
-      <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁">Home</a>
-      <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車">UBike</a>
-      <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
-      <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵">Rail</a>
-      <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵">THSR</a>
-      <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
-      <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震">Quake</a>
-    </div>
-  </header>
-
-  <div class="container">
-    <div class="filter-bar" id="filter-bar">
-      <button class="filter-btn active" data-cat="all" data-en="All" data-zh="全部">All</button>
-      <button class="filter-btn" data-cat="dividend" data-en="Dividend" data-zh="高股息">Dividend</button>
-      <button class="filter-btn" data-cat="broad" data-en="Broad Market" data-zh="市值型">Broad Market</button>
-      <button class="filter-btn" data-cat="tech" data-en="Tech" data-zh="科技型">Tech</button>
-      <button class="filter-btn" data-cat="bond" data-en="Bond" data-zh="債券型">Bond</button>
-      <button class="filter-btn" data-cat="theme" data-en="Thematic" data-zh="主題型">Thematic</button>
-    </div>
-
-    <div style="margin-bottom:12px;">
-      <input type="text" id="etf-search" class="etf-search" placeholder="Search ticker or name..." style="width:100%;padding:9px 14px;border:1px solid #ccc;border-radius:20px;font-size:13px;outline:none;">
-    </div>
-    <div class="result-count" id="result-count"></div>
-    <div class="etf-list" id="etf-list"></div>
-  </div>
-
-  <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-
-  <script>
-'use strict';
-
-// ============================================================
-// ETF DATA — Popular Taiwan-listed ETFs
-// ============================================================
-const ETFS = [
-  {
-    ticker: '0050', name: 'Yuanta Taiwan 50', nameZh: '元大台灣50',
-    category: 'broad', aum: '345B', aumZh: '3,450億',
-    expense: 0.43, yield: 3.2, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'FTSE TWSE Taiwan 50 Index', benchmarkZh: '臺灣50指數',
-    holdings: ['TSMC', 'Hon Hai', 'MediaTek', 'Delta', 'CTBC'],
-    holdingsZh: ['台積電', '鴻海', '聯發科', 'Delta', '中信金'],
-    desc: 'Tracks the top 50 companies listed on TWSE by market cap. The benchmark ETF for Taiwan broad market exposure.',
-    descZh: '追蹤台灣證交所市值前50大公司。台灣市值型ETF的代表指標。',
-    inception: '2003-06-30', shares: '~1.8B'
-  },
-  {
-    ticker: '0056', name: 'Yuanta High Div', nameZh: '元大高股息',
-    category: 'dividend', aum: '270B', aumZh: '2,700億',
-    expense: 0.66, yield: 5.8, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'TWSE Dividend+ Index', benchmarkZh: '臺灣高股息指數',
-    holdings: ['ASE Tech', 'Unimicron', 'Quanta', 'Nanya', 'Compal'],
-    holdingsZh: ['日月光投控', '欣興', '廣達', '南亞', '仁寶'],
-    desc: 'Selects 50 stocks with highest predicted dividend yields from TWSE 150. Popular among income investors.',
-    descZh: '從台灣150指數成分股中選取預測殖利率最高的50檔。收益型投資人的熱門選擇。',
-    inception: '2007-12-26', shares: '~18B'
-  },
-  {
-    ticker: '00878', name: 'Cathay ESG Div', nameZh: '國泰永續高股息',
-    category: 'dividend', aum: '310B', aumZh: '3,100億',
-    expense: 0.57, yield: 5.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'MSCI Taiwan ESG Leaders Dividend', benchmarkZh: 'MSCI台灣ESG永續高股息指數',
-    holdings: ['TSMC', 'Cathay FHC', 'Fubon FHC', 'ASE Tech', 'MediaTek'],
-    holdingsZh: ['台積電', '國泰金', '富邦金', '日月光投控', '聯發科'],
-    desc: 'Combines ESG screening with high-dividend selection. Quarterly distributions make it popular for regular income.',
-    descZh: '結合ESG篩選與高股息選股。季配息機制深受定期收益投資人歡迎。',
-    inception: '2020-07-20', shares: '~15B'
-  },
-  {
-    ticker: '00919', name: 'Cathay Taiwan Select Div', nameZh: '群益台灣精選高息',
-    category: 'dividend', aum: '230B', aumZh: '2,300億',
-    expense: 0.55, yield: 8.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Select High Dividend Index', benchmarkZh: '臺灣精選高息指數',
-    holdings: ['Wistron', 'Inventec', 'Unimicron', 'ASE Tech', 'CTBC'],
-    holdingsZh: ['緯創', '英業達', '欣興', '日月光投控', '中信金'],
-    desc: 'Focuses on stocks with high and stable dividend yields. One of the highest-yielding Taiwan ETFs.',
-    descZh: '聚焦高殖利率且穩定配息的個股。台灣殖利率最高的ETF之一。',
-    inception: '2022-10-20', shares: '~12B'
-  },
-  {
-    ticker: '00929', name: 'FH Taiwan Smart Div', nameZh: '復華台灣科技優息',
-    category: 'dividend', aum: '200B', aumZh: '2,000億',
-    expense: 0.52, yield: 7.2, freq: 'Monthly', freqZh: '月配',
-    benchmark: 'Taiwan Smart Dividend Index', benchmarkZh: '特選臺灣科技優息指數',
-    holdings: ['TSMC', 'MediaTek', 'Novatek', 'Realtek', 'ASE Tech'],
-    holdingsZh: ['台積電', '聯發科', '聯詠', '瑞昱', '日月光投控'],
-    desc: 'Monthly dividend ETF with tech sector focus. First monthly-pay high-dividend ETF in Taiwan.',
-    descZh: '以科技股為主的月配息ETF。台灣首檔月配高股息ETF。',
-    inception: '2023-06-09', shares: '~10B'
-  },
-  {
-    ticker: '006208', name: 'FT TWSE Cap Weighted', nameZh: '富邦台50',
-    category: 'broad', aum: '60B', aumZh: '600億',
-    expense: 0.24, yield: 2.8, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'TWSE Taiwan 50 Index', benchmarkZh: '臺灣50指數',
-    holdings: ['TSMC', 'Hon Hai', 'MediaTek', 'Delta', 'CTBC'],
-    holdingsZh: ['台積電', '鴻海', '聯發科', 'Delta', '中信金'],
-    desc: 'Low-cost alternative to 0050, tracking the same Taiwan 50 index. Popular for its lower expense ratio.',
-    descZh: '追蹤與0050相同指數的低費用替代方案。以低費用率受到青睞。',
-    inception: '2012-06-22', shares: '~3B'
-  },
-  {
-    ticker: '00692', name: 'FT ESG', nameZh: '富邦公司治理',
-    category: 'broad', aum: '18B', aumZh: '180億',
-    expense: 0.35, yield: 3.0, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'TWSE CG 100 Index', benchmarkZh: '公司治理100指數',
-    holdings: ['TSMC', 'Hon Hai', 'MediaTek', 'Cathay FHC', 'Fubon FHC'],
-    holdingsZh: ['台積電', '鴻海', '聯發科', '國泰金', '富邦金'],
-    desc: 'Tracks 100 companies ranked by corporate governance. Broader market coverage than Taiwan 50.',
-    descZh: '追蹤公司治理排名前100的企業。比台灣50涵蓋更廣的市場。',
-    inception: '2017-05-17', shares: '~1.5B'
-  },
-  {
-    ticker: '00881', name: 'Cathay Nasdaq 100', nameZh: '國泰北美科技',
-    category: 'tech', aum: '42B', aumZh: '420億',
-    expense: 0.76, yield: 0.3, freq: 'Annual', freqZh: '年配',
-    benchmark: 'Nasdaq-100 Index', benchmarkZh: 'Nasdaq-100指數',
-    holdings: ['Apple', 'Microsoft', 'NVIDIA', 'Amazon', 'Meta'],
-    holdingsZh: ['蘋果', '微軟', '輝達', '亞馬遜', 'Meta'],
-    desc: 'Taiwan-listed ETF tracking Nasdaq-100. Provides exposure to US tech giants in TWD.',
-    descZh: '追蹤Nasdaq-100的台灣掛牌ETF。以新台幣投資美國科技巨頭。',
-    inception: '2021-01-19', shares: '~4B'
-  },
-  {
-    ticker: '00891', name: 'CTBC MSCI Taiwan ESG', nameZh: '中信關鍵半導體',
-    category: 'tech', aum: '15B', aumZh: '150億',
-    expense: 0.68, yield: 2.1, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'ICE FactSet Taiwan Semiconductor', benchmarkZh: 'ICE臺灣半導體指數',
-    holdings: ['TSMC', 'ASE Tech', 'MediaTek', 'Novatek', 'Realtek'],
-    holdingsZh: ['台積電', '日月光投控', '聯發科', '聯詠', '瑞昱'],
-    desc: 'Focused on Taiwan semiconductor industry chain. High TSMC concentration.',
-    descZh: '聚焦台灣半導體產業鏈。台積電權重較高。',
-    inception: '2021-05-20', shares: '~3B'
-  },
-  {
-    ticker: '00830', name: 'Cathay US Equity', nameZh: '國泰道瓊',
-    category: 'broad', aum: '8B', aumZh: '80億',
-    expense: 0.65, yield: 1.2, freq: 'Annual', freqZh: '年配',
-    benchmark: 'Dow Jones Industrial Average', benchmarkZh: '道瓊工業平均指數',
-    holdings: ['UnitedHealth', 'Goldman Sachs', 'Microsoft', 'Home Depot', 'Caterpillar'],
-    holdingsZh: ['聯合健康', '高盛', '微軟', '家得寶', '開拓重工'],
-    desc: 'Tracks the Dow Jones Industrial Average in TWD. Blue-chip US exposure.',
-    descZh: '以新台幣追蹤道瓊工業平均指數。投資美國藍籌股。',
-    inception: '2019-04-01', shares: '~0.8B'
-  },
-  {
-    ticker: '00679B', name: 'Yuanta US Treasury 20Y+', nameZh: '元大美債20年',
-    category: 'bond', aum: '180B', aumZh: '1,800億',
-    expense: 0.21, yield: 4.0, freq: 'Monthly', freqZh: '月配',
-    benchmark: 'ICE US Treasury 20+ Year', benchmarkZh: 'ICE美國政府20+年期債券指數',
-    holdings: ['US Treasury 2044', 'US Treasury 2053', 'US Treasury 2050', 'US Treasury 2043', 'US Treasury 2054'],
-    holdingsZh: ['美國公債2044', '美國公債2053', '美國公債2050', '美國公債2043', '美國公債2054'],
-    desc: 'Long-duration US Treasury bond ETF. Popular for hedging equity risk and earning monthly income.',
-    descZh: '長天期美國公債ETF。適合對沖股票風險及賺取月配息。',
-    inception: '2017-01-11', shares: '~12B'
-  },
-  {
-    ticker: '00687B', name: 'Cathay US IG Corp Bond', nameZh: '國泰美投等債',
-    category: 'bond', aum: '55B', aumZh: '550億',
-    expense: 0.32, yield: 4.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Bloomberg US Aggregate Corp Bond', benchmarkZh: 'Bloomberg美國投等公司債指數',
-    holdings: ['Apple Bond', 'Microsoft Bond', 'JPMorgan Bond', 'Amazon Bond', 'Bank of America Bond'],
-    holdingsZh: ['蘋果公司債', '微軟公司債', '摩根大通債', '亞馬遜債', '美銀債'],
-    desc: 'Investment-grade US corporate bonds. Moderate credit risk with higher yield than treasuries.',
-    descZh: '美國投資等級公司債。信用風險適中，殖利率高於公債。',
-    inception: '2017-12-18', shares: '~5B'
-  },
-  {
-    ticker: '00713', name: 'Yuanta High Div Low Vol', nameZh: '元大台灣高息低波',
-    category: 'dividend', aum: '25B', aumZh: '250億',
-    expense: 0.60, yield: 5.0, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'TWSE High Div Low Volatility Index', benchmarkZh: '臺灣高息低波指數',
-    holdings: ['Chailease', 'Mega FHC', 'Hua Nan FHC', 'Taiwan Mobile', 'China Steel'],
-    holdingsZh: ['中租-KY', '兆豐金', '華南金', '台灣大', '中鋼'],
-    desc: 'Combines high dividend yield with low volatility screening. Suitable for conservative investors.',
-    descZh: '結合高殖利率與低波動度篩選。適合保守型投資人。',
-    inception: '2017-09-27', shares: '~2B'
-  },
-  {
-    ticker: '00940', name: 'FH S&P 500', nameZh: '元大台灣價值高息',
-    category: 'dividend', aum: '190B', aumZh: '1,900億',
-    expense: 0.52, yield: 6.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Value High Div Index', benchmarkZh: '臺灣價值高息指數',
-    holdings: ['Hon Hai', 'Quanta', 'Wistron', 'Compal', 'Inventec'],
-    holdingsZh: ['鴻海', '廣達', '緯創', '仁寶', '英業達'],
-    desc: 'Value + high dividend strategy. Attracted massive inflows at launch. Focuses on undervalued dividend stocks.',
-    descZh: '價值投資加高股息策略。募集時引發大量資金湧入。聚焦被低估的高息股。',
-    inception: '2024-03-01', shares: '~10B'
-  },
-  {
-    ticker: '00757', name: 'SinoPac Nasdaq 100', nameZh: '統一FANG+',
-    category: 'tech', aum: '28B', aumZh: '280億',
-    expense: 0.75, yield: 0.0, freq: 'N/A', freqZh: '不配息',
-    benchmark: 'NYSE FANG+ Index', benchmarkZh: 'NYSE FANG+指數',
-    holdings: ['NVIDIA', 'Meta', 'Netflix', 'Apple', 'Amazon'],
-    holdingsZh: ['輝達', 'Meta', 'Netflix', '蘋果', '亞馬遜'],
-    desc: 'Concentrated bet on 10 mega-cap US tech stocks. High growth, high volatility.',
-    descZh: '集中投資10檔美國超大型科技股。高成長、高波動。',
-    inception: '2018-08-06', shares: '~2B'
-  },
-  {
-    ticker: '00646', name: 'Yuanta S&P 500', nameZh: '元大S&P500',
-    category: 'broad', aum: '50B', aumZh: '500億',
-    expense: 0.61, yield: 1.0, freq: 'Annual', freqZh: '年配',
-    benchmark: 'S&P 500 Index', benchmarkZh: 'S&P 500指數',
-    holdings: ['Apple', 'Microsoft', 'NVIDIA', 'Amazon', 'Alphabet'],
-    holdingsZh: ['蘋果', '微軟', '輝達', '亞馬遜', 'Alphabet'],
-    desc: 'Taiwan-listed S&P 500 tracker. Core US equity exposure in TWD.',
-    descZh: '台灣掛牌的S&P 500追蹤ETF。以新台幣投資美國核心股市。',
-    inception: '2015-12-02', shares: '~3B'
-  },
-  {
-    ticker: '00915', name: 'CTBC MSCI Taiwan ESG HiDiv', nameZh: '凱基優選高股息30',
-    category: 'dividend', aum: '40B', aumZh: '400億',
-    expense: 0.50, yield: 7.0, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'MSCI Taiwan Select Hi Div 30', benchmarkZh: 'MSCI台灣精選高息30指數',
-    holdings: ['ASE Tech', 'Quanta', 'Unimicron', 'Cathay FHC', 'Mega FHC'],
-    holdingsZh: ['日月光投控', '廣達', '欣興', '國泰金', '兆豐金'],
-    desc: 'Selects 30 stocks with ESG and high-dividend criteria. Concentrated portfolio approach.',
-    descZh: '以ESG及高股息標準精選30檔個股。集中型投資組合。',
-    inception: '2022-08-16', shares: '~5B'
-  },
-  {
-    ticker: '00772B', name: 'CTBC EM Bond', nameZh: '中信高評級公司債',
-    category: 'bond', aum: '30B', aumZh: '300億',
-    expense: 0.40, yield: 4.8, freq: 'Monthly', freqZh: '月配',
-    benchmark: 'Bloomberg EM USD Aggregate', benchmarkZh: 'Bloomberg高評級公司債指數',
-    holdings: ['Various IG corporate bonds'],
-    holdingsZh: ['多檔投資等級公司債'],
-    desc: 'Diversified high-grade corporate bond exposure. Monthly distributions.',
-    descZh: '分散投資高評級公司債。月月配息。',
-    inception: '2018-10-31', shares: '~3B'
-  },
-  // ---- Additional Dividend ETFs ----
-  {
-    ticker: '00934', name: 'CTBC Taiwan Momentum Div', nameZh: '中信成長高股息',
-    category: 'dividend', aum: '35B', aumZh: '350億',
-    expense: 0.49, yield: 6.8, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Momentum High Div Index', benchmarkZh: '臺灣動能高息指數',
-    holdings: ['Quanta', 'Wistron', 'Inventec', 'Hon Hai', 'ASE Tech'],
-    holdingsZh: ['廣達', '緯創', '英業達', '鴻海', '日月光投控'],
-    desc: 'Selects stocks with price momentum and high dividends. Growth + income strategy.',
-    descZh: '選取具價格動能且高配息的個股。成長加收益策略。',
-    inception: '2023-03-20', shares: '~3B'
-  },
-  {
-    ticker: '00936', name: 'Taiwan Innovation Tech Div', nameZh: '台新臺灣永續高息中小',
-    category: 'dividend', aum: '22B', aumZh: '220億',
-    expense: 0.53, yield: 6.0, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Sustainability Hi Div SMid', benchmarkZh: '臺灣永續高息中小型指數',
-    holdings: ['Auras Tech', 'Chicony Power', 'Voltronic', 'Sinbon', 'Topco'],
-    holdingsZh: ['鈊象', '群光', '旭隼', '信邦', '德律'],
-    desc: 'High-dividend small/mid-cap ESG stocks. Diversification beyond large-cap dividend ETFs.',
-    descZh: '高配息中小型ESG個股。提供大型股高息ETF以外的分散投資選擇。',
-    inception: '2023-06-14', shares: '~2B'
-  },
-  {
-    ticker: '00944', name: 'Cathay TAIEX Plus Div 30', nameZh: '野村臺灣趨勢動能高息',
-    category: 'dividend', aum: '15B', aumZh: '150億',
-    expense: 0.48, yield: 7.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Trend Momentum Hi Div', benchmarkZh: '臺灣趨勢動能高息指數',
-    holdings: ['Wistron', 'Inventec', 'Compal', 'Quanta', 'Pegatron'],
-    holdingsZh: ['緯創', '英業達', '仁寶', '廣達', '和碩'],
-    desc: 'Momentum-based high-dividend selection with trend-following overlay.',
-    descZh: '結合趨勢追蹤的動能型高息選股策略。',
-    inception: '2024-05-15', shares: '~1B'
-  },
-  {
-    ticker: '00918', name: 'Taishin Dividend+', nameZh: '大華優利高填息30',
-    category: 'dividend', aum: '42B', aumZh: '420億',
-    expense: 0.54, yield: 6.2, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'Taiwan Hi Fill Rate Div 30', benchmarkZh: '臺灣優利高填息30指數',
-    holdings: ['CTBC FHC', 'Mega FHC', 'Fubon FHC', 'Hua Nan FHC', 'E.SUN FHC'],
-    holdingsZh: ['中信金', '兆豐金', '富邦金', '華南金', '玉山金'],
-    desc: 'Targets stocks with high dividend fill rates (post-ex-div recovery). Financial sector heavy.',
-    descZh: '鎖定高填息率（除息後股價回復率高）個股。金融股比重較高。',
-    inception: '2022-07-13', shares: '~4B'
-  },
-  // ---- Additional Broad Market ETFs ----
-  {
-    ticker: '006205', name: 'FT TWSE MidCap 100', nameZh: '富邦上證',
-    category: 'broad', aum: '10B', aumZh: '100億',
-    expense: 0.88, yield: 2.0, freq: 'Annual', freqZh: '年配',
-    benchmark: 'SSE 180 Index', benchmarkZh: '上證180指數',
-    holdings: ['Kweichow Moutai', 'ICBC', 'China Merchants Bank', 'Ping An', 'CNOOC'],
-    holdingsZh: ['貴州茅台', '工商銀行', '招商銀行', '平安保險', '中國海油'],
-    desc: 'Tracks Shanghai Stock Exchange top 180 companies. China A-share exposure in TWD.',
-    descZh: '追蹤上海證交所前180大企業。以新台幣投資中國A股。',
-    inception: '2012-06-22', shares: '~1B'
-  },
-  {
-    ticker: '00662', name: 'FT Nasdaq-100', nameZh: '富邦NASDAQ',
-    category: 'tech', aum: '38B', aumZh: '380億',
-    expense: 0.56, yield: 0.2, freq: 'Annual', freqZh: '年配',
-    benchmark: 'Nasdaq-100 Index', benchmarkZh: 'Nasdaq-100指數',
-    holdings: ['Apple', 'Microsoft', 'NVIDIA', 'Amazon', 'Broadcom'],
-    holdingsZh: ['蘋果', '微軟', '輝達', '亞馬遜', '博通'],
-    desc: 'Fubon version of Nasdaq-100 tracker. Lower expense ratio than Cathay 00881.',
-    descZh: '富邦版Nasdaq-100追蹤ETF。費用率低於國泰00881。',
-    inception: '2016-12-07', shares: '~3B'
-  },
-  {
-    ticker: '00735', name: 'Cathay MSCI Taiwan ESG Leaders', nameZh: '國泰臺韓科技',
-    category: 'tech', aum: '6B', aumZh: '60億',
-    expense: 0.62, yield: 1.5, freq: 'Annual', freqZh: '年配',
-    benchmark: 'MSCI AC Asia Info Tech', benchmarkZh: 'MSCI亞洲科技指數',
-    holdings: ['TSMC', 'Samsung', 'SK Hynix', 'MediaTek', 'Hon Hai'],
-    holdingsZh: ['台積電', '三星', 'SK海力士', '聯發科', '鴻海'],
-    desc: 'Taiwan and Korea tech sector exposure. Semiconductor-heavy portfolio.',
-    descZh: '台灣與韓國科技產業曝險。半導體比重較高。',
-    inception: '2018-03-28', shares: '~0.5B'
-  },
-  // ---- Additional Tech ETFs ----
-  {
-    ticker: '00895', name: 'CTBC ICE Semiconductor', nameZh: '富邦未來車',
-    category: 'theme', aum: '12B', aumZh: '120億',
-    expense: 0.75, yield: 0.5, freq: 'Annual', freqZh: '年配',
-    benchmark: 'MSCI ACWI IMI EV & Future Transport', benchmarkZh: 'MSCI全球電動車與未來交通指數',
-    holdings: ['Tesla', 'NVIDIA', 'Rivian', 'BYD', 'NIO'],
-    holdingsZh: ['特斯拉', '輝達', 'Rivian', '比亞迪', '蔚來'],
-    desc: 'Global electric vehicle and future mobility theme. High growth, high volatility.',
-    descZh: '全球電動車與未來移動主題。高成長、高波動。',
-    inception: '2021-08-12', shares: '~1B'
-  },
-  {
-    ticker: '00893', name: 'Cathay AI & Robotics', nameZh: '國泰智能電動車',
-    category: 'theme', aum: '16B', aumZh: '160億',
-    expense: 0.70, yield: 0.3, freq: 'Annual', freqZh: '年配',
-    benchmark: 'ICE EV & Smart Transport', benchmarkZh: 'ICE電動車與智慧運輸指數',
-    holdings: ['Tesla', 'NVIDIA', 'Qualcomm', 'NXP', 'ON Semi'],
-    holdingsZh: ['特斯拉', '輝達', '高通', '恩智浦', '安森美'],
-    desc: 'EV + smart transportation ecosystem. Includes chip makers and EV manufacturers.',
-    descZh: '電動車＋智慧運輸生態系。涵蓋晶片廠與電動車製造商。',
-    inception: '2021-07-01', shares: '~1.5B'
-  },
-  {
-    ticker: '00851', name: 'Yuanta Global 5G', nameZh: '元大全球5G',
-    category: 'theme', aum: '10B', aumZh: '100億',
-    expense: 0.65, yield: 0.8, freq: 'Annual', freqZh: '年配',
-    benchmark: 'ICE FactSet Global NextGen Comm', benchmarkZh: 'ICE全球次世代通訊指數',
-    holdings: ['Apple', 'NVIDIA', 'Broadcom', 'Qualcomm', 'TSMC'],
-    holdingsZh: ['蘋果', '輝達', '博通', '高通', '台積電'],
-    desc: 'Global 5G and next-gen communications theme. Diversified across chip, device, and infrastructure.',
-    descZh: '全球5G與次世代通訊主題。橫跨晶片、裝置與基礎建設。',
-    inception: '2020-01-09', shares: '~1B'
-  },
-  {
-    ticker: '00876', name: 'Yuanta Global Genomics', nameZh: '元大全球生技',
-    category: 'theme', aum: '5B', aumZh: '50億',
-    expense: 0.82, yield: 0.0, freq: 'N/A', freqZh: '不配息',
-    benchmark: 'Solactive Genomics v2 Index', benchmarkZh: 'Solactive全球基因組學指數',
-    holdings: ['Illumina', 'Moderna', 'Exact Sciences', 'Natera', '10x Genomics'],
-    holdingsZh: ['Illumina', 'Moderna', 'Exact Sciences', 'Natera', '10x Genomics'],
-    desc: 'Global genomics and biotech theme. High-risk, high-reward sector exposure.',
-    descZh: '全球基因組學與生技主題。高風險高報酬的產業投資。',
-    inception: '2020-08-04', shares: '~0.5B'
-  },
-  // ---- Additional Bond ETFs ----
-  {
-    ticker: '00720B', name: 'Yuanta IG Corp 1-5Y', nameZh: '元大投等債1-5',
-    category: 'bond', aum: '25B', aumZh: '250億',
-    expense: 0.28, yield: 3.8, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'ICE BofA 1-5Y US Corp Index', benchmarkZh: 'ICE美銀1-5年美國公司債指數',
-    holdings: ['Various short-duration IG bonds'],
-    holdingsZh: ['多檔短天期投等公司債'],
-    desc: 'Short-duration US investment-grade corporate bonds. Lower rate sensitivity than long-duration.',
-    descZh: '短天期美國投資等級公司債。利率敏感度低於長天期債券。',
-    inception: '2017-08-09', shares: '~3B'
-  },
-  {
-    ticker: '00751B', name: 'Yuanta AAA-AA US Corp', nameZh: '元大AAA至A公司債',
-    category: 'bond', aum: '20B', aumZh: '200億',
-    expense: 0.25, yield: 3.5, freq: 'Quarterly', freqZh: '季配',
-    benchmark: 'ICE BofA AAA-A US Corp Index', benchmarkZh: 'ICE美銀AAA-A美國公司債指數',
-    holdings: ['Microsoft Bond', 'Apple Bond', 'Google Bond', 'J&J Bond', 'P&G Bond'],
-    holdingsZh: ['微軟債', '蘋果債', 'Google債', '嬌生債', '寶僑債'],
-    desc: 'Highest-quality US corporate bonds (AAA to A rated). Very low credit risk.',
-    descZh: '最高品質美國公司債（AAA至A級）。信用風險極低。',
-    inception: '2018-04-20', shares: '~2B'
-  },
-  {
-    ticker: '00937B', name: 'Cathay US Treasury 7-10Y', nameZh: '群益ESG投等債20+',
-    category: 'bond', aum: '28B', aumZh: '280億',
-    expense: 0.30, yield: 4.2, freq: 'Monthly', freqZh: '月配',
-    benchmark: 'Bloomberg US Long Corp ESG', benchmarkZh: 'Bloomberg美國長天期ESG公司債指數',
-    holdings: ['Various 20+ year ESG corporate bonds'],
-    holdingsZh: ['多檔20年期以上ESG公司債'],
-    desc: 'Long-duration ESG-screened corporate bonds. Monthly income with responsible investing.',
-    descZh: '長天期ESG篩選公司債。月配息結合責任投資。',
-    inception: '2023-08-08', shares: '~3B'
-  },
-  {
-    ticker: '00933B', name: 'Cathay US IG 15Y+', nameZh: '國泰10Y+金融債',
-    category: 'bond', aum: '18B', aumZh: '180億',
-    expense: 0.32, yield: 4.6, freq: 'Monthly', freqZh: '月配',
-    benchmark: 'Bloomberg 10Y+ US Financial Bond', benchmarkZh: 'Bloomberg 10年期以上美國金融債指數',
-    holdings: ['JPMorgan Bond', 'Bank of America Bond', 'Citigroup Bond', 'Goldman Sachs Bond', 'Morgan Stanley Bond'],
-    holdingsZh: ['摩根大通債', '美銀債', '花旗債', '高盛債', '摩根士丹利債'],
-    desc: 'Long-duration US financial sector bonds. Higher yield with financial sector concentration.',
-    descZh: '長天期美國金融業公司債。殖利率較高但集中於金融產業。',
-    inception: '2023-05-25', shares: '~2B'
-  },
-  // ---- More Broad Market ----
-  {
-    ticker: '00850', name: 'Yuanta MSCI Taiwan', nameZh: '元大臺灣ESG永續',
-    category: 'broad', aum: '14B', aumZh: '140億',
-    expense: 0.35, yield: 2.5, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'MSCI Taiwan ESG Leaders Index', benchmarkZh: 'MSCI臺灣ESG永續指數',
-    holdings: ['TSMC', 'MediaTek', 'Delta', 'Cathay FHC', 'Fubon FHC'],
-    holdingsZh: ['台積電', '聯發科', 'Delta', '國泰金', '富邦金'],
-    desc: 'MSCI Taiwan ESG Leaders index. ESG-screened broad Taiwan market.',
-    descZh: '追蹤MSCI臺灣ESG永續指數。經ESG篩選的台灣大盤。',
-    inception: '2019-08-23', shares: '~1B'
-  },
-  {
-    ticker: '0051', name: 'Yuanta MidCap 100', nameZh: '元大中型100',
-    category: 'broad', aum: '8B', aumZh: '80億',
-    expense: 0.48, yield: 3.5, freq: 'Annual', freqZh: '年配',
-    benchmark: 'TWSE MidCap 100 Index', benchmarkZh: '臺灣中型100指數',
-    holdings: ['Wistron', 'Inventec', 'Pegatron', 'Novatek', 'Voltronic'],
-    holdingsZh: ['緯創', '英業達', '和碩', '聯詠', '旭隼'],
-    desc: 'Mid-cap Taiwan stocks ranked 51-150 by market cap. Complements 0050 for broader coverage.',
-    descZh: '台灣市值排名第51至150的中型股。與0050搭配可涵蓋更廣市場。',
-    inception: '2006-08-31', shares: '~0.8B'
-  },
-  {
-    ticker: '00922', name: 'Cathay Taiwan Div Plus', nameZh: '國泰台灣領袖50',
-    category: 'broad', aum: '12B', aumZh: '120億',
-    expense: 0.30, yield: 2.8, freq: 'Semi-annual', freqZh: '半年配',
-    benchmark: 'FTSE Taiwan Leaders 50', benchmarkZh: 'FTSE臺灣領袖50指數',
-    holdings: ['TSMC', 'Hon Hai', 'MediaTek', 'Delta', 'Fubon FHC'],
-    holdingsZh: ['台積電', '鴻海', '聯發科', 'Delta', '富邦金'],
-    desc: 'Alternative Taiwan 50 tracker with slightly different methodology from 0050.',
-    descZh: '與0050略有不同方法論的台灣50替代追蹤ETF。',
-    inception: '2022-11-17', shares: '~1B'
-  },
-  // ---- Leveraged / Inverse (popular but risky) ----
-  {
-    ticker: '00631L', name: 'Yuanta Daily 2X Taiwan 50', nameZh: '元大台灣50正2',
-    category: 'theme', aum: '45B', aumZh: '450億',
-    expense: 1.07, yield: 0.0, freq: 'N/A', freqZh: '不配息',
-    benchmark: 'TWSE Taiwan 50 Index (2x Daily)', benchmarkZh: '臺灣50指數（單日正向2倍）',
-    holdings: ['Taiwan 50 Index futures'],
-    holdingsZh: ['臺灣50指數期貨'],
-    desc: '2x daily leveraged Taiwan 50. For short-term trading only; daily reset causes long-term decay.',
-    descZh: '台灣50單日正向2倍。僅適合短線交易；每日重設會造成長期耗損。',
-    inception: '2014-10-27', shares: '~3B'
-  },
-  {
-    ticker: '00632R', name: 'Yuanta Daily -1X Taiwan 50', nameZh: '元大台灣50反1',
-    category: 'theme', aum: '12B', aumZh: '120億',
-    expense: 1.07, yield: 0.0, freq: 'N/A', freqZh: '不配息',
-    benchmark: 'TWSE Taiwan 50 Index (-1x Daily)', benchmarkZh: '臺灣50指數（單日反向1倍）',
-    holdings: ['Taiwan 50 Index futures (short)'],
-    holdingsZh: ['臺灣50指數期貨（放空）'],
-    desc: 'Daily inverse Taiwan 50. Hedge tool or bearish bet. Not for long-term holding.',
-    descZh: '台灣50單日反向1倍。避險工具或看空策略。不適合長期持有。',
-    inception: '2014-10-27', shares: '~2B'
-  },
-  {
-    ticker: '00670L', name: 'FT DJIA 2X Daily', nameZh: '富邦NASDAQ正2',
-    category: 'theme', aum: '20B', aumZh: '200億',
-    expense: 1.15, yield: 0.0, freq: 'N/A', freqZh: '不配息',
-    benchmark: 'Nasdaq-100 Index (2x Daily)', benchmarkZh: 'Nasdaq-100指數（單日正向2倍）',
-    holdings: ['Nasdaq-100 futures'],
-    holdingsZh: ['Nasdaq-100指數期貨'],
-    desc: '2x daily leveraged Nasdaq-100. Popular for short-term bullish tech bets.',
-    descZh: 'Nasdaq-100單日正向2倍。短線看多科技股的熱門工具。',
-    inception: '2018-04-24', shares: '~2B'
-  },
-];
-
-// ============================================================
-// TWSE API — fetch live ETF data
-// ============================================================
-const TWSE_API = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL';
-const WORKER_URL = 'https://twse-etf.owen-ouyang.workers.dev/'; // Set to Cloudflare Worker URL if deployed
-
-// Build enrichment lookup from static ETFS data
-const ENRICHMENT = {};
-ETFS.forEach(e => { ENRICHMENT[e.ticker] = e; });
-
-// Classify ETF by code/name heuristics
-function classifyEtf(code, name) {
-  const rich = ENRICHMENT[code];
-  if (rich) return rich.category;
-  // Leveraged/Inverse
-  if (code.endsWith('L') || code.endsWith('R') || /正2|反1/.test(name)) return 'theme';
-  // Bond
-  if (code.endsWith('B') || /債|bond/i.test(name)) return 'bond';
-  // Commodity / Futures
-  if (code.endsWith('U') || /黃金|石油|白銀|銅|黃豆|原油|美元/.test(name)) return 'theme';
-  // Dividend keywords
-  if (/高股息|高息|優息|精選高|填息|股利|收益|入息/.test(name)) return 'dividend';
-  // Tech keywords
-  if (/半導體|科技|NASDAQ|AI|5G|電動車|未來車|通訊|元宇宙|生技|基因|IC設計|FANG|費城|龍頭|創新/.test(name)) return 'tech';
-  // Bond-ish names
-  if (/公債|投等|特別股|REITs|不動產/.test(name)) return 'bond';
-  // Broad market
-  if (/台灣50|台50|中型|加權|ESG|永續|治理|S&P|道瓊|歐洲|日本|印度|越南|中國|A50|滬深|恒生|全球|美國|藍籌|領袖/.test(name)) return 'broad';
-  return 'broad';
-}
-
-// ============================================================
-// STATE
-// ============================================================
-let isZh = (navigator.language || navigator.userLanguage).startsWith('zh');
-let currentCategory = 'all';
-let expandedTicker = null;
-let allEtfs = []; // merged live + enrichment
-let searchQuery = '';
-let isLive = false;
-
-// ============================================================
-// INITIALIZATION
-// ============================================================
-async function initialize() {
-  console.log('[ETF] Initializing...');
-
-  const savedLang = localStorage.getItem('ubike-lang');
-  if (savedLang) isZh = savedLang === 'zh';
-
-  // Bind filter buttons
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentCategory = btn.dataset.cat;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      expandedTicker = null;
-      renderList();
-    });
-  });
-
-  // Bind search
-  const searchInput = document.getElementById('etf-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value.trim().toLowerCase();
-      renderList();
-    });
-  }
-
-  updateUI();
-
-  // Start with static data immediately
-  allEtfs = ETFS.map(e => ({ ...e }));
-  renderList();
-
-  // Then try to fetch live data
-  await fetchLiveData();
-}
-
-async function fetchLiveData() {
-  try {
-    const url = WORKER_URL ? `${WORKER_URL}/etf-list` : TWSE_API;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-
-    let liveEtfs;
-    if (WORKER_URL && data.etfs) {
-      // Worker response format
-      liveEtfs = data.etfs;
-    } else if (Array.isArray(data)) {
-      // Direct TWSE API — filter ETFs (codes starting with 00)
-      liveEtfs = data
-        .filter(d => d.Code && d.Code.startsWith('00'))
-        .map(d => ({
-          code: d.Code,
-          name: d.Name,
-          price: d.ClosingPrice || '',
-          monthAvg: d.MonthlyAveragePrice || '',
-        }));
-    } else {
-      throw new Error('Unexpected response format');
-    }
-
-    // Merge live data with enrichment
-    allEtfs = liveEtfs.map(live => {
-      const code = live.code;
-      const rich = ENRICHMENT[code];
-      const category = classifyEtf(code, live.name);
-      const price = parseFloat(live.price) || 0;
-      const monthAvg = parseFloat(live.monthAvg) || 0;
-
-      if (rich) {
-        // Enriched ETF — merge live price with static details
-        return {
-          ...rich,
-          ticker: code,
-          nameZh: live.name || rich.nameZh,
-          price,
-          monthAvg,
-          category,
-          _live: true,
-        };
-      } else {
-        // New ETF from TWSE — basic info only
-        return {
-          ticker: code,
-          name: live.name,
-          nameZh: live.name,
-          category,
-          price,
-          monthAvg,
-          expense: 0, yield: parseFloat(live.yield) || 0,
-          freq: '', freqZh: '',
-          benchmark: '', benchmarkZh: '',
-          holdings: [], holdingsZh: [],
-          desc: '', descZh: '',
-          inception: '', aum: '', aumZh: '',
-          _live: true,
-        };
+      .detail-item {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
       }
-    });
+      .detail-label {
+        font-size: 0.75em;
+        color: #888;
+        margin-bottom: 2px;
+      }
+      .detail-value {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: #333;
+      }
 
-    isLive = true;
-    console.log(`[ETF] Loaded ${allEtfs.length} ETFs from ${WORKER_URL ? 'Worker' : 'TWSE API'}`);
-    renderList();
-  } catch (error) {
-    console.warn('[ETF] Live fetch failed, using static data:', error.message);
-    // Keep static data
-  }
-}
+      .detail-section-title {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #666;
+        margin: 10px 0 6px;
+      }
+      .holdings-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .holding-tag {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.8em;
+        color: #333;
+      }
+      .detail-desc {
+        font-size: 0.85em;
+        color: #555;
+        line-height: 1.5;
+        margin-top: 8px;
+      }
 
-// ============================================================
-// RENDERING
-// ============================================================
-function getFilteredEtfs() {
-  let list = currentCategory === 'all'
-    ? allEtfs
-    : allEtfs.filter(e => e.category === currentCategory);
+      .result-count {
+        font-size: 0.85em;
+        color: #888;
+        margin-bottom: 12px;
+      }
 
-  if (searchQuery) {
-    list = list.filter(e => {
-      const ticker = (e.ticker || '').toLowerCase();
-      const name = (e.name || '').toLowerCase();
-      const nameZh = (e.nameZh || '').toLowerCase();
-      return ticker.includes(searchQuery) || name.includes(searchQuery) || nameZh.includes(searchQuery);
-    });
-  }
+      /* Float button */
+      .float-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+        background: white;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        transition: background 0.2s;
+      }
+      .float-btn:hover {
+        background: #f4f4f4;
+      }
 
-  return list;
-}
+      @media (max-width: 768px) {
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
+        .container {
+          padding: 12px;
+        }
+        .etf-row {
+          padding: 12px;
+          gap: 8px;
+        }
+        .etf-expense {
+          display: none;
+        }
+        .detail-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">Taiwan ETFs</h1>
+      <div class="header-controls">
+        <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁"
+          >Home</a
+        >
+        <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車"
+          >UBike</a
+        >
+        <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+        <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵"
+          >Rail</a
+        >
+        <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵"
+          >THSR</a
+        >
+        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+        <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震"
+          >Quake</a
+        >
+      </div>
+    </header>
 
-function renderList() {
-  const filtered = getFilteredEtfs();
+    <div class="container">
+      <div class="filter-bar" id="filter-bar">
+        <button
+          class="filter-btn active"
+          data-cat="all"
+          data-en="All"
+          data-zh="全部"
+        >
+          All
+        </button>
+        <button
+          class="filter-btn"
+          data-cat="dividend"
+          data-en="Dividend"
+          data-zh="高股息"
+        >
+          Dividend
+        </button>
+        <button
+          class="filter-btn"
+          data-cat="broad"
+          data-en="Broad Market"
+          data-zh="市值型"
+        >
+          Broad Market
+        </button>
+        <button
+          class="filter-btn"
+          data-cat="tech"
+          data-en="Tech"
+          data-zh="科技型"
+        >
+          Tech
+        </button>
+        <button
+          class="filter-btn"
+          data-cat="bond"
+          data-en="Bond"
+          data-zh="債券型"
+        >
+          Bond
+        </button>
+        <button
+          class="filter-btn"
+          data-cat="theme"
+          data-en="Thematic"
+          data-zh="主題型"
+        >
+          Thematic
+        </button>
+      </div>
 
-  const countEl = document.getElementById('result-count');
-  const liveTag = isLive ? (isZh ? ' (TWSE即時)' : ' (TWSE Live)') : (isZh ? ' (靜態資料)' : ' (Static)');
-  countEl.textContent = isZh
-    ? `顯示 ${filtered.length} 檔 ETF${liveTag}`
-    : `Showing ${filtered.length} ETFs${liveTag}`;
+      <div style="margin-bottom: 12px">
+        <input
+          type="text"
+          id="etf-search"
+          class="etf-search"
+          placeholder="Search ticker or name..."
+          style="
+            width: 100%;
+            padding: 9px 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+          "
+        />
+      </div>
+      <div class="result-count" id="result-count"></div>
+      <div class="etf-list" id="etf-list"></div>
+    </div>
 
-  const listEl = document.getElementById('etf-list');
-  listEl.innerHTML = filtered.map(etf => {
-    const name = isZh ? etf.nameZh : (etf.name || etf.nameZh);
-    const yieldVal = etf.yield || 0;
-    const yieldClass = yieldVal >= 5 ? 'yield-high' : yieldVal >= 2 ? 'yield-med' : 'yield-low';
-    const yieldText = yieldVal > 0 ? `${yieldVal.toFixed(1)}%` : '';
-    const priceText = etf.price ? `$${etf.price}` : (etf.expense > 0 ? `${etf.expense.toFixed(2)}%` : '');
-    const isExpanded = expandedTicker === etf.ticker;
+    <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
 
-    return `<div class="etf-row${isExpanded ? ' expanded' : ''}" data-ticker="${etf.ticker}">
+    <script>
+      "use strict";
+
+      // ============================================================
+      // ETF DATA — Popular Taiwan-listed ETFs
+      // ============================================================
+      const ETFS = [
+        {
+          ticker: "0050",
+          name: "Yuanta Taiwan 50",
+          nameZh: "元大台灣50",
+          category: "broad",
+          aum: "345B",
+          aumZh: "3,450億",
+          expense: 0.43,
+          yield: 3.2,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "FTSE TWSE Taiwan 50 Index",
+          benchmarkZh: "臺灣50指數",
+          holdings: ["TSMC", "Hon Hai", "MediaTek", "Delta", "CTBC"],
+          holdingsZh: ["台積電", "鴻海", "聯發科", "Delta", "中信金"],
+          desc: "Tracks the top 50 companies listed on TWSE by market cap. The benchmark ETF for Taiwan broad market exposure.",
+          descZh: "追蹤台灣證交所市值前50大公司。台灣市值型ETF的代表指標。",
+          inception: "2003-06-30",
+          shares: "~1.8B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "1,7",
+        },
+        {
+          ticker: "0056",
+          name: "Yuanta High Div",
+          nameZh: "元大高股息",
+          category: "dividend",
+          aum: "270B",
+          aumZh: "2,700億",
+          expense: 0.66,
+          yield: 5.8,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "TWSE Dividend+ Index",
+          benchmarkZh: "臺灣高股息指數",
+          holdings: ["ASE Tech", "Unimicron", "Quanta", "Nanya", "Compal"],
+          holdingsZh: ["日月光投控", "欣興", "廣達", "南亞", "仁寶"],
+          desc: "Selects 50 stocks with highest predicted dividend yields from TWSE 150. Popular among income investors.",
+          descZh:
+            "從台灣150指數成分股中選取預測殖利率最高的50檔。收益型投資人的熱門選擇。",
+          inception: "2007-12-26",
+          shares: "~18B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00878",
+          name: "Cathay ESG Div",
+          nameZh: "國泰永續高股息",
+          category: "dividend",
+          aum: "310B",
+          aumZh: "3,100億",
+          expense: 0.57,
+          yield: 5.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "MSCI Taiwan ESG Leaders Dividend",
+          benchmarkZh: "MSCI台灣ESG永續高股息指數",
+          holdings: ["TSMC", "Cathay FHC", "Fubon FHC", "ASE Tech", "MediaTek"],
+          holdingsZh: ["台積電", "國泰金", "富邦金", "日月光投控", "聯發科"],
+          desc: "Combines ESG screening with high-dividend selection. Quarterly distributions make it popular for regular income.",
+          descZh: "結合ESG篩選與高股息選股。季配息機制深受定期收益投資人歡迎。",
+          inception: "2020-07-20",
+          shares: "~15B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "2,5,8,11",
+        },
+        {
+          ticker: "00919",
+          name: "Cathay Taiwan Select Div",
+          nameZh: "群益台灣精選高息",
+          category: "dividend",
+          aum: "230B",
+          aumZh: "2,300億",
+          expense: 0.55,
+          yield: 8.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Select High Dividend Index",
+          benchmarkZh: "臺灣精選高息指數",
+          holdings: ["Wistron", "Inventec", "Unimicron", "ASE Tech", "CTBC"],
+          holdingsZh: ["緯創", "英業達", "欣興", "日月光投控", "中信金"],
+          desc: "Focuses on stocks with high and stable dividend yields. One of the highest-yielding Taiwan ETFs.",
+          descZh: "聚焦高殖利率且穩定配息的個股。台灣殖利率最高的ETF之一。",
+          inception: "2022-10-20",
+          shares: "~12B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Capital",
+          issuerZh: "群益投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00929",
+          name: "FH Taiwan Smart Div",
+          nameZh: "復華台灣科技優息",
+          category: "dividend",
+          aum: "200B",
+          aumZh: "2,000億",
+          expense: 0.52,
+          yield: 7.2,
+          freq: "Monthly",
+          freqZh: "月配",
+          benchmark: "Taiwan Smart Dividend Index",
+          benchmarkZh: "特選臺灣科技優息指數",
+          holdings: ["TSMC", "MediaTek", "Novatek", "Realtek", "ASE Tech"],
+          holdingsZh: ["台積電", "聯發科", "聯詠", "瑞昱", "日月光投控"],
+          desc: "Monthly dividend ETF with tech sector focus. First monthly-pay high-dividend ETF in Taiwan.",
+          descZh: "以科技股為主的月配息ETF。台灣首檔月配高股息ETF。",
+          inception: "2023-06-09",
+          shares: "~10B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Fuh Hwa",
+          issuerZh: "復華投信",
+          divMonths: "every month",
+          divMonthsZh: "每月",
+        },
+        {
+          ticker: "006208",
+          name: "FT TWSE Cap Weighted",
+          nameZh: "富邦台50",
+          category: "broad",
+          aum: "60B",
+          aumZh: "600億",
+          expense: 0.24,
+          yield: 2.8,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "TWSE Taiwan 50 Index",
+          benchmarkZh: "臺灣50指數",
+          holdings: ["TSMC", "Hon Hai", "MediaTek", "Delta", "CTBC"],
+          holdingsZh: ["台積電", "鴻海", "聯發科", "Delta", "中信金"],
+          desc: "Low-cost alternative to 0050, tracking the same Taiwan 50 index. Popular for its lower expense ratio.",
+          descZh: "追蹤與0050相同指數的低費用替代方案。以低費用率受到青睞。",
+          inception: "2012-06-22",
+          shares: "~3B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "1,7",
+        },
+        {
+          ticker: "00692",
+          name: "FT ESG",
+          nameZh: "富邦公司治理",
+          category: "broad",
+          aum: "18B",
+          aumZh: "180億",
+          expense: 0.35,
+          yield: 3.0,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "TWSE CG 100 Index",
+          benchmarkZh: "公司治理100指數",
+          holdings: ["TSMC", "Hon Hai", "MediaTek", "Cathay FHC", "Fubon FHC"],
+          holdingsZh: ["台積電", "鴻海", "聯發科", "國泰金", "富邦金"],
+          desc: "Tracks 100 companies ranked by corporate governance. Broader market coverage than Taiwan 50.",
+          descZh: "追蹤公司治理排名前100的企業。比台灣50涵蓋更廣的市場。",
+          inception: "2017-05-17",
+          shares: "~1.5B",
+          custodian: "CTBC Bank",
+          custodianZh: "中國信託商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "7,11",
+        },
+        {
+          ticker: "00881",
+          name: "Cathay Nasdaq 100",
+          nameZh: "國泰北美科技",
+          category: "tech",
+          aum: "42B",
+          aumZh: "420億",
+          expense: 0.76,
+          yield: 0.3,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "Nasdaq-100 Index",
+          benchmarkZh: "Nasdaq-100指數",
+          holdings: ["Apple", "Microsoft", "NVIDIA", "Amazon", "Meta"],
+          holdingsZh: ["蘋果", "微軟", "輝達", "亞馬遜", "Meta"],
+          desc: "Taiwan-listed ETF tracking Nasdaq-100. Provides exposure to US tech giants in TWD.",
+          descZh: "追蹤Nasdaq-100的台灣掛牌ETF。以新台幣投資美國科技巨頭。",
+          inception: "2021-01-19",
+          shares: "~4B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "8",
+        },
+        {
+          ticker: "00891",
+          name: "CTBC MSCI Taiwan ESG",
+          nameZh: "中信關鍵半導體",
+          category: "tech",
+          aum: "15B",
+          aumZh: "150億",
+          expense: 0.68,
+          yield: 2.1,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "ICE FactSet Taiwan Semiconductor",
+          benchmarkZh: "ICE臺灣半導體指數",
+          holdings: ["TSMC", "ASE Tech", "MediaTek", "Novatek", "Realtek"],
+          holdingsZh: ["台積電", "日月光投控", "聯發科", "聯詠", "瑞昱"],
+          desc: "Focused on Taiwan semiconductor industry chain. High TSMC concentration.",
+          descZh: "聚焦台灣半導體產業鏈。台積電權重較高。",
+          inception: "2021-05-20",
+          shares: "~3B",
+          custodian: "First Commercial Bank",
+          custodianZh: "第一銀行",
+          issuer: "CTBC",
+          issuerZh: "中信投信",
+          divMonths: "2,8",
+        },
+        {
+          ticker: "00830",
+          name: "Cathay US Equity",
+          nameZh: "國泰道瓊",
+          category: "broad",
+          aum: "8B",
+          aumZh: "80億",
+          expense: 0.65,
+          yield: 1.2,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "Dow Jones Industrial Average",
+          benchmarkZh: "道瓊工業平均指數",
+          holdings: [
+            "UnitedHealth",
+            "Goldman Sachs",
+            "Microsoft",
+            "Home Depot",
+            "Caterpillar",
+          ],
+          holdingsZh: ["聯合健康", "高盛", "微軟", "家得寶", "開拓重工"],
+          desc: "Tracks the Dow Jones Industrial Average in TWD. Blue-chip US exposure.",
+          descZh: "以新台幣追蹤道瓊工業平均指數。投資美國藍籌股。",
+          inception: "2019-04-01",
+          shares: "~0.8B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "8",
+        },
+        {
+          ticker: "00679B",
+          name: "Yuanta US Treasury 20Y+",
+          nameZh: "元大美債20年",
+          category: "bond",
+          aum: "180B",
+          aumZh: "1,800億",
+          expense: 0.21,
+          yield: 4.0,
+          freq: "Monthly",
+          freqZh: "月配",
+          benchmark: "ICE US Treasury 20+ Year",
+          benchmarkZh: "ICE美國政府20+年期債券指數",
+          holdings: [
+            "US Treasury 2044",
+            "US Treasury 2053",
+            "US Treasury 2050",
+            "US Treasury 2043",
+            "US Treasury 2054",
+          ],
+          holdingsZh: [
+            "美國公債2044",
+            "美國公債2053",
+            "美國公債2050",
+            "美國公債2043",
+            "美國公債2054",
+          ],
+          desc: "Long-duration US Treasury bond ETF. Popular for hedging equity risk and earning monthly income.",
+          descZh: "長天期美國公債ETF。適合對沖股票風險及賺取月配息。",
+          inception: "2017-01-11",
+          shares: "~12B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "every month",
+          divMonthsZh: "每月",
+        },
+        {
+          ticker: "00687B",
+          name: "Cathay US IG Corp Bond",
+          nameZh: "國泰美投等債",
+          category: "bond",
+          aum: "55B",
+          aumZh: "550億",
+          expense: 0.32,
+          yield: 4.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Bloomberg US Aggregate Corp Bond",
+          benchmarkZh: "Bloomberg美國投等公司債指數",
+          holdings: [
+            "Apple Bond",
+            "Microsoft Bond",
+            "JPMorgan Bond",
+            "Amazon Bond",
+            "Bank of America Bond",
+          ],
+          holdingsZh: [
+            "蘋果公司債",
+            "微軟公司債",
+            "摩根大通債",
+            "亞馬遜債",
+            "美銀債",
+          ],
+          desc: "Investment-grade US corporate bonds. Moderate credit risk with higher yield than treasuries.",
+          descZh: "美國投資等級公司債。信用風險適中，殖利率高於公債。",
+          inception: "2017-12-18",
+          shares: "~5B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00713",
+          name: "Yuanta High Div Low Vol",
+          nameZh: "元大台灣高息低波",
+          category: "dividend",
+          aum: "25B",
+          aumZh: "250億",
+          expense: 0.6,
+          yield: 5.0,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "TWSE High Div Low Volatility Index",
+          benchmarkZh: "臺灣高息低波指數",
+          holdings: [
+            "Chailease",
+            "Mega FHC",
+            "Hua Nan FHC",
+            "Taiwan Mobile",
+            "China Steel",
+          ],
+          holdingsZh: ["中租-KY", "兆豐金", "華南金", "台灣大", "中鋼"],
+          desc: "Combines high dividend yield with low volatility screening. Suitable for conservative investors.",
+          descZh: "結合高殖利率與低波動度篩選。適合保守型投資人。",
+          inception: "2017-09-27",
+          shares: "~2B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00940",
+          name: "FH S&P 500",
+          nameZh: "元大台灣價值高息",
+          category: "dividend",
+          aum: "190B",
+          aumZh: "1,900億",
+          expense: 0.52,
+          yield: 6.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Value High Div Index",
+          benchmarkZh: "臺灣價值高息指數",
+          holdings: ["Hon Hai", "Quanta", "Wistron", "Compal", "Inventec"],
+          holdingsZh: ["鴻海", "廣達", "緯創", "仁寶", "英業達"],
+          desc: "Value + high dividend strategy. Attracted massive inflows at launch. Focuses on undervalued dividend stocks.",
+          descZh:
+            "價值投資加高股息策略。募集時引發大量資金湧入。聚焦被低估的高息股。",
+          inception: "2024-03-01",
+          shares: "~10B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00757",
+          name: "SinoPac Nasdaq 100",
+          nameZh: "統一FANG+",
+          category: "tech",
+          aum: "28B",
+          aumZh: "280億",
+          expense: 0.75,
+          yield: 0.0,
+          freq: "N/A",
+          freqZh: "不配息",
+          benchmark: "NYSE FANG+ Index",
+          benchmarkZh: "NYSE FANG+指數",
+          holdings: ["NVIDIA", "Meta", "Netflix", "Apple", "Amazon"],
+          holdingsZh: ["輝達", "Meta", "Netflix", "蘋果", "亞馬遜"],
+          desc: "Concentrated bet on 10 mega-cap US tech stocks. High growth, high volatility.",
+          descZh: "集中投資10檔美國超大型科技股。高成長、高波動。",
+          inception: "2018-08-06",
+          shares: "~2B",
+          custodian: "CTBC Bank",
+          custodianZh: "中國信託商業銀行",
+          issuer: "UPAMC",
+          issuerZh: "統一投信",
+          divMonths: "",
+        },
+        {
+          ticker: "00646",
+          name: "Yuanta S&P 500",
+          nameZh: "元大S&P500",
+          category: "broad",
+          aum: "50B",
+          aumZh: "500億",
+          expense: 0.61,
+          yield: 1.0,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "S&P 500 Index",
+          benchmarkZh: "S&P 500指數",
+          holdings: ["Apple", "Microsoft", "NVIDIA", "Amazon", "Alphabet"],
+          holdingsZh: ["蘋果", "微軟", "輝達", "亞馬遜", "Alphabet"],
+          desc: "Taiwan-listed S&P 500 tracker. Core US equity exposure in TWD.",
+          descZh: "台灣掛牌的S&P 500追蹤ETF。以新台幣投資美國核心股市。",
+          inception: "2015-12-02",
+          shares: "~3B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "11",
+        },
+        {
+          ticker: "00915",
+          name: "CTBC MSCI Taiwan ESG HiDiv",
+          nameZh: "凱基優選高股息30",
+          category: "dividend",
+          aum: "40B",
+          aumZh: "400億",
+          expense: 0.5,
+          yield: 7.0,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "MSCI Taiwan Select Hi Div 30",
+          benchmarkZh: "MSCI台灣精選高息30指數",
+          holdings: [
+            "ASE Tech",
+            "Quanta",
+            "Unimicron",
+            "Cathay FHC",
+            "Mega FHC",
+          ],
+          holdingsZh: ["日月光投控", "廣達", "欣興", "國泰金", "兆豐金"],
+          desc: "Selects 30 stocks with ESG and high-dividend criteria. Concentrated portfolio approach.",
+          descZh: "以ESG及高股息標準精選30檔個股。集中型投資組合。",
+          inception: "2022-08-16",
+          shares: "~5B",
+          custodian: "First Commercial Bank",
+          custodianZh: "第一銀行",
+          issuer: "KGI",
+          issuerZh: "凱基投信",
+          divMonths: "3,6,9,12",
+        },
+        {
+          ticker: "00772B",
+          name: "CTBC EM Bond",
+          nameZh: "中信高評級公司債",
+          category: "bond",
+          aum: "30B",
+          aumZh: "300億",
+          expense: 0.4,
+          yield: 4.8,
+          freq: "Monthly",
+          freqZh: "月配",
+          benchmark: "Bloomberg EM USD Aggregate",
+          benchmarkZh: "Bloomberg高評級公司債指數",
+          holdings: ["Various IG corporate bonds"],
+          holdingsZh: ["多檔投資等級公司債"],
+          desc: "Diversified high-grade corporate bond exposure. Monthly distributions.",
+          descZh: "分散投資高評級公司債。月月配息。",
+          inception: "2018-10-31",
+          shares: "~3B",
+          custodian: "First Commercial Bank",
+          custodianZh: "第一銀行",
+          issuer: "CTBC",
+          issuerZh: "中信投信",
+          divMonths: "every month",
+          divMonthsZh: "每月",
+        },
+        // ---- Additional Dividend ETFs ----
+        {
+          ticker: "00934",
+          name: "CTBC Taiwan Momentum Div",
+          nameZh: "中信成長高股息",
+          category: "dividend",
+          aum: "35B",
+          aumZh: "350億",
+          expense: 0.49,
+          yield: 6.8,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Momentum High Div Index",
+          benchmarkZh: "臺灣動能高息指數",
+          holdings: ["Quanta", "Wistron", "Inventec", "Hon Hai", "ASE Tech"],
+          holdingsZh: ["廣達", "緯創", "英業達", "鴻海", "日月光投控"],
+          desc: "Selects stocks with price momentum and high dividends. Growth + income strategy.",
+          descZh: "選取具價格動能且高配息的個股。成長加收益策略。",
+          inception: "2023-03-20",
+          shares: "~3B",
+          custodian: "First Commercial Bank",
+          custodianZh: "第一銀行",
+          issuer: "CTBC",
+          issuerZh: "中信投信",
+          divMonths: "1,4,7,10",
+        },
+        {
+          ticker: "00936",
+          name: "Taiwan Innovation Tech Div",
+          nameZh: "台新臺灣永續高息中小",
+          category: "dividend",
+          aum: "22B",
+          aumZh: "220億",
+          expense: 0.53,
+          yield: 6.0,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Sustainability Hi Div SMid",
+          benchmarkZh: "臺灣永續高息中小型指數",
+          holdings: [
+            "Auras Tech",
+            "Chicony Power",
+            "Voltronic",
+            "Sinbon",
+            "Topco",
+          ],
+          holdingsZh: ["鈊象", "群光", "旭隼", "信邦", "德律"],
+          desc: "High-dividend small/mid-cap ESG stocks. Diversification beyond large-cap dividend ETFs.",
+          descZh: "高配息中小型ESG個股。提供大型股高息ETF以外的分散投資選擇。",
+          inception: "2023-06-14",
+          shares: "~2B",
+          custodian: "CTBC Bank",
+          custodianZh: "中國信託商業銀行",
+          issuer: "Taishin",
+          issuerZh: "台新投信",
+          divMonths: "3,6,9,12",
+        },
+        {
+          ticker: "00944",
+          name: "Cathay TAIEX Plus Div 30",
+          nameZh: "野村臺灣趨勢動能高息",
+          category: "dividend",
+          aum: "15B",
+          aumZh: "150億",
+          expense: 0.48,
+          yield: 7.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Trend Momentum Hi Div",
+          benchmarkZh: "臺灣趨勢動能高息指數",
+          holdings: ["Wistron", "Inventec", "Compal", "Quanta", "Pegatron"],
+          holdingsZh: ["緯創", "英業達", "仁寶", "廣達", "和碩"],
+          desc: "Momentum-based high-dividend selection with trend-following overlay.",
+          descZh: "結合趨勢追蹤的動能型高息選股策略。",
+          inception: "2024-05-15",
+          shares: "~1B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Nomura",
+          issuerZh: "野村投信",
+          divMonths: "3,6,9,12",
+        },
+        {
+          ticker: "00918",
+          name: "Taishin Dividend+",
+          nameZh: "大華優利高填息30",
+          category: "dividend",
+          aum: "42B",
+          aumZh: "420億",
+          expense: 0.54,
+          yield: 6.2,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "Taiwan Hi Fill Rate Div 30",
+          benchmarkZh: "臺灣優利高填息30指數",
+          holdings: [
+            "CTBC FHC",
+            "Mega FHC",
+            "Fubon FHC",
+            "Hua Nan FHC",
+            "E.SUN FHC",
+          ],
+          holdingsZh: ["中信金", "兆豐金", "富邦金", "華南金", "玉山金"],
+          desc: "Targets stocks with high dividend fill rates (post-ex-div recovery). Financial sector heavy.",
+          descZh: "鎖定高填息率（除息後股價回復率高）個股。金融股比重較高。",
+          inception: "2022-07-13",
+          shares: "~4B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Daiwa (Taishin)",
+          issuerZh: "大華銀投信",
+          divMonths: "3,6,9,12",
+        },
+        // ---- Additional Broad Market ETFs ----
+        {
+          ticker: "006205",
+          name: "FT TWSE MidCap 100",
+          nameZh: "富邦上證",
+          category: "broad",
+          aum: "10B",
+          aumZh: "100億",
+          expense: 0.88,
+          yield: 2.0,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "SSE 180 Index",
+          benchmarkZh: "上證180指數",
+          holdings: [
+            "Kweichow Moutai",
+            "ICBC",
+            "China Merchants Bank",
+            "Ping An",
+            "CNOOC",
+          ],
+          holdingsZh: [
+            "貴州茅台",
+            "工商銀行",
+            "招商銀行",
+            "平安保險",
+            "中國海油",
+          ],
+          desc: "Tracks Shanghai Stock Exchange top 180 companies. China A-share exposure in TWD.",
+          descZh: "追蹤上海證交所前180大企業。以新台幣投資中國A股。",
+          inception: "2012-06-22",
+          shares: "~1B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "11",
+        },
+        {
+          ticker: "00662",
+          name: "FT Nasdaq-100",
+          nameZh: "富邦NASDAQ",
+          category: "tech",
+          aum: "38B",
+          aumZh: "380億",
+          expense: 0.56,
+          yield: 0.2,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "Nasdaq-100 Index",
+          benchmarkZh: "Nasdaq-100指數",
+          holdings: ["Apple", "Microsoft", "NVIDIA", "Amazon", "Broadcom"],
+          holdingsZh: ["蘋果", "微軟", "輝達", "亞馬遜", "博通"],
+          desc: "Fubon version of Nasdaq-100 tracker. Lower expense ratio than Cathay 00881.",
+          descZh: "富邦版Nasdaq-100追蹤ETF。費用率低於國泰00881。",
+          inception: "2016-12-07",
+          shares: "~3B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "11",
+        },
+        {
+          ticker: "00735",
+          name: "Cathay MSCI Taiwan ESG Leaders",
+          nameZh: "國泰臺韓科技",
+          category: "tech",
+          aum: "6B",
+          aumZh: "60億",
+          expense: 0.62,
+          yield: 1.5,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "MSCI AC Asia Info Tech",
+          benchmarkZh: "MSCI亞洲科技指數",
+          holdings: ["TSMC", "Samsung", "SK Hynix", "MediaTek", "Hon Hai"],
+          holdingsZh: ["台積電", "三星", "SK海力士", "聯發科", "鴻海"],
+          desc: "Taiwan and Korea tech sector exposure. Semiconductor-heavy portfolio.",
+          descZh: "台灣與韓國科技產業曝險。半導體比重較高。",
+          inception: "2018-03-28",
+          shares: "~0.5B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "8",
+        },
+        // ---- Additional Tech ETFs ----
+        {
+          ticker: "00895",
+          name: "CTBC ICE Semiconductor",
+          nameZh: "富邦未來車",
+          category: "theme",
+          aum: "12B",
+          aumZh: "120億",
+          expense: 0.75,
+          yield: 0.5,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "MSCI ACWI IMI EV & Future Transport",
+          benchmarkZh: "MSCI全球電動車與未來交通指數",
+          holdings: ["Tesla", "NVIDIA", "Rivian", "BYD", "NIO"],
+          holdingsZh: ["特斯拉", "輝達", "Rivian", "比亞迪", "蔚來"],
+          desc: "Global electric vehicle and future mobility theme. High growth, high volatility.",
+          descZh: "全球電動車與未來移動主題。高成長、高波動。",
+          inception: "2021-08-12",
+          shares: "~1B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "11",
+        },
+        {
+          ticker: "00893",
+          name: "Cathay AI & Robotics",
+          nameZh: "國泰智能電動車",
+          category: "theme",
+          aum: "16B",
+          aumZh: "160億",
+          expense: 0.7,
+          yield: 0.3,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "ICE EV & Smart Transport",
+          benchmarkZh: "ICE電動車與智慧運輸指數",
+          holdings: ["Tesla", "NVIDIA", "Qualcomm", "NXP", "ON Semi"],
+          holdingsZh: ["特斯拉", "輝達", "高通", "恩智浦", "安森美"],
+          desc: "EV + smart transportation ecosystem. Includes chip makers and EV manufacturers.",
+          descZh: "電動車＋智慧運輸生態系。涵蓋晶片廠與電動車製造商。",
+          inception: "2021-07-01",
+          shares: "~1.5B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "8",
+        },
+        {
+          ticker: "00851",
+          name: "Yuanta Global 5G",
+          nameZh: "元大全球5G",
+          category: "theme",
+          aum: "10B",
+          aumZh: "100億",
+          expense: 0.65,
+          yield: 0.8,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "ICE FactSet Global NextGen Comm",
+          benchmarkZh: "ICE全球次世代通訊指數",
+          holdings: ["Apple", "NVIDIA", "Broadcom", "Qualcomm", "TSMC"],
+          holdingsZh: ["蘋果", "輝達", "博通", "高通", "台積電"],
+          desc: "Global 5G and next-gen communications theme. Diversified across chip, device, and infrastructure.",
+          descZh: "全球5G與次世代通訊主題。橫跨晶片、裝置與基礎建設。",
+          inception: "2020-01-09",
+          shares: "~1B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "11",
+        },
+        {
+          ticker: "00876",
+          name: "Yuanta Global Genomics",
+          nameZh: "元大全球生技",
+          category: "theme",
+          aum: "5B",
+          aumZh: "50億",
+          expense: 0.82,
+          yield: 0.0,
+          freq: "N/A",
+          freqZh: "不配息",
+          benchmark: "Solactive Genomics v2 Index",
+          benchmarkZh: "Solactive全球基因組學指數",
+          holdings: [
+            "Illumina",
+            "Moderna",
+            "Exact Sciences",
+            "Natera",
+            "10x Genomics",
+          ],
+          holdingsZh: [
+            "Illumina",
+            "Moderna",
+            "Exact Sciences",
+            "Natera",
+            "10x Genomics",
+          ],
+          desc: "Global genomics and biotech theme. High-risk, high-reward sector exposure.",
+          descZh: "全球基因組學與生技主題。高風險高報酬的產業投資。",
+          inception: "2020-08-04",
+          shares: "~0.5B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "",
+        },
+        // ---- Additional Bond ETFs ----
+        {
+          ticker: "00720B",
+          name: "Yuanta IG Corp 1-5Y",
+          nameZh: "元大投等債1-5",
+          category: "bond",
+          aum: "25B",
+          aumZh: "250億",
+          expense: 0.28,
+          yield: 3.8,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "ICE BofA 1-5Y US Corp Index",
+          benchmarkZh: "ICE美銀1-5年美國公司債指數",
+          holdings: ["Various short-duration IG bonds"],
+          holdingsZh: ["多檔短天期投等公司債"],
+          desc: "Short-duration US investment-grade corporate bonds. Lower rate sensitivity than long-duration.",
+          descZh: "短天期美國投資等級公司債。利率敏感度低於長天期債券。",
+          inception: "2017-08-09",
+          shares: "~3B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "2,5,8,11",
+        },
+        {
+          ticker: "00751B",
+          name: "Yuanta AAA-AA US Corp",
+          nameZh: "元大AAA至A公司債",
+          category: "bond",
+          aum: "20B",
+          aumZh: "200億",
+          expense: 0.25,
+          yield: 3.5,
+          freq: "Quarterly",
+          freqZh: "季配",
+          benchmark: "ICE BofA AAA-A US Corp Index",
+          benchmarkZh: "ICE美銀AAA-A美國公司債指數",
+          holdings: [
+            "Microsoft Bond",
+            "Apple Bond",
+            "Google Bond",
+            "J&J Bond",
+            "P&G Bond",
+          ],
+          holdingsZh: ["微軟債", "蘋果債", "Google債", "嬌生債", "寶僑債"],
+          desc: "Highest-quality US corporate bonds (AAA to A rated). Very low credit risk.",
+          descZh: "最高品質美國公司債（AAA至A級）。信用風險極低。",
+          inception: "2018-04-20",
+          shares: "~2B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "2,5,8,11",
+        },
+        {
+          ticker: "00937B",
+          name: "Cathay US Treasury 7-10Y",
+          nameZh: "群益ESG投等債20+",
+          category: "bond",
+          aum: "28B",
+          aumZh: "280億",
+          expense: 0.3,
+          yield: 4.2,
+          freq: "Monthly",
+          freqZh: "月配",
+          benchmark: "Bloomberg US Long Corp ESG",
+          benchmarkZh: "Bloomberg美國長天期ESG公司債指數",
+          holdings: ["Various 20+ year ESG corporate bonds"],
+          holdingsZh: ["多檔20年期以上ESG公司債"],
+          desc: "Long-duration ESG-screened corporate bonds. Monthly income with responsible investing.",
+          descZh: "長天期ESG篩選公司債。月配息結合責任投資。",
+          inception: "2023-08-08",
+          shares: "~3B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Capital",
+          issuerZh: "群益投信",
+          divMonths: "every month",
+          divMonthsZh: "每月",
+        },
+        {
+          ticker: "00933B",
+          name: "Cathay US IG 15Y+",
+          nameZh: "國泰10Y+金融債",
+          category: "bond",
+          aum: "18B",
+          aumZh: "180億",
+          expense: 0.32,
+          yield: 4.6,
+          freq: "Monthly",
+          freqZh: "月配",
+          benchmark: "Bloomberg 10Y+ US Financial Bond",
+          benchmarkZh: "Bloomberg 10年期以上美國金融債指數",
+          holdings: [
+            "JPMorgan Bond",
+            "Bank of America Bond",
+            "Citigroup Bond",
+            "Goldman Sachs Bond",
+            "Morgan Stanley Bond",
+          ],
+          holdingsZh: [
+            "摩根大通債",
+            "美銀債",
+            "花旗債",
+            "高盛債",
+            "摩根士丹利債",
+          ],
+          desc: "Long-duration US financial sector bonds. Higher yield with financial sector concentration.",
+          descZh: "長天期美國金融業公司債。殖利率較高但集中於金融產業。",
+          inception: "2023-05-25",
+          shares: "~2B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "every month",
+          divMonthsZh: "每月",
+        },
+        // ---- More Broad Market ----
+        {
+          ticker: "00850",
+          name: "Yuanta MSCI Taiwan",
+          nameZh: "元大臺灣ESG永續",
+          category: "broad",
+          aum: "14B",
+          aumZh: "140億",
+          expense: 0.35,
+          yield: 2.5,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "MSCI Taiwan ESG Leaders Index",
+          benchmarkZh: "MSCI臺灣ESG永續指數",
+          holdings: ["TSMC", "MediaTek", "Delta", "Cathay FHC", "Fubon FHC"],
+          holdingsZh: ["台積電", "聯發科", "Delta", "國泰金", "富邦金"],
+          desc: "MSCI Taiwan ESG Leaders index. ESG-screened broad Taiwan market.",
+          descZh: "追蹤MSCI臺灣ESG永續指數。經ESG篩選的台灣大盤。",
+          inception: "2019-08-23",
+          shares: "~1B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "1,7",
+        },
+        {
+          ticker: "0051",
+          name: "Yuanta MidCap 100",
+          nameZh: "元大中型100",
+          category: "broad",
+          aum: "8B",
+          aumZh: "80億",
+          expense: 0.48,
+          yield: 3.5,
+          freq: "Annual",
+          freqZh: "年配",
+          benchmark: "TWSE MidCap 100 Index",
+          benchmarkZh: "臺灣中型100指數",
+          holdings: ["Wistron", "Inventec", "Pegatron", "Novatek", "Voltronic"],
+          holdingsZh: ["緯創", "英業達", "和碩", "聯詠", "旭隼"],
+          desc: "Mid-cap Taiwan stocks ranked 51-150 by market cap. Complements 0050 for broader coverage.",
+          descZh: "台灣市值排名第51至150的中型股。與0050搭配可涵蓋更廣市場。",
+          inception: "2006-08-31",
+          shares: "~0.8B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "10",
+        },
+        {
+          ticker: "00922",
+          name: "Cathay Taiwan Div Plus",
+          nameZh: "國泰台灣領袖50",
+          category: "broad",
+          aum: "12B",
+          aumZh: "120億",
+          expense: 0.3,
+          yield: 2.8,
+          freq: "Semi-annual",
+          freqZh: "半年配",
+          benchmark: "FTSE Taiwan Leaders 50",
+          benchmarkZh: "FTSE臺灣領袖50指數",
+          holdings: ["TSMC", "Hon Hai", "MediaTek", "Delta", "Fubon FHC"],
+          holdingsZh: ["台積電", "鴻海", "聯發科", "Delta", "富邦金"],
+          desc: "Alternative Taiwan 50 tracker with slightly different methodology from 0050.",
+          descZh: "與0050略有不同方法論的台灣50替代追蹤ETF。",
+          inception: "2022-11-17",
+          shares: "~1B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Cathay",
+          issuerZh: "國泰投信",
+          divMonths: "7,11",
+        },
+        // ---- Leveraged / Inverse (popular but risky) ----
+        {
+          ticker: "00631L",
+          name: "Yuanta Daily 2X Taiwan 50",
+          nameZh: "元大台灣50正2",
+          category: "theme",
+          aum: "45B",
+          aumZh: "450億",
+          expense: 1.07,
+          yield: 0.0,
+          freq: "N/A",
+          freqZh: "不配息",
+          benchmark: "TWSE Taiwan 50 Index (2x Daily)",
+          benchmarkZh: "臺灣50指數（單日正向2倍）",
+          holdings: ["Taiwan 50 Index futures"],
+          holdingsZh: ["臺灣50指數期貨"],
+          desc: "2x daily leveraged Taiwan 50. For short-term trading only; daily reset causes long-term decay.",
+          descZh: "台灣50單日正向2倍。僅適合短線交易；每日重設會造成長期耗損。",
+          inception: "2014-10-27",
+          shares: "~3B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "",
+        },
+        {
+          ticker: "00632R",
+          name: "Yuanta Daily -1X Taiwan 50",
+          nameZh: "元大台灣50反1",
+          category: "theme",
+          aum: "12B",
+          aumZh: "120億",
+          expense: 1.07,
+          yield: 0.0,
+          freq: "N/A",
+          freqZh: "不配息",
+          benchmark: "TWSE Taiwan 50 Index (-1x Daily)",
+          benchmarkZh: "臺灣50指數（單日反向1倍）",
+          holdings: ["Taiwan 50 Index futures (short)"],
+          holdingsZh: ["臺灣50指數期貨（放空）"],
+          desc: "Daily inverse Taiwan 50. Hedge tool or bearish bet. Not for long-term holding.",
+          descZh: "台灣50單日反向1倍。避險工具或看空策略。不適合長期持有。",
+          inception: "2014-10-27",
+          shares: "~2B",
+          custodian: "Bank of Taiwan",
+          custodianZh: "臺灣銀行",
+          issuer: "Yuanta",
+          issuerZh: "元大投信",
+          divMonths: "",
+        },
+        {
+          ticker: "00670L",
+          name: "FT DJIA 2X Daily",
+          nameZh: "富邦NASDAQ正2",
+          category: "theme",
+          aum: "20B",
+          aumZh: "200億",
+          expense: 1.15,
+          yield: 0.0,
+          freq: "N/A",
+          freqZh: "不配息",
+          benchmark: "Nasdaq-100 Index (2x Daily)",
+          benchmarkZh: "Nasdaq-100指數（單日正向2倍）",
+          holdings: ["Nasdaq-100 futures"],
+          holdingsZh: ["Nasdaq-100指數期貨"],
+          desc: "2x daily leveraged Nasdaq-100. Popular for short-term bullish tech bets.",
+          descZh: "Nasdaq-100單日正向2倍。短線看多科技股的熱門工具。",
+          inception: "2018-04-24",
+          shares: "~2B",
+          custodian: "Mega International Commercial Bank",
+          custodianZh: "兆豐國際商業銀行",
+          issuer: "Fubon",
+          issuerZh: "富邦投信",
+          divMonths: "",
+        },
+      ];
+
+      // ============================================================
+      // EXTRA DATA — Performance, risk, allocation, links
+      // ============================================================
+      const EXTRA_DATA = {
+        "0050": {
+          high52w: 198.5, low52w: 132.0,
+          return1y: 28.5, return3y: 15.2, return5y: 18.1,
+          nav: 185.2, discount: -0.3,
+          top10Weight: 72.5, trackingError: 0.05,
+          sectors: { Tech: 68, Finance: 12, Materials: 5, Other: 15 },
+          sectorsZh: { "科技": 68, "金融": 12, "原材料": 5, "其他": 15 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/0050/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/0050/Introduction",
+        },
+        "0056": {
+          high52w: 39.5, low52w: 28.8,
+          return1y: 18.2, return3y: 12.5, return5y: 14.8,
+          nav: 36.8, discount: 0.1,
+          top10Weight: 35.0, trackingError: 0.12,
+          sectors: { Tech: 42, Finance: 15, Industry: 18, Other: 25 },
+          sectorsZh: { "科技": 42, "金融": 15, "工業": 18, "其他": 25 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/0056/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/0056/Introduction",
+        },
+        "00878": {
+          high52w: 24.5, low52w: 17.8,
+          return1y: 22.1, return3y: 10.8, return5y: null,
+          nav: 22.6, discount: 0.2,
+          top10Weight: 40.0, trackingError: 0.15,
+          sectors: { Tech: 38, Finance: 25, Industry: 12, Other: 25 },
+          sectorsZh: { "科技": 38, "金融": 25, "工業": 12, "其他": 25 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00878",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00878",
+        },
+        "00919": {
+          high52w: 28.0, low52w: 18.5,
+          return1y: 32.5, return3y: null, return5y: null,
+          nav: 25.3, discount: -0.2,
+          top10Weight: 38.0, trackingError: 0.18,
+          sectors: { Tech: 45, Industry: 20, Finance: 15, Other: 20 },
+          sectorsZh: { "科技": 45, "工業": 20, "金融": 15, "其他": 20 },
+          issuerUrl: "https://www.capitalfund.com.tw/ETFWeb/ETFProduct.aspx?stock=00919",
+          prospectusUrl: "https://www.capitalfund.com.tw/ETFWeb/ETFProduct.aspx?stock=00919",
+        },
+        "00929": {
+          high52w: 22.5, low52w: 15.2,
+          return1y: 25.8, return3y: null, return5y: null,
+          nav: 20.1, discount: 0.1,
+          top10Weight: 42.0, trackingError: 0.14,
+          sectors: { Tech: 65, "Comm.": 12, Industry: 10, Other: 13 },
+          sectorsZh: { "科技": 65, "通訊": 12, "工業": 10, "其他": 13 },
+          issuerUrl: "https://www.ffritz.com.tw/ETF/ETFDetail.aspx?fundid=00929",
+          prospectusUrl: "https://www.ffritz.com.tw/ETF/ETFDetail.aspx?fundid=00929",
+        },
+        "006208": {
+          high52w: 105.0, low52w: 70.5,
+          return1y: 27.8, return3y: 14.9, return5y: 17.5,
+          nav: 98.5, discount: -0.1,
+          top10Weight: 72.0, trackingError: 0.03,
+          sectors: { Tech: 68, Finance: 12, Materials: 5, Other: 15 },
+          sectorsZh: { "科技": 68, "金融": 12, "原材料": 5, "其他": 15 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=006208",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=006208",
+        },
+        "00692": {
+          high52w: 38.0, low52w: 26.5,
+          return1y: 25.2, return3y: 13.8, return5y: 16.0,
+          nav: 35.2, discount: 0.0,
+          top10Weight: 65.0, trackingError: 0.08,
+          sectors: { Tech: 55, Finance: 18, Materials: 8, Other: 19 },
+          sectorsZh: { "科技": 55, "金融": 18, "原材料": 8, "其他": 19 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00692",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00692",
+        },
+        "00881": {
+          high52w: 18.5, low52w: 12.8,
+          return1y: 30.2, return3y: 12.0, return5y: null,
+          nav: 16.8, discount: 0.5,
+          top10Weight: 52.0, trackingError: 0.25,
+          sectors: { Tech: 62, "Comm.": 18, "Cons.": 12, Other: 8 },
+          sectorsZh: { "科技": 62, "通訊": 18, "消費": 12, "其他": 8 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00881",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00881",
+        },
+        "00891": {
+          high52w: 18.0, low52w: 11.5,
+          return1y: 35.0, return3y: 8.5, return5y: null,
+          nav: 16.2, discount: -0.1,
+          top10Weight: 68.0, trackingError: 0.20,
+          sectors: { Semiconductor: 85, Electronics: 10, Other: 5 },
+          sectorsZh: { "半導體": 85, "電子": 10, "其他": 5 },
+          issuerUrl: "https://www.ctbcinvestments.com/Product/ETF/00891",
+          prospectusUrl: "https://www.ctbcinvestments.com/Product/ETF/00891",
+        },
+        "00830": {
+          high52w: 42.0, low52w: 32.5,
+          return1y: 15.8, return3y: 10.2, return5y: 12.5,
+          nav: 39.5, discount: 0.3,
+          top10Weight: 55.0, trackingError: 0.30,
+          sectors: { Finance: 22, "Health": 18, Tech: 20, Industry: 15, Other: 25 },
+          sectorsZh: { "金融": 22, "醫療": 18, "科技": 20, "工業": 15, "其他": 25 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00830",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00830",
+        },
+        "00679B": {
+          high52w: 33.5, low52w: 28.0,
+          return1y: -2.5, return3y: -8.0, return5y: -3.2,
+          nav: 30.2, discount: -0.1,
+          top10Weight: 25.0, trackingError: 0.08,
+          duration: 17.2, creditRating: "AAA (US Treasury)",
+          creditRatingZh: "AAA（美國公債）",
+          sectors: { "US Treasury": 100 },
+          sectorsZh: { "美國公債": 100 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00679B/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00679B/Introduction",
+        },
+        "00687B": {
+          high52w: 20.5, low52w: 17.2,
+          return1y: 2.8, return3y: -2.5, return5y: 1.2,
+          nav: 19.0, discount: 0.1,
+          top10Weight: 15.0, trackingError: 0.10,
+          duration: 8.5, creditRating: "A / BBB+",
+          creditRatingZh: "A / BBB+",
+          sectors: { Finance: 30, Tech: 15, "Health": 12, Energy: 10, Other: 33 },
+          sectorsZh: { "金融": 30, "科技": 15, "醫療": 12, "能源": 10, "其他": 33 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00687B",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00687B",
+        },
+        "00713": {
+          high52w: 58.0, low52w: 42.5,
+          return1y: 20.5, return3y: 11.0, return5y: 13.2,
+          nav: 53.5, discount: 0.0,
+          top10Weight: 32.0, trackingError: 0.12,
+          sectors: { Finance: 35, Telecom: 15, Steel: 12, Other: 38 },
+          sectorsZh: { "金融": 35, "電信": 15, "鋼鐵": 12, "其他": 38 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00713/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00713/Introduction",
+        },
+        "00940": {
+          high52w: 12.5, low52w: 8.8,
+          return1y: 15.0, return3y: null, return5y: null,
+          nav: 11.2, discount: -0.2,
+          top10Weight: 38.0, trackingError: 0.20,
+          sectors: { Tech: 40, Industry: 25, Finance: 15, Other: 20 },
+          sectorsZh: { "科技": 40, "工業": 25, "金融": 15, "其他": 20 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00940/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00940/Introduction",
+        },
+        "00757": {
+          high52w: 42.0, low52w: 22.5,
+          return1y: 45.0, return3y: 18.5, return5y: 22.0,
+          nav: 38.5, discount: 0.8,
+          top10Weight: 100.0, trackingError: 0.15,
+          sectors: { Tech: 80, "Comm.": 15, "Cons.": 5 },
+          sectorsZh: { "科技": 80, "通訊": 15, "消費": 5 },
+          issuerUrl: "https://www.ezmoney.com.tw/ETF/ETFBasic.aspx?fcode=00757",
+          prospectusUrl: "https://www.ezmoney.com.tw/ETF/ETFBasic.aspx?fcode=00757",
+        },
+        "00646": {
+          high52w: 58.0, low52w: 40.5,
+          return1y: 26.8, return3y: 14.5, return5y: 16.8,
+          nav: 54.2, discount: 0.2,
+          top10Weight: 35.0, trackingError: 0.20,
+          sectors: { Tech: 32, "Health": 12, Finance: 13, "Cons.": 11, Other: 32 },
+          sectorsZh: { "科技": 32, "醫療": 12, "金融": 13, "消費": 11, "其他": 32 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00646/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00646/Introduction",
+        },
+        "00915": {
+          high52w: 22.0, low52w: 14.5,
+          return1y: 28.0, return3y: null, return5y: null,
+          nav: 19.8, discount: -0.1,
+          top10Weight: 45.0, trackingError: 0.18,
+          sectors: { Tech: 35, Finance: 25, Industry: 18, Other: 22 },
+          sectorsZh: { "科技": 35, "金融": 25, "工業": 18, "其他": 22 },
+          issuerUrl: "https://www.kgifund.com.tw/ETF/Detail/00915",
+          prospectusUrl: "https://www.kgifund.com.tw/ETF/Detail/00915",
+        },
+        "00772B": {
+          high52w: 10.5, low52w: 8.8,
+          return1y: 3.2, return3y: -1.5, return5y: 1.8,
+          nav: 9.8, discount: 0.0,
+          top10Weight: 12.0, trackingError: 0.08,
+          duration: 6.8, creditRating: "A- / BBB+",
+          creditRatingZh: "A- / BBB+",
+          sectors: { Finance: 28, Tech: 12, Energy: 10, Other: 50 },
+          sectorsZh: { "金融": 28, "科技": 12, "能源": 10, "其他": 50 },
+          issuerUrl: "https://www.ctbcinvestments.com/Product/ETF/00772B",
+          prospectusUrl: "https://www.ctbcinvestments.com/Product/ETF/00772B",
+        },
+        "00934": {
+          high52w: 20.0, low52w: 12.8,
+          return1y: 30.0, return3y: null, return5y: null,
+          nav: 17.5, discount: -0.1,
+          top10Weight: 40.0, trackingError: 0.16,
+          sectors: { Tech: 42, Industry: 22, "Comm.": 12, Other: 24 },
+          sectorsZh: { "科技": 42, "工業": 22, "通訊": 12, "其他": 24 },
+          issuerUrl: "https://www.ctbcinvestments.com/Product/ETF/00934",
+          prospectusUrl: "https://www.ctbcinvestments.com/Product/ETF/00934",
+        },
+        "00936": {
+          high52w: 18.0, low52w: 11.5,
+          return1y: 22.5, return3y: null, return5y: null,
+          nav: 15.8, discount: 0.2,
+          top10Weight: 35.0, trackingError: 0.22,
+          sectors: { Tech: 30, Industry: 25, "Cons.": 15, Other: 30 },
+          sectorsZh: { "科技": 30, "工業": 25, "消費": 15, "其他": 30 },
+          issuerUrl: "https://www.taishinbank.com.tw/ETF/00936",
+          prospectusUrl: "https://www.taishinbank.com.tw/ETF/00936",
+        },
+        "00944": {
+          high52w: 15.0, low52w: 9.0,
+          return1y: 18.0, return3y: null, return5y: null,
+          nav: 12.5, discount: -0.3,
+          top10Weight: 42.0, trackingError: 0.20,
+          sectors: { Tech: 38, Industry: 28, "Comm.": 10, Other: 24 },
+          sectorsZh: { "科技": 38, "工業": 28, "通訊": 10, "其他": 24 },
+          issuerUrl: "https://www.nomurafunds.com.tw/ETF/00944",
+          prospectusUrl: "https://www.nomurafunds.com.tw/ETF/00944",
+        },
+        "00918": {
+          high52w: 25.0, low52w: 17.5,
+          return1y: 24.0, return3y: null, return5y: null,
+          nav: 22.8, discount: 0.1,
+          top10Weight: 38.0, trackingError: 0.15,
+          sectors: { Finance: 45, Tech: 18, Telecom: 12, Other: 25 },
+          sectorsZh: { "金融": 45, "科技": 18, "電信": 12, "其他": 25 },
+          issuerUrl: "https://www.tweif.com/ETF/00918",
+          prospectusUrl: "https://www.tweif.com/ETF/00918",
+        },
+        "006205": {
+          high52w: 18.0, low52w: 12.5,
+          return1y: 8.5, return3y: -2.0, return5y: 1.5,
+          nav: 15.2, discount: -1.5,
+          top10Weight: 35.0, trackingError: 0.80,
+          sectors: { Finance: 30, "Cons.": 20, Energy: 12, Other: 38 },
+          sectorsZh: { "金融": 30, "消費": 20, "能源": 12, "其他": 38 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=006205",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=006205",
+        },
+        "00662": {
+          high52w: 85.0, low52w: 55.0,
+          return1y: 32.0, return3y: 14.0, return5y: 18.5,
+          nav: 78.5, discount: 0.3,
+          top10Weight: 52.0, trackingError: 0.18,
+          sectors: { Tech: 62, "Comm.": 18, "Cons.": 12, Other: 8 },
+          sectorsZh: { "科技": 62, "通訊": 18, "消費": 12, "其他": 8 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00662",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00662",
+        },
+        "00735": {
+          high52w: 18.5, low52w: 12.0,
+          return1y: 28.0, return3y: 8.0, return5y: 10.5,
+          nav: 16.5, discount: 0.5,
+          top10Weight: 55.0, trackingError: 0.35,
+          sectors: { Semiconductor: 72, Electronics: 18, Other: 10 },
+          sectorsZh: { "半導體": 72, "電子": 18, "其他": 10 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00735",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00735",
+        },
+        "00895": {
+          high52w: 12.0, low52w: 7.5,
+          return1y: 15.0, return3y: -5.0, return5y: null,
+          nav: 10.2, discount: 0.8,
+          top10Weight: 38.0, trackingError: 0.40,
+          sectors: { Auto: 45, Tech: 30, Industry: 15, Other: 10 },
+          sectorsZh: { "汽車": 45, "科技": 30, "工業": 15, "其他": 10 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00895",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00895",
+        },
+        "00893": {
+          high52w: 15.0, low52w: 9.0,
+          return1y: 20.5, return3y: -2.0, return5y: null,
+          nav: 13.2, discount: 0.6,
+          top10Weight: 42.0, trackingError: 0.38,
+          sectors: { Auto: 40, Semiconductor: 30, "Comm.": 15, Other: 15 },
+          sectorsZh: { "汽車": 40, "半導體": 30, "通訊": 15, "其他": 15 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00893",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00893",
+        },
+        "00851": {
+          high52w: 22.0, low52w: 15.5,
+          return1y: 18.5, return3y: 5.0, return5y: 8.2,
+          nav: 19.8, discount: 0.2,
+          top10Weight: 40.0, trackingError: 0.30,
+          sectors: { Semiconductor: 35, "Comm.": 25, Tech: 25, Other: 15 },
+          sectorsZh: { "半導體": 35, "通訊": 25, "科技": 25, "其他": 15 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00851/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00851/Introduction",
+        },
+        "00876": {
+          high52w: 12.0, low52w: 6.5,
+          return1y: 5.0, return3y: -15.0, return5y: -8.0,
+          nav: 8.5, discount: 0.5,
+          top10Weight: 28.0, trackingError: 0.35,
+          sectors: { Biotech: 55, Diagnostics: 20, Pharma: 15, Other: 10 },
+          sectorsZh: { "生技": 55, "診斷": 20, "製藥": 15, "其他": 10 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00876/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00876/Introduction",
+        },
+        "00720B": {
+          high52w: 36.0, low52w: 33.5,
+          return1y: 4.5, return3y: -0.5, return5y: 2.0,
+          nav: 35.0, discount: 0.0,
+          top10Weight: 10.0, trackingError: 0.06,
+          duration: 2.8, creditRating: "A / BBB+",
+          creditRatingZh: "A / BBB+",
+          sectors: { Finance: 25, Tech: 15, "Health": 12, Other: 48 },
+          sectorsZh: { "金融": 25, "科技": 15, "醫療": 12, "其他": 48 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00720B/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00720B/Introduction",
+        },
+        "00751B": {
+          high52w: 38.5, low52w: 35.0,
+          return1y: 3.8, return3y: -1.0, return5y: 1.5,
+          nav: 37.0, discount: 0.1,
+          top10Weight: 12.0, trackingError: 0.05,
+          duration: 7.5, creditRating: "AAA / AA / A",
+          creditRatingZh: "AAA / AA / A",
+          sectors: { Finance: 22, Tech: 18, "Health": 10, Other: 50 },
+          sectorsZh: { "金融": 22, "科技": 18, "醫療": 10, "其他": 50 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00751B/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00751B/Introduction",
+        },
+        "00937B": {
+          high52w: 11.0, low52w: 9.0,
+          return1y: 2.5, return3y: null, return5y: null,
+          nav: 10.0, discount: -0.2,
+          top10Weight: 10.0, trackingError: 0.10,
+          duration: 12.5, creditRating: "A- / BBB+",
+          creditRatingZh: "A- / BBB+",
+          sectors: { Finance: 25, Tech: 12, Energy: 10, Other: 53 },
+          sectorsZh: { "金融": 25, "科技": 12, "能源": 10, "其他": 53 },
+          issuerUrl: "https://www.capitalfund.com.tw/ETFWeb/ETFProduct.aspx?stock=00937B",
+          prospectusUrl: "https://www.capitalfund.com.tw/ETFWeb/ETFProduct.aspx?stock=00937B",
+        },
+        "00933B": {
+          high52w: 10.8, low52w: 9.2,
+          return1y: 3.0, return3y: null, return5y: null,
+          nav: 10.2, discount: -0.1,
+          top10Weight: 18.0, trackingError: 0.08,
+          duration: 11.0, creditRating: "A / BBB+",
+          creditRatingZh: "A / BBB+",
+          sectors: { Finance: 100 },
+          sectorsZh: { "金融": 100 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00933B",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00933B",
+        },
+        "00850": {
+          high52w: 45.0, low52w: 30.5,
+          return1y: 26.0, return3y: 14.0, return5y: 16.5,
+          nav: 41.5, discount: -0.2,
+          top10Weight: 68.0, trackingError: 0.08,
+          sectors: { Tech: 62, Finance: 15, Materials: 6, Other: 17 },
+          sectorsZh: { "科技": 62, "金融": 15, "原材料": 6, "其他": 17 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00850/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00850/Introduction",
+        },
+        "0051": {
+          high52w: 55.0, low52w: 35.0,
+          return1y: 22.0, return3y: 10.5, return5y: 12.8,
+          nav: 48.5, discount: 0.1,
+          top10Weight: 25.0, trackingError: 0.10,
+          sectors: { Tech: 45, Industry: 20, Finance: 12, Other: 23 },
+          sectorsZh: { "科技": 45, "工業": 20, "金融": 12, "其他": 23 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/0051/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/0051/Introduction",
+        },
+        "00922": {
+          high52w: 22.0, low52w: 14.5,
+          return1y: 25.5, return3y: null, return5y: null,
+          nav: 20.0, discount: -0.1,
+          top10Weight: 70.0, trackingError: 0.06,
+          sectors: { Tech: 65, Finance: 12, Materials: 6, Other: 17 },
+          sectorsZh: { "科技": 65, "金融": 12, "原材料": 6, "其他": 17 },
+          issuerUrl: "https://www.cathaysite.com.tw/funds/etf/00922",
+          prospectusUrl: "https://www.cathaysite.com.tw/funds/etf/00922",
+        },
+        "00631L": {
+          high52w: 240.0, low52w: 100.0,
+          return1y: 55.0, return3y: 28.0, return5y: 32.0,
+          nav: 210.0, discount: 0.1,
+          top10Weight: 100.0, trackingError: 0.15,
+          sectors: { "Futures": 100 },
+          sectorsZh: { "期貨": 100 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00631L/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00631L/Introduction",
+        },
+        "00632R": {
+          high52w: 6.5, low52w: 3.5,
+          return1y: -32.0, return3y: -22.0, return5y: -25.0,
+          nav: 4.2, discount: 0.0,
+          top10Weight: 100.0, trackingError: 0.12,
+          sectors: { "Futures": 100 },
+          sectorsZh: { "期貨": 100 },
+          issuerUrl: "https://www.yuantaetfs.com/product/detail/00632R/Basic",
+          prospectusUrl: "https://www.yuantaetfs.com/product/detail/00632R/Introduction",
+        },
+        "00670L": {
+          high52w: 85.0, low52w: 35.0,
+          return1y: 52.0, return3y: 22.0, return5y: 28.0,
+          nav: 72.0, discount: 0.5,
+          top10Weight: 100.0, trackingError: 0.20,
+          sectors: { "Futures": 100 },
+          sectorsZh: { "期貨": 100 },
+          issuerUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00670L",
+          prospectusUrl: "https://www.fubonetf.com.tw/ETFProduct.aspx?stock=00670L",
+        },
+      };
+
+      // ============================================================
+      // TWSE API — fetch live ETF data
+      // ============================================================
+      const TWSE_API =
+        "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
+      const WORKER_URL = "https://twse-etf.owen-ouyang.workers.dev"; // Set to Cloudflare Worker URL if deployed
+
+      // Build enrichment lookup from static ETFS data + extra data
+      const ENRICHMENT = {};
+      ETFS.forEach((e) => {
+        const extra = EXTRA_DATA[e.ticker];
+        ENRICHMENT[e.ticker] = extra ? { ...e, ...extra } : e;
+      });
+
+      // Classify ETF by code/name heuristics
+      function classifyEtf(code, name) {
+        const rich = ENRICHMENT[code];
+        if (rich) return rich.category;
+        // Leveraged/Inverse
+        if (code.endsWith("L") || code.endsWith("R") || /正2|反1/.test(name))
+          return "theme";
+        // Bond
+        if (code.endsWith("B") || /債|bond/i.test(name)) return "bond";
+        // Commodity / Futures
+        if (code.endsWith("U") || /黃金|石油|白銀|銅|黃豆|原油|美元/.test(name))
+          return "theme";
+        // Dividend keywords
+        if (/高股息|高息|優息|精選高|填息|股利|收益|入息/.test(name))
+          return "dividend";
+        // Tech keywords
+        if (
+          /半導體|科技|NASDAQ|AI|5G|電動車|未來車|通訊|元宇宙|生技|基因|IC設計|FANG|費城|龍頭|創新/.test(
+            name,
+          )
+        )
+          return "tech";
+        // Bond-ish names
+        if (/公債|投等|特別股|REITs|不動產/.test(name)) return "bond";
+        // Broad market
+        if (
+          /台灣50|台50|中型|加權|ESG|永續|治理|S&P|道瓊|歐洲|日本|印度|越南|中國|A50|滬深|恒生|全球|美國|藍籌|領袖/.test(
+            name,
+          )
+        )
+          return "broad";
+        return "broad";
+      }
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let isZh = (navigator.language || navigator.userLanguage).startsWith(
+        "zh",
+      );
+      let currentCategory = "all";
+      let expandedTicker = null;
+      let allEtfs = []; // merged live + enrichment
+      let searchQuery = "";
+      let isLive = false;
+
+      // ============================================================
+      // INITIALIZATION
+      // ============================================================
+      async function initialize() {
+        console.log("[ETF] Initializing...");
+
+        const savedLang = localStorage.getItem("ubike-lang");
+        if (savedLang) isZh = savedLang === "zh";
+
+        // Bind filter buttons
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            currentCategory = btn.dataset.cat;
+            document
+              .querySelectorAll(".filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            expandedTicker = null;
+            renderList();
+          });
+        });
+
+        // Bind search
+        const searchInput = document.getElementById("etf-search");
+        if (searchInput) {
+          searchInput.addEventListener("input", (e) => {
+            searchQuery = e.target.value.trim().toLowerCase();
+            renderList();
+          });
+        }
+
+        updateUI();
+
+        // Start with static data immediately
+        allEtfs = ETFS.map((e) => ({ ...e, ...(EXTRA_DATA[e.ticker] || {}) }));
+        renderList();
+
+        // Then try to fetch live data
+        await fetchLiveData();
+      }
+
+      // Format volume number with commas and K/M suffix
+      function formatVolume(vol) {
+        const n = parseInt(vol, 10);
+        if (!n) return vol;
+        if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+        if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+        return n.toLocaleString();
+      }
+
+      // Format AUM (NT$) with 億/M suffix
+      function formatAum(val, zh) {
+        const n = typeof val === "number" ? val : parseInt(val, 10);
+        if (!n) return "";
+        if (zh) {
+          if (n >= 1e8) return `NT$${(n / 1e8).toFixed(1)}億`;
+          if (n >= 1e4) return `NT$${(n / 1e4).toFixed(0)}萬`;
+          return `NT$${n.toLocaleString()}`;
+        }
+        if (n >= 1e9) return `NT$${(n / 1e9).toFixed(1)}B`;
+        if (n >= 1e6) return `NT$${(n / 1e6).toFixed(0)}M`;
+        return `NT$${n.toLocaleString()}`;
+      }
+
+      async function fetchLiveData() {
+        try {
+          const url = WORKER_URL ? `${WORKER_URL}/etf-list` : TWSE_API;
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+
+          let liveEtfs;
+          if (WORKER_URL && data.etfs) {
+            // Worker response format — already has all merged fields
+            liveEtfs = data.etfs;
+          } else if (Array.isArray(data)) {
+            // Direct TWSE STOCK_DAY_ALL — filter ETFs (codes starting with 00)
+            liveEtfs = data
+              .filter((d) => d.Code && d.Code.startsWith("00"))
+              .map((d) => ({
+                code: d.Code,
+                name: d.Name,
+                price: d.ClosingPrice || "",
+                monthAvg: "",
+                open: d.OpeningPrice || "",
+                high: d.HighestPrice || "",
+                low: d.LowestPrice || "",
+                volume: d.TradeVolume || "",
+                change: d.Change || "",
+                transactions: d.Transaction || "",
+              }));
+          } else {
+            throw new Error("Unexpected response format");
+          }
+
+          // Merge live data with enrichment
+          allEtfs = liveEtfs.map((live) => {
+            const code = live.code;
+            const rich = ENRICHMENT[code];
+            const category = classifyEtf(code, live.name);
+            const price = parseFloat(live.price) || 0;
+            const monthAvg = parseFloat(live.monthAvg) || 0;
+
+            // Build live-sourced fields
+            const liveFields = {
+              price,
+              monthAvg,
+              category,
+              _live: true,
+              // OHLCV from STOCK_DAY_ALL
+              volume: live.volume ? formatVolume(live.volume) : "",
+              open: live.open || "",
+              high: live.high || "",
+              low: live.low || "",
+              change: live.change || "",
+              transactions: live.transactions || "",
+              // Fund info from t187ap47_L (worker only)
+              englishName: live.englishName || "",
+              benchmarkIndex: live.benchmarkIndex || "",
+              fundManager: live.fundManager || "",
+            };
+            // Override inception/aum only if live data provides them
+            if (live.inceptionDate) liveFields.inception = live.inceptionDate;
+            if (live.aum) {
+              liveFields.aum = formatAum(live.aum, false);
+              liveFields.aumZh = formatAum(live.aum, true);
+            }
+
+            if (rich) {
+              // Enriched ETF — merge live fields over static details
+              return {
+                ...rich,
+                ticker: code,
+                nameZh: live.name || rich.nameZh,
+                ...liveFields,
+              };
+            } else {
+              // New ETF from TWSE — basic info only
+              return {
+                ticker: code,
+                name: live.englishName || live.name,
+                nameZh: live.name,
+                expense: 0,
+                yield: parseFloat(live.yield) || 0,
+                freq: "",
+                freqZh: "",
+                benchmark: live.benchmarkIndex || "",
+                benchmarkZh: live.benchmarkIndex || "",
+                holdings: [],
+                holdingsZh: [],
+                desc: "",
+                descZh: "",
+                inception: live.inceptionDate || "",
+                aum: "",
+                aumZh: "",
+                ...liveFields,
+              };
+            }
+          });
+
+          isLive = true;
+          console.log(
+            `[ETF] Loaded ${allEtfs.length} ETFs from ${WORKER_URL ? "Worker" : "TWSE API"}`,
+          );
+          renderList();
+        } catch (error) {
+          console.warn(
+            "[ETF] Live fetch failed, using static data:",
+            error.message,
+          );
+          // Keep static data
+        }
+      }
+
+      // ============================================================
+      // RENDERING
+      // ============================================================
+      function getFilteredEtfs() {
+        let list =
+          currentCategory === "all"
+            ? allEtfs
+            : allEtfs.filter((e) => e.category === currentCategory);
+
+        if (searchQuery) {
+          list = list.filter((e) => {
+            const ticker = (e.ticker || "").toLowerCase();
+            const name = (e.name || "").toLowerCase();
+            const nameZh = (e.nameZh || "").toLowerCase();
+            return (
+              ticker.includes(searchQuery) ||
+              name.includes(searchQuery) ||
+              nameZh.includes(searchQuery)
+            );
+          });
+        }
+
+        return list;
+      }
+
+      function renderList() {
+        const filtered = getFilteredEtfs();
+
+        const countEl = document.getElementById("result-count");
+        const liveTag = isLive
+          ? isZh
+            ? " (TWSE即時)"
+            : " (TWSE Live)"
+          : isZh
+            ? " (靜態資料)"
+            : " (Static)";
+        countEl.textContent = isZh
+          ? `顯示 ${filtered.length} 檔 ETF${liveTag}`
+          : `Showing ${filtered.length} ETFs${liveTag}`;
+
+        const listEl = document.getElementById("etf-list");
+        listEl.innerHTML = filtered
+          .map((etf) => {
+            const name = isZh ? etf.nameZh : etf.name || etf.nameZh;
+            const yieldVal = etf.yield || 0;
+            const yieldClass =
+              yieldVal >= 5
+                ? "yield-high"
+                : yieldVal >= 2
+                  ? "yield-med"
+                  : "yield-low";
+            const yieldText = yieldVal > 0 ? `${yieldVal.toFixed(1)}%` : "";
+            const priceText = etf.price
+              ? `$${etf.price}`
+              : etf.expense > 0
+                ? `${etf.expense.toFixed(2)}%`
+                : "";
+            const isExpanded = expandedTicker === etf.ticker;
+
+            return `<div class="etf-row${isExpanded ? " expanded" : ""}" data-ticker="${etf.ticker}">
         <span class="etf-ticker">${etf.ticker}</span>
         <span class="etf-name">${name}</span>
         <span class="etf-yield ${yieldClass}">${yieldText}</span>
         <span class="etf-expense">${priceText}</span>
         <span class="etf-arrow">▼</span>
       </div>
-      <div class="etf-detail${isExpanded ? ' open' : ''}" id="detail-${etf.ticker}">
+      <div class="etf-detail${isExpanded ? " open" : ""}" id="detail-${etf.ticker}">
         ${renderDetail(etf)}
       </div>`;
-  }).join('');
+          })
+          .join("");
 
-  // Bind row click
-  listEl.querySelectorAll('.etf-row').forEach(row => {
-    row.addEventListener('click', () => toggleDetail(row.dataset.ticker));
-  });
-}
+        // Bind row click
+        listEl.querySelectorAll(".etf-row").forEach((row) => {
+          row.addEventListener("click", () => toggleDetail(row.dataset.ticker));
+        });
+      }
 
-function renderDetail(etf) {
-  const hasRich = etf.desc || etf.holdings?.length > 0;
-  const freq = isZh ? (etf.freqZh || etf.freq) : (etf.freq || etf.freqZh);
-  const benchmark = isZh ? (etf.benchmarkZh || etf.benchmark) : (etf.benchmark || etf.benchmarkZh);
-  const holdings = isZh ? (etf.holdingsZh?.length ? etf.holdingsZh : etf.holdings) : (etf.holdings?.length ? etf.holdings : etf.holdingsZh);
-  const desc = isZh ? (etf.descZh || etf.desc) : (etf.desc || etf.descZh);
-  const aum = isZh ? (etf.aumZh || etf.aum) : (etf.aum || etf.aumZh);
-  const catLabel = getCategoryLabel(etf.category);
+      function renderDetail(etf) {
+        const freq = isZh ? etf.freqZh || etf.freq : etf.freq || etf.freqZh;
+        const benchmark = etf.benchmarkIndex
+          || (isZh ? etf.benchmarkZh || etf.benchmark : etf.benchmark || etf.benchmarkZh);
+        const holdings = isZh
+          ? etf.holdingsZh?.length
+            ? etf.holdingsZh
+            : etf.holdings
+          : etf.holdings?.length
+            ? etf.holdings
+            : etf.holdingsZh;
+        const desc = isZh ? etf.descZh || etf.desc : etf.desc || etf.descZh;
+        const aum = isZh ? etf.aumZh || etf.aum : etf.aum || etf.aumZh;
+        const catLabel = getCategoryLabel(etf.category);
 
-  // Price info from live data
-  const priceHtml = etf.price ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '收盤價' : 'Close Price'}</div>
-        <div class="detail-value">$${etf.price}</div>
-      </div>` : '';
-  const monthAvgHtml = etf.monthAvg ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '月均價' : 'Month Avg'}</div>
-        <div class="detail-value">$${etf.monthAvg}</div>
-      </div>` : '';
+        // Helper to build a detail-item
+        function item(label, value) {
+          if (!value && value !== 0) return "";
+          return `<div class="detail-item">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${value}</div>
+      </div>`;
+        }
 
-  const yieldHtml = etf.yield > 0 ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '殖利率' : 'Yield'}</div>
-        <div class="detail-value">${etf.yield.toFixed(1)}%</div>
-      </div>` : '';
-  const expenseHtml = etf.expense > 0 ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '費用率' : 'Expense Ratio'}</div>
-        <div class="detail-value">${etf.expense.toFixed(2)}%</div>
-      </div>` : '';
-  const freqHtml = freq ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '配息頻率' : 'Distribution'}</div>
-        <div class="detail-value">${freq}</div>
-      </div>` : '';
-  const aumHtml = aum ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '規模' : 'AUM'}</div>
-        <div class="detail-value">${aum}</div>
-      </div>` : '';
-  const inceptionHtml = etf.inception ? `
-      <div class="detail-item">
-        <div class="detail-label">${isZh ? '成立日' : 'Inception'}</div>
-        <div class="detail-value">${etf.inception}</div>
-      </div>` : '';
+        // Helper for bilingual field
+        function biVal(zhField, enField) {
+          return isZh ? (etf[zhField] || etf[enField]) : (etf[enField] || etf[zhField]);
+        }
 
-  const benchmarkSection = benchmark ? `
-    <div class="detail-section-title">${isZh ? '追蹤指數' : 'Benchmark'}</div>
-    <div style="font-size:0.85em;color:#333;margin-bottom:8px;">${benchmark}</div>` : '';
+        // ---- Basic Info Grid ----
+        const priceHtml = etf.price ? item(isZh ? "收盤價" : "Close Price", `$${etf.price}`) : "";
+        // Daily change (live)
+        const changeVal = parseFloat(etf.change);
+        const changeHtml = !isNaN(changeVal) ? item(
+          isZh ? "漲跌" : "Change",
+          `<span style="color:${changeVal > 0 ? '#d32f2f' : changeVal < 0 ? '#2e7d32' : '#888'};font-weight:600">${changeVal > 0 ? '▲' : changeVal < 0 ? '▼' : ''}${changeVal > 0 ? '+' : ''}${changeVal}</span>`
+        ) : "";
+        const monthAvgHtml = etf.monthAvg ? item(isZh ? "月均價" : "Month Avg", `$${etf.monthAvg}`) : "";
+        const navHtml = etf.nav ? item(isZh ? "淨值" : "NAV", `$${etf.nav}`) : "";
+        const discountHtml = etf.discount != null ? item(
+          isZh ? "折溢價" : "Prem/Disc",
+          `<span style="color:${etf.discount > 0 ? '#d32f2f' : etf.discount < 0 ? '#2e7d32' : '#888'}">${etf.discount > 0 ? '+' : ''}${etf.discount.toFixed(1)}%</span>`
+        ) : "";
+        // Daily OHLC (live)
+        const openHtml = etf.open ? item(isZh ? "開盤" : "Open", `$${etf.open}`) : "";
+        const highHtml = etf.high ? item(isZh ? "最高" : "High", `$${etf.high}`) : "";
+        const lowHtml = etf.low ? item(isZh ? "最低" : "Low", `$${etf.low}`) : "";
+        const yieldHtml = etf.yield > 0 ? item(isZh ? "殖利率" : "Yield", `${etf.yield.toFixed(1)}%`) : "";
+        const expenseHtml = etf.expense > 0 ? item(isZh ? "費用率" : "Expense", `${etf.expense.toFixed(2)}%`) : "";
+        const freqHtml = freq ? item(isZh ? "配息頻率" : "Distribution", freq) : "";
+        const divMonthsVal = biVal("divMonthsZh", "divMonths");
+        const divMonthsHtml = divMonthsVal ? item(isZh ? "配息月份" : "Div Months", divMonthsVal) : "";
+        const volumeHtml = etf.volume ? item(isZh ? "成交量" : "Volume", etf.volume) : "";
+        const transactionsHtml = etf.transactions ? item(isZh ? "成交筆數" : "Transactions", parseInt(etf.transactions, 10).toLocaleString()) : "";
+        const high52Html = etf.high52w ? item(isZh ? "52週高" : "52W High", `$${etf.high52w}`) : "";
+        const low52Html = etf.low52w ? item(isZh ? "52週低" : "52W Low", `$${etf.low52w}`) : "";
+        const aumHtml = aum ? item(isZh ? "規模" : "AUM", aum) : "";
+        const inceptionHtml = etf.inception ? item(isZh ? "成立日" : "Inception", etf.inception) : "";
+        const issuerHtml = biVal("issuerZh", "issuer") ? item(isZh ? "投信公司" : "Issuer", biVal("issuerZh", "issuer")) : "";
+        const custodianHtml = biVal("custodianZh", "custodian") ? item(isZh ? "保管銀行" : "Custodian", biVal("custodianZh", "custodian")) : "";
+        const fundManagerHtml = etf.fundManager ? item(isZh ? "經理人" : "Fund Manager", etf.fundManager) : "";
 
-  const holdingsSection = holdings?.length ? `
-    <div class="detail-section-title">${isZh ? '主要持股' : 'Top Holdings'}</div>
+        // ---- Returns Section ----
+        let returnsHtml = "";
+        if (etf.return1y != null || etf.return3y != null || etf.return5y != null) {
+          const retItems = [];
+          if (etf.return1y != null) retItems.push({ label: "1Y", val: etf.return1y });
+          if (etf.return3y != null) retItems.push({ label: "3Y", val: etf.return3y });
+          if (etf.return5y != null) retItems.push({ label: "5Y", val: etf.return5y });
+          returnsHtml = `
+    <div class="detail-section-title">${isZh ? "年化報酬率" : "Annualized Returns"}</div>
     <div class="holdings-list">
-      ${holdings.map(h => `<span class="holding-tag">${h}</span>`).join('')}
-    </div>` : '';
+      ${retItems.map((r) => `<span class="holding-tag" style="font-weight:600;color:${r.val >= 0 ? '#2e7d32' : '#d32f2f'}">${r.label}: ${r.val > 0 ? '+' : ''}${r.val.toFixed(1)}%</span>`).join("")}
+    </div>`;
+        }
 
-  const descSection = desc ? `<div class="detail-desc">${desc}</div>` : '';
+        // ---- Risk Section ----
+        let riskItems = "";
+        if (etf.top10Weight) riskItems += item(isZh ? "前十大權重" : "Top 10 Wt%", `${etf.top10Weight}%`);
+        if (etf.trackingError) riskItems += item(isZh ? "追蹤誤差" : "Track. Error", `${etf.trackingError.toFixed(2)}%`);
+        if (etf.duration) riskItems += item(isZh ? "存續期間" : "Duration", `${etf.duration}${isZh ? " 年" : " yrs"}`);
+        const creditVal = biVal("creditRatingZh", "creditRating");
+        if (creditVal) riskItems += item(isZh ? "信用評級" : "Credit Rating", creditVal);
+        const riskHtml = riskItems
+          ? `<div class="detail-section-title">${isZh ? "風險指標" : "Risk Metrics"}</div>
+    <div class="detail-grid">${riskItems}</div>`
+          : "";
 
-  return `<div class="detail-grid">
-      ${priceHtml}${monthAvgHtml}${yieldHtml}${expenseHtml}${freqHtml}${aumHtml}${inceptionHtml}
+        // ---- Sector Allocation ----
+        const sectorObj = isZh ? etf.sectorsZh : etf.sectors;
+        const sectorHtml = sectorObj && Object.keys(sectorObj).length
+          ? `<div class="detail-section-title">${isZh ? "產業分布" : "Sector Allocation"}</div>
+    <div class="holdings-list">
+      ${Object.entries(sectorObj).map(([k, v]) => `<span class="holding-tag">${k} ${v}%</span>`).join("")}
+    </div>`
+          : "";
+
+        // ---- Benchmark ----
+        const benchmarkSection = benchmark
+          ? `<div class="detail-section-title">${isZh ? "追蹤指數" : "Benchmark"}</div>
+    <div style="font-size:0.85em;color:#333;margin-bottom:8px;">${benchmark}</div>`
+          : "";
+
+        // ---- Holdings ----
+        const holdingsSection = holdings?.length
+          ? `<div class="detail-section-title">${isZh ? "主要持股" : "Top Holdings"}</div>
+    <div class="holdings-list">
+      ${holdings.map((h) => `<span class="holding-tag">${h}</span>`).join("")}
+    </div>`
+          : "";
+
+        // ---- Description ----
+        const descSection = desc ? `<div class="detail-desc">${desc}</div>` : "";
+
+        // ---- Links ----
+        let linksHtml = "";
+        if (etf.issuerUrl || etf.prospectusUrl) {
+          const linkItems = [];
+          if (etf.issuerUrl) linkItems.push(`<a href="${etf.issuerUrl}" target="_blank" rel="noopener" class="holding-tag" style="text-decoration:none;color:#1976d2;cursor:pointer">${isZh ? "投信官網" : "Issuer Site"} ↗</a>`);
+          if (etf.prospectusUrl) linkItems.push(`<a href="${etf.prospectusUrl}" target="_blank" rel="noopener" class="holding-tag" style="text-decoration:none;color:#1976d2;cursor:pointer">${isZh ? "基金說明書" : "Prospectus"} ↗</a>`);
+          linksHtml = `<div class="detail-section-title">${isZh ? "相關連結" : "Links"}</div>
+    <div class="holdings-list">${linkItems.join("")}</div>`;
+        }
+
+        return `<div class="detail-grid">
+      ${priceHtml}${changeHtml}${openHtml}${highHtml}${lowHtml}${navHtml}${discountHtml}${monthAvgHtml}${high52Html}${low52Html}${volumeHtml}${transactionsHtml}${yieldHtml}${expenseHtml}${freqHtml}${divMonthsHtml}${aumHtml}${inceptionHtml}${issuerHtml}${custodianHtml}${fundManagerHtml}
       <div class="detail-item">
-        <div class="detail-label">${isZh ? '類型' : 'Category'}</div>
+        <div class="detail-label">${isZh ? "類型" : "Category"}</div>
         <div class="detail-value">${catLabel}</div>
       </div>
     </div>
-    ${benchmarkSection}${holdingsSection}${descSection}`;
-}
+    ${returnsHtml}${riskHtml}${sectorHtml}${benchmarkSection}${holdingsSection}${descSection}${linksHtml}`;
+      }
 
-function getCategoryLabel(cat) {
-  const labels = {
-    dividend: { en: 'High Dividend', zh: '高股息' },
-    broad: { en: 'Broad Market', zh: '市值型' },
-    tech: { en: 'Technology', zh: '科技型' },
-    bond: { en: 'Bond', zh: '債券型' },
-    theme: { en: 'Thematic', zh: '主題型' },
-  };
-  const l = labels[cat];
-  return l ? (isZh ? l.zh : l.en) : cat;
-}
+      function getCategoryLabel(cat) {
+        const labels = {
+          dividend: { en: "High Dividend", zh: "高股息" },
+          broad: { en: "Broad Market", zh: "市值型" },
+          tech: { en: "Technology", zh: "科技型" },
+          bond: { en: "Bond", zh: "債券型" },
+          theme: { en: "Thematic", zh: "主題型" },
+        };
+        const l = labels[cat];
+        return l ? (isZh ? l.zh : l.en) : cat;
+      }
 
-// ============================================================
-// EXPAND / COLLAPSE
-// ============================================================
-function toggleDetail(ticker) {
-  if (expandedTicker === ticker) {
-    // Collapse
-    expandedTicker = null;
-    const row = document.querySelector(`.etf-row[data-ticker="${ticker}"]`);
-    const detail = document.getElementById(`detail-${ticker}`);
-    if (row) row.classList.remove('expanded');
-    if (detail) detail.classList.remove('open');
-  } else {
-    // Collapse previous
-    if (expandedTicker) {
-      const prevRow = document.querySelector(`.etf-row[data-ticker="${expandedTicker}"]`);
-      const prevDetail = document.getElementById(`detail-${expandedTicker}`);
-      if (prevRow) prevRow.classList.remove('expanded');
-      if (prevDetail) prevDetail.classList.remove('open');
-    }
-    // Expand new
-    expandedTicker = ticker;
-    const row = document.querySelector(`.etf-row[data-ticker="${ticker}"]`);
-    const detail = document.getElementById(`detail-${ticker}`);
-    if (row) row.classList.add('expanded');
-    if (detail) {
-      detail.classList.add('open');
-      // Scroll into view
-      setTimeout(() => detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-    }
-  }
-}
+      // ============================================================
+      // EXPAND / COLLAPSE
+      // ============================================================
+      function toggleDetail(ticker) {
+        if (expandedTicker === ticker) {
+          // Collapse
+          expandedTicker = null;
+          const row = document.querySelector(
+            `.etf-row[data-ticker="${ticker}"]`,
+          );
+          const detail = document.getElementById(`detail-${ticker}`);
+          if (row) row.classList.remove("expanded");
+          if (detail) detail.classList.remove("open");
+        } else {
+          // Collapse previous
+          if (expandedTicker) {
+            const prevRow = document.querySelector(
+              `.etf-row[data-ticker="${expandedTicker}"]`,
+            );
+            const prevDetail = document.getElementById(
+              `detail-${expandedTicker}`,
+            );
+            if (prevRow) prevRow.classList.remove("expanded");
+            if (prevDetail) prevDetail.classList.remove("open");
+          }
+          // Expand new
+          expandedTicker = ticker;
+          const row = document.querySelector(
+            `.etf-row[data-ticker="${ticker}"]`,
+          );
+          const detail = document.getElementById(`detail-${ticker}`);
+          if (row) row.classList.add("expanded");
+          if (detail) {
+            detail.classList.add("open");
+            // Scroll into view
+            setTimeout(
+              () =>
+                detail.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+              50,
+            );
+          }
+        }
+      }
 
-// ============================================================
-// LANGUAGE
-// ============================================================
-function toggleLang() {
-  isZh = !isZh;
-  localStorage.setItem('ubike-lang', isZh ? 'zh' : 'en');
-  updateUI();
-  renderList();
-}
+      // ============================================================
+      // LANGUAGE
+      // ============================================================
+      function toggleLang() {
+        isZh = !isZh;
+        localStorage.setItem("ubike-lang", isZh ? "zh" : "en");
+        updateUI();
+        renderList();
+      }
 
-function updateUI() {
-  document.title = isZh ? '台灣ETF' : 'Taiwan ETFs';
-  document.getElementById('page-title').textContent = isZh ? '台灣ETF' : 'Taiwan ETFs';
+      function updateUI() {
+        document.title = isZh ? "台灣ETF" : "Taiwan ETFs";
+        document.getElementById("page-title").textContent = isZh
+          ? "台灣ETF"
+          : "Taiwan ETFs";
 
-  document.querySelectorAll('[data-en]').forEach(el => {
-    el.textContent = isZh ? el.dataset.zh : el.dataset.en;
-  });
+        document.querySelectorAll("[data-en]").forEach((el) => {
+          el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+        });
 
-  const langBtn = document.getElementById('lang-btn');
-  if (langBtn) langBtn.textContent = isZh ? '中' : 'EN';
+        const langBtn = document.getElementById("lang-btn");
+        if (langBtn) langBtn.textContent = isZh ? "中" : "EN";
 
-  const searchInput = document.getElementById('etf-search');
-  if (searchInput) searchInput.placeholder = isZh ? '搜尋代號或名稱...' : 'Search ticker or name...';
-}
+        const searchInput = document.getElementById("etf-search");
+        if (searchInput)
+          searchInput.placeholder = isZh
+            ? "搜尋代號或名稱..."
+            : "Search ticker or name...";
+      }
 
-// ============================================================
-// STARTUP
-// ============================================================
-document.addEventListener('DOMContentLoaded', initialize);
-  </script>
-</body>
+      // ============================================================
+      // STARTUP
+      // ============================================================
+      document.addEventListener("DOMContentLoaded", initialize);
+    </script>
+  </body>
 </html>

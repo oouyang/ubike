@@ -2,7 +2,7 @@
  * TWSE ETF Data Proxy Worker for Cloudflare
  *
  * Proxies requests to Taiwan Stock Exchange OpenAPI for ETF data.
- * Combines price data with yield/PE data into a unified response.
+ * Combines price (AVG+DAY), yield/PE, and fund info into a unified response.
  * Caches for 1 hour (market data updates daily after market close).
  *
  * Endpoints:
@@ -10,8 +10,10 @@
  *   GET /health    — Health check
  */
 
-const TWSE_PRICE_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL';
+const TWSE_AVG_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL';
+const TWSE_DAY_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
 const TWSE_YIELD_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL';
+const TWSE_FUND_URL = 'https://openapi.twse.com.tw/v1/opendata/t187ap47_L';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,18 +23,40 @@ const corsHeaders = {
 };
 
 /**
- * Fetch and merge ETF data from TWSE
+ * Fetch and merge ETF data from TWSE (3 APIs + fund info)
  */
 async function fetchEtfData() {
-  const [priceRes, yieldRes] = await Promise.all([
-    fetch(TWSE_PRICE_URL),
+  const [avgRes, dayRes, yieldRes, fundRes] = await Promise.all([
+    fetch(TWSE_AVG_URL),
+    fetch(TWSE_DAY_URL),
     fetch(TWSE_YIELD_URL),
+    fetch(TWSE_FUND_URL),
   ]);
 
-  if (!priceRes.ok) throw new Error(`Price API: ${priceRes.status}`);
-  const priceData = await priceRes.json();
+  if (!avgRes.ok) throw new Error(`Avg API: ${avgRes.status}`);
+  const avgData = await avgRes.json();
 
-  // Yield data may not include ETFs, but try anyway
+  // STOCK_DAY_ALL — OHLCV per stock
+  let dayMap = {};
+  if (dayRes.ok) {
+    try {
+      const dayData = await dayRes.json();
+      for (const item of dayData) {
+        dayMap[item.Code] = {
+          open: item.OpeningPrice || '',
+          high: item.HighestPrice || '',
+          low: item.LowestPrice || '',
+          volume: item.TradeVolume || '',
+          change: item.Change || '',
+          transactions: item.Transaction || '',
+        };
+      }
+    } catch (e) {
+      // Day data optional
+    }
+  }
+
+  // Yield/PE data
   let yieldMap = {};
   if (yieldRes.ok) {
     try {
@@ -49,11 +73,38 @@ async function fetchEtfData() {
     }
   }
 
-  // Filter to ETFs (codes starting with 00)
-  const etfs = priceData
+  // Fund basic info (ETF-specific)
+  let fundMap = {};
+  if (fundRes.ok) {
+    try {
+      const fundData = await fundRes.json();
+      for (const item of fundData) {
+        // Match by stock code field
+        const code = item['基金代號'] || item['證券代號'] || '';
+        if (!code) continue;
+        fundMap[code] = {
+          englishName: item['英文名稱'] || '',
+          benchmarkIndex: item['標的指數'] || item['追蹤指數名稱'] || '',
+          inceptionDate: item['成立日期'] || '',
+          sharesOutstanding: item['發行單位數'] || item['轉換數'] || '',
+          fundManager: item['投資經理人'] || item['經理人'] || '',
+        };
+      }
+    } catch (e) {
+      // Fund data optional
+    }
+  }
+
+  // Filter to ETFs (codes starting with 00) and merge all sources
+  const etfs = avgData
     .filter(d => d.Code && d.Code.startsWith('00'))
     .map(d => {
       const y = yieldMap[d.Code] || {};
+      const day = dayMap[d.Code] || {};
+      const fund = fundMap[d.Code] || {};
+      const price = parseFloat(d.ClosingPrice) || 0;
+      const shares = parseFloat(fund.sharesOutstanding) || 0;
+
       return {
         code: d.Code,
         name: d.Name,
@@ -63,6 +114,21 @@ async function fetchEtfData() {
         pe: y.pe || '',
         pb: y.pb || '',
         date: d.Date || '',
+        // STOCK_DAY_ALL fields
+        open: day.open || '',
+        high: day.high || '',
+        low: day.low || '',
+        volume: day.volume || '',
+        change: day.change || '',
+        transactions: day.transactions || '',
+        // Fund info fields
+        englishName: fund.englishName || '',
+        benchmarkIndex: fund.benchmarkIndex || '',
+        inceptionDate: fund.inceptionDate || '',
+        sharesOutstanding: fund.sharesOutstanding || '',
+        fundManager: fund.fundManager || '',
+        // Computed: AUM = shares × price
+        aum: (shares && price) ? Math.round(shares * price) : '',
       };
     });
 
