@@ -5,6 +5,10 @@
  * Serves both ETF and individual stock data from shared upstream fetches.
  * Caches each endpoint for 1 hour (market data updates daily after close).
  *
+ * Note: OTC-listed ETFs (bond ETFs ending in B like 00679B, 00937B) are not
+ * available from TWSE APIs. TPEX (tpex.org.tw) has the data but blocks
+ * Cloudflare Workers. These ETFs fall back to static data on the client side.
+ *
  * Endpoints:
  *   GET /etf-list    — All ETFs with price, yield, PE, fund info
  *   GET /stock-list  — All stocks (non-ETF) with price, OHLCV, PE, yield, PB

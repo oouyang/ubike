@@ -173,6 +173,25 @@
         transform: rotate(180deg);
       }
 
+      .stale-badge {
+        font-size: 0.7em;
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ffcc80;
+        border-radius: 4px;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+      .stale-banner {
+        background: #fff3e0;
+        border: 1px solid #ffcc80;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin-bottom: 10px;
+        font-size: 0.8em;
+        color: #e65100;
+      }
+
       /* Expanded detail panel */
       .etf-detail {
         display: none;
@@ -2133,13 +2152,16 @@
           });
 
           // Append any enrichment-only ETFs missing from live data
+          // Strip price fields to avoid showing stale numbers
           const liveCodes = new Set(allEtfs.map((e) => e.ticker));
           for (const code of Object.keys(ENRICHMENT)) {
             if (!liveCodes.has(code)) {
               const rich = ENRICHMENT[code];
+              const { price, nav, discount, high52w, low52w, return1y, return3y, return5y, open, high, low, volume, change, transactions, monthAvg, ...rest } = rich;
               allEtfs.push({
-                ...rich,
+                ...rest,
                 ticker: code,
+                price: 0,
                 _live: false,
               });
             }
@@ -2218,9 +2240,13 @@
                 : "";
             const isExpanded = expandedTicker === etf.ticker;
 
+            const staleBadge = etf._live === false
+              ? `<span class="stale-badge">${isZh ? "靜態" : "Static"}</span>`
+              : "";
+
             return `<div class="etf-row${isExpanded ? " expanded" : ""}" data-ticker="${etf.ticker}">
         <span class="etf-ticker">${etf.ticker}</span>
-        <span class="etf-name">${name}</span>
+        <span class="etf-name">${name} ${staleBadge}</span>
         <span class="etf-yield ${yieldClass}">${yieldText}</span>
         <span class="etf-expense">${priceText}</span>
         <span class="etf-arrow">▼</span>
@@ -2361,7 +2387,11 @@
     <div class="holdings-list">${linkItems.join("")}</div>`;
         }
 
-        return `<div class="detail-grid">
+        const staleBanner = etf._live === false
+          ? `<div class="stale-banner">${isZh ? "⚠ 此ETF目前未納入TWSE即時資料，以下為靜態參考資訊，可能已過時。" : "⚠ This ETF is not currently in TWSE live data. Info below is static and may be outdated."}</div>`
+          : "";
+
+        return `${staleBanner}<div class="detail-grid">
       ${priceHtml}${changeHtml}${openHtml}${highHtml}${lowHtml}${navHtml}${discountHtml}${monthAvgHtml}${high52Html}${low52Html}${volumeHtml}${transactionsHtml}${yieldHtml}${expenseHtml}${freqHtml}${divMonthsHtml}${aumHtml}${inceptionHtml}${issuerHtml}${custodianHtml}${fundManagerHtml}
       <div class="detail-item">
         <div class="detail-label">${isZh ? "類型" : "Category"}</div>
