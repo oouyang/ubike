@@ -1,0 +1,818 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#1976d2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>TAIFEX After-Hours</title>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <link rel="manifest" href="manifest.webapp" />
+    <link rel="apple-touch-icon" href="img/icon-180.png" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f0f2f5;
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
+        color: white;
+        flex-shrink: 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.5em;
+      }
+      .header-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .nav-btn {
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+      }
+      .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .nav-btn.active {
+        background: rgba(255, 255, 255, 0.4);
+        font-weight: bold;
+      }
+      .nav-btn.home {
+        background: #ff9800;
+        border-color: #ff9800;
+      }
+      .nav-btn.home:hover {
+        background: #f57c00;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      /* Tab buttons */
+      .taifex-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .taifex-tab {
+        flex: 1;
+        padding: 10px;
+        border: 2px solid #1976d2;
+        border-radius: 8px;
+        background: white;
+        color: #1976d2;
+        font-size: 0.95em;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.2s, color 0.2s;
+      }
+      .taifex-tab:hover {
+        background: #e3f2fd;
+      }
+      .taifex-tab.active {
+        background: #1976d2;
+        color: white;
+      }
+
+      /* List */
+      .taifex-list {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+      .taifex-row {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.15s;
+        gap: 12px;
+      }
+      .taifex-row:hover {
+        background: #f5f8ff;
+      }
+      .taifex-row:last-child {
+        border-bottom: none;
+      }
+      .taifex-row.expanded {
+        background: #e8f0fe;
+      }
+
+      .taifex-contract {
+        font-weight: 700;
+        font-size: 1em;
+        color: #1976d2;
+        min-width: 55px;
+      }
+      .taifex-month {
+        flex: 1;
+        font-size: 0.92em;
+        color: #333;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .taifex-price {
+        font-size: 0.85em;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: right;
+        color: #333;
+      }
+      .taifex-change {
+        font-size: 0.8em;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: right;
+      }
+      .taifex-volume {
+        font-size: 0.8em;
+        color: #666;
+        min-width: 50px;
+        text-align: right;
+      }
+      .taifex-arrow {
+        font-size: 12px;
+        color: #aaa;
+        transition: transform 0.2s;
+        flex-shrink: 0;
+      }
+      .taifex-row.expanded .taifex-arrow {
+        transform: rotate(180deg);
+      }
+
+      /* Detail panel */
+      .taifex-detail {
+        display: none;
+        padding: 0 16px 16px;
+        background: #f8fafd;
+        border-bottom: 1px solid #e8e8e8;
+        animation: slideDown 0.2s ease;
+      }
+      .taifex-detail.open {
+        display: block;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          max-height: 0;
+        }
+        to {
+          opacity: 1;
+          max-height: 1200px;
+        }
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .detail-item {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .detail-label {
+        font-size: 0.75em;
+        color: #888;
+        margin-bottom: 2px;
+      }
+      .detail-value {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: #333;
+      }
+      .detail-section-title {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #666;
+        margin: 10px 0 6px;
+      }
+
+      .result-count {
+        font-size: 0.85em;
+        color: #888;
+        margin-bottom: 12px;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #888;
+      }
+      .empty-state .icon {
+        font-size: 2em;
+        margin-bottom: 12px;
+      }
+
+      /* Float button */
+      .float-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+        background: white;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        transition: background 0.2s;
+      }
+      .float-btn:hover {
+        background: #f4f4f4;
+      }
+
+      @media (max-width: 768px) {
+        header {
+          padding: 8px 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        h1 {
+          font-size: 1.2em;
+          width: 100%;
+        }
+        .header-controls {
+          width: 100%;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: flex-start;
+        }
+        .nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+        }
+        .container {
+          padding: 12px;
+        }
+        .taifex-row {
+          padding: 12px;
+          gap: 8px;
+        }
+        .taifex-change {
+          min-width: 50px;
+        }
+        .taifex-volume {
+          min-width: 40px;
+        }
+        .detail-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="page-title">TAIFEX After-Hours</h1>
+      <div class="header-controls">
+        <a href="index.html" class="nav-btn home" data-en="Home" data-zh="首頁"
+          >Home</a
+        >
+        <a href="ubike.html" class="nav-btn" data-en="UBike" data-zh="微笑單車"
+          >UBike</a
+        >
+        <a href="mrt.html" class="nav-btn" data-en="MRT" data-zh="捷運">MRT</a>
+        <a href="rail.html" class="nav-btn" data-en="Rail" data-zh="台鐵"
+          >Rail</a
+        >
+        <a href="thsr.html" class="nav-btn" data-en="THSR" data-zh="高鐵"
+          >THSR</a
+        >
+        <a href="bus.html" class="nav-btn" data-en="Bus" data-zh="公車">Bus</a>
+        <a href="earthquake.html" class="nav-btn" data-en="Quake" data-zh="地震"
+          >Quake</a
+        >
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="taifex-tabs">
+        <button class="taifex-tab active" id="tab-futures" onclick="switchTab('futures')">
+          <span data-en="Futures" data-zh="期貨">Futures</span>
+        </button>
+        <button class="taifex-tab" id="tab-options" onclick="switchTab('options')">
+          <span data-en="Options" data-zh="選擇權">Options</span>
+        </button>
+      </div>
+      <div style="margin-bottom: 12px">
+        <input
+          type="text"
+          id="taifex-search"
+          placeholder="Search contract code (e.g. TX, TXO, MTX)..."
+          style="
+            width: 100%;
+            padding: 9px 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+          "
+        />
+      </div>
+      <div class="result-count" id="result-count"></div>
+      <div class="taifex-list" id="taifex-list"></div>
+    </div>
+
+    <button class="float-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+
+    <script>
+      "use strict";
+
+      // ============================================================
+      // TAIFEX OpenAPI endpoints
+      // ============================================================
+      const FUTURES_API =
+        "https://openapi.taifex.com.tw/v1/DailyMarketReportFut";
+      const OPTIONS_API =
+        "https://openapi.taifex.com.tw/v1/DailyMarketReportOpt";
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let isZh = (navigator.language || navigator.userLanguage).startsWith(
+        "zh",
+      );
+      let activeTab = "futures"; // 'futures' | 'options'
+      let expandedId = null;
+      let allFutures = [];
+      let allOptions = [];
+      let searchQuery = "";
+      let isLive = false;
+
+      // ============================================================
+      // INITIALIZATION
+      // ============================================================
+      async function initialize() {
+        console.log("[TAIFEX] Initializing...");
+
+        const savedLang = localStorage.getItem("ubike-lang");
+        if (savedLang) isZh = savedLang === "zh";
+
+        const searchInput = document.getElementById("taifex-search");
+        if (searchInput) {
+          searchInput.addEventListener("input", (e) => {
+            searchQuery = e.target.value.trim().toLowerCase();
+            expandedId = null;
+            renderList();
+          });
+        }
+
+        updateUI();
+        renderList();
+        await fetchLiveData();
+      }
+
+      // ============================================================
+      // FETCH
+      // ============================================================
+      async function fetchLiveData() {
+        try {
+          const [futRes, optRes] = await Promise.all([
+            fetch(FUTURES_API),
+            fetch(OPTIONS_API),
+          ]);
+
+          if (futRes.ok) {
+            const futData = await futRes.json();
+            allFutures = futData
+              .filter((d) => d.TradingSession === "盤後")
+              .sort(
+                (a, b) =>
+                  parseInt(b.Volume || "0", 10) -
+                  parseInt(a.Volume || "0", 10),
+              );
+            console.log(
+              `[TAIFEX] Loaded ${allFutures.length} after-hours futures`,
+            );
+          }
+
+          if (optRes.ok) {
+            const optData = await optRes.json();
+            allOptions = optData
+              .filter((d) => d.TradingSession === "盤後")
+              .sort(
+                (a, b) =>
+                  parseInt(b.Volume || "0", 10) -
+                  parseInt(a.Volume || "0", 10),
+              );
+            console.log(
+              `[TAIFEX] Loaded ${allOptions.length} after-hours options`,
+            );
+          }
+
+          isLive = true;
+          renderList();
+        } catch (error) {
+          console.warn("[TAIFEX] Fetch failed:", error.message);
+          renderList();
+        }
+      }
+
+      // ============================================================
+      // TABS
+      // ============================================================
+      function switchTab(tab) {
+        activeTab = tab;
+        expandedId = null;
+        document
+          .getElementById("tab-futures")
+          .classList.toggle("active", tab === "futures");
+        document
+          .getElementById("tab-options")
+          .classList.toggle("active", tab === "options");
+        renderList();
+      }
+
+      // ============================================================
+      // HELPERS
+      // ============================================================
+      function formatVolume(vol) {
+        const n = parseInt(vol, 10);
+        if (!n) return vol || "-";
+        if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+        if (n >= 1e3) return (n / 1e3).toFixed(0) + "K";
+        return n.toLocaleString();
+      }
+
+      function makeRowId(item, index) {
+        // Create a unique ID from contract + month + index
+        const contract = (item.Contract || "").replace(/\s/g, "");
+        const month = (item["ContractMonth(Week)"] || "").replace(/\s/g, "");
+        const strike = item.StrikePrice || "";
+        const cp = item["Call/Put"] || item.CallPut || "";
+        return `${contract}-${month}-${strike}-${cp}-${index}`;
+      }
+
+      // ============================================================
+      // RENDERING
+      // ============================================================
+      function getFilteredData() {
+        const data = activeTab === "futures" ? allFutures : allOptions;
+        if (!searchQuery) return data;
+        return data.filter((d) => {
+          const contract = (d.Contract || "").toLowerCase();
+          return contract.includes(searchQuery);
+        });
+      }
+
+      function renderList() {
+        const filtered = getFilteredData();
+        const total =
+          activeTab === "futures" ? allFutures.length : allOptions.length;
+
+        const countEl = document.getElementById("result-count");
+        const liveTag = isLive
+          ? isZh
+            ? " (TAIFEX即時)"
+            : " (TAIFEX Live)"
+          : total === 0
+            ? isZh
+              ? " (載入中...)"
+              : " (Loading...)"
+            : "";
+        const typeLabel =
+          activeTab === "futures"
+            ? isZh
+              ? "期貨合約"
+              : "futures contracts"
+            : isZh
+              ? "選擇權合約"
+              : "options contracts";
+        countEl.textContent = isZh
+          ? `顯示 ${filtered.length} 筆${typeLabel}${liveTag}`
+          : `Showing ${filtered.length} ${typeLabel}${liveTag}`;
+
+        const listEl = document.getElementById("taifex-list");
+
+        if (total === 0 && !isLive) {
+          listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">📊</div>
+            <div>${isZh ? "正在載入盤後資料..." : "Loading after-hours data..."}</div>
+          </div>`;
+          return;
+        }
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">🔍</div>
+            <div>${isZh ? "找不到符合的合約" : "No matching contracts found"}</div>
+          </div>`;
+          return;
+        }
+
+        listEl.innerHTML = filtered
+          .map((item, i) => {
+            const rowId = makeRowId(item, i);
+            const isExpanded = expandedId === rowId;
+
+            // Common fields
+            const contract = item.Contract || "";
+            const month = item["ContractMonth(Week)"] || "";
+            const lastPrice =
+              activeTab === "futures"
+                ? item.Last || item.SettlementPrice || "-"
+                : item.Close || item.SettlementPrice || "-";
+            const changeStr = item.Change || "";
+            const changePct = item["ChangePercent"] || item["Change%"] || "";
+            const volume = item.Volume || "0";
+
+            // Change coloring
+            const changeVal = parseFloat(changeStr);
+            const changeColor =
+              changeVal > 0 ? "#d32f2f" : changeVal < 0 ? "#2e7d32" : "#888";
+            const changePrefix =
+              changeVal > 0 ? "▲+" : changeVal < 0 ? "▼" : "";
+            const changeText = !isNaN(changeVal)
+              ? `${changePrefix}${changeStr}`
+              : changeStr || "-";
+
+            // Options: show strike + C/P in month column
+            let monthDisplay = month;
+            if (activeTab === "options") {
+              const strike = item.StrikePrice || "";
+              const cp = item["Call/Put"] || item.CallPut || "";
+              monthDisplay = `${month} ${strike} ${cp}`.trim();
+            }
+
+            return `<div class="taifex-row${isExpanded ? " expanded" : ""}" data-id="${rowId}" data-index="${i}">
+        <span class="taifex-contract">${contract}</span>
+        <span class="taifex-month">${monthDisplay}</span>
+        <span class="taifex-price">${lastPrice !== "-" ? lastPrice : "-"}</span>
+        <span class="taifex-change" style="color:${changeColor}">${changeText}</span>
+        <span class="taifex-volume">${formatVolume(volume)}</span>
+        <span class="taifex-arrow">▼</span>
+      </div>
+      <div class="taifex-detail${isExpanded ? " open" : ""}" id="detail-${rowId}">
+        ${renderDetail(item)}
+      </div>`;
+          })
+          .join("");
+
+        // Bind row click
+        listEl.querySelectorAll(".taifex-row").forEach((row) => {
+          row.addEventListener("click", () => toggleDetail(row.dataset.id));
+        });
+      }
+
+      function renderDetail(item) {
+        function di(label, value) {
+          if (!value && value !== 0) return "";
+          return `<div class="detail-item">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${value}</div>
+      </div>`;
+        }
+
+        const isFut = activeTab === "futures";
+
+        // Price section
+        const lastLabel = isFut
+          ? isZh
+            ? "最後成交價"
+            : "Last"
+          : isZh
+            ? "收盤價"
+            : "Close";
+        const lastVal = isFut ? item.Last : item.Close;
+        const changeVal = parseFloat(item.Change);
+        const changeColor =
+          changeVal > 0 ? "#d32f2f" : changeVal < 0 ? "#2e7d32" : "#888";
+        const changePrefix =
+          changeVal > 0 ? "▲+" : changeVal < 0 ? "▼" : "";
+
+        let priceHtml = "";
+        priceHtml += di(lastLabel, lastVal || "-");
+        priceHtml += di(
+          isZh ? "漲跌" : "Change",
+          !isNaN(changeVal)
+            ? `<span style="color:${changeColor};font-weight:600">${changePrefix}${item.Change}</span>`
+            : item.Change || "-",
+        );
+        const pct = item["ChangePercent"] || item["Change%"] || "";
+        if (pct) {
+          const pctVal = parseFloat(pct);
+          const pctColor =
+            pctVal > 0 ? "#d32f2f" : pctVal < 0 ? "#2e7d32" : "#888";
+          priceHtml += di(
+            isZh ? "漲跌%" : "Change%",
+            `<span style="color:${pctColor};font-weight:600">${pct}%</span>`,
+          );
+        }
+        priceHtml += di(isZh ? "開盤" : "Open", item.Open || "-");
+        priceHtml += di(isZh ? "最高" : "High", item.High || "-");
+        priceHtml += di(isZh ? "最低" : "Low", item.Low || "-");
+
+        // Trading section
+        let tradingHtml = "";
+        tradingHtml += di(
+          isZh ? "成交量" : "Volume",
+          formatVolume(item.Volume),
+        );
+        tradingHtml += di(
+          isZh ? "結算價" : "Settlement",
+          item.SettlementPrice || "-",
+        );
+        tradingHtml += di(
+          isZh ? "未平倉量" : "Open Interest",
+          item.OpenInterest
+            ? parseInt(item.OpenInterest, 10).toLocaleString()
+            : "-",
+        );
+        tradingHtml += di(
+          isZh ? "最佳買價" : "Best Bid",
+          item.BestBid || "-",
+        );
+        tradingHtml += di(
+          isZh ? "最佳賣價" : "Best Ask",
+          item.BestAsk || "-",
+        );
+        if (isFut && item["Volume(Spread)"]) {
+          tradingHtml += di(
+            isZh ? "價差成交量" : "Spread Volume",
+            formatVolume(item["Volume(Spread)"]),
+          );
+        }
+
+        // History section
+        let historyHtml = "";
+        historyHtml += di(
+          isZh ? "歷史最高" : "Historical High",
+          item.HistoricalHigh || "-",
+        );
+        historyHtml += di(
+          isZh ? "歷史最低" : "Historical Low",
+          item.HistoricalLow || "-",
+        );
+
+        // Options-only section
+        let optionsHtml = "";
+        if (!isFut) {
+          optionsHtml += di(
+            isZh ? "履約價" : "Strike Price",
+            item.StrikePrice || "-",
+          );
+          const cp = item["Call/Put"] || item.CallPut || "";
+          const cpLabel = cp === "買權" || cp === "Call" ? (isZh ? "買權" : "Call") : cp === "賣權" || cp === "Put" ? (isZh ? "賣權" : "Put") : cp;
+          optionsHtml += di(isZh ? "買賣權" : "Call/Put", cpLabel || "-");
+        }
+
+        // Contract info
+        let infoHtml = "";
+        infoHtml += di(isZh ? "日期" : "Date", item.Date || "-");
+        infoHtml += di(
+          isZh ? "到期月份(週別)" : "Contract Month",
+          item["ContractMonth(Week)"] || "-",
+        );
+        if (item.TradingHalt) {
+          infoHtml += di(
+            isZh ? "暫停交易" : "Trading Halt",
+            item.TradingHalt,
+          );
+        }
+
+        let html = "";
+
+        if (priceHtml) {
+          html += `<div class="detail-section-title">${isZh ? "價格" : "Price"}</div>
+          <div class="detail-grid">${priceHtml}</div>`;
+        }
+        if (tradingHtml) {
+          html += `<div class="detail-section-title">${isZh ? "交易" : "Trading"}</div>
+          <div class="detail-grid">${tradingHtml}</div>`;
+        }
+        if (historyHtml) {
+          html += `<div class="detail-section-title">${isZh ? "歷史" : "History"}</div>
+          <div class="detail-grid">${historyHtml}</div>`;
+        }
+        if (optionsHtml) {
+          html += `<div class="detail-section-title">${isZh ? "選擇權資訊" : "Options Info"}</div>
+          <div class="detail-grid">${optionsHtml}</div>`;
+        }
+        if (infoHtml) {
+          html += `<div class="detail-section-title">${isZh ? "合約資訊" : "Contract Info"}</div>
+          <div class="detail-grid">${infoHtml}</div>`;
+        }
+
+        return (
+          html ||
+          `<div style="padding:10px;color:#888;font-size:0.85em">${isZh ? "無詳細資料" : "No detail available"}</div>`
+        );
+      }
+
+      // ============================================================
+      // EXPAND / COLLAPSE
+      // ============================================================
+      function toggleDetail(id) {
+        if (expandedId === id) {
+          expandedId = null;
+          const row = document.querySelector(`.taifex-row[data-id="${id}"]`);
+          const detail = document.getElementById(`detail-${id}`);
+          if (row) row.classList.remove("expanded");
+          if (detail) detail.classList.remove("open");
+        } else {
+          if (expandedId) {
+            const prevRow = document.querySelector(
+              `.taifex-row[data-id="${expandedId}"]`,
+            );
+            const prevDetail = document.getElementById(
+              `detail-${expandedId}`,
+            );
+            if (prevRow) prevRow.classList.remove("expanded");
+            if (prevDetail) prevDetail.classList.remove("open");
+          }
+          expandedId = id;
+          const row = document.querySelector(`.taifex-row[data-id="${id}"]`);
+          const detail = document.getElementById(`detail-${id}`);
+          if (row) row.classList.add("expanded");
+          if (detail) {
+            detail.classList.add("open");
+            setTimeout(
+              () =>
+                detail.scrollIntoView({
+                  behavior: "smooth",
+                  block: "nearest",
+                }),
+              50,
+            );
+          }
+        }
+      }
+
+      // ============================================================
+      // LANGUAGE
+      // ============================================================
+      function toggleLang() {
+        isZh = !isZh;
+        localStorage.setItem("ubike-lang", isZh ? "zh" : "en");
+        updateUI();
+        renderList();
+      }
+
+      function updateUI() {
+        document.title = isZh ? "期交所盤後交易" : "TAIFEX After-Hours";
+        document.getElementById("page-title").textContent = isZh
+          ? "期交所盤後交易"
+          : "TAIFEX After-Hours";
+
+        document.querySelectorAll("[data-en]").forEach((el) => {
+          el.textContent = isZh ? el.dataset.zh : el.dataset.en;
+        });
+
+        const langBtn = document.getElementById("lang-btn");
+        if (langBtn) langBtn.textContent = isZh ? "中" : "EN";
+
+        const searchInput = document.getElementById("taifex-search");
+        if (searchInput)
+          searchInput.placeholder = isZh
+            ? "搜尋合約代碼（如 TX、TXO、MTX）..."
+            : "Search contract code (e.g. TX, TXO, MTX)...";
+      }
+
+      // ============================================================
+      // STARTUP
+      // ============================================================
+      document.addEventListener("DOMContentLoaded", initialize);
+    </script>
+  </body>
+</html>
