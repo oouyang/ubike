@@ -235,12 +235,55 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
 #puzzle-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 #hint-btn { background: #7d5a00; }
 #hint-btn:hover { background: #a67c00; }
+
+#story-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
+#story-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#story-modal.show { display: flex; }
+#story-content {
+  background: #16213e;
+  border: 2px solid #0f3460;
+  border-radius: 12px;
+  padding: 28px 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  line-height: 1.7;
+  font-size: 14px;
+  color: #ccc;
+}
+#story-content h2 { color: #f0e68c; font-size: 20px; margin-bottom: 12px; }
+#story-content h3 { color: #e0c868; font-size: 15px; margin: 16px 0 6px; }
+#story-content p { margin-bottom: 10px; }
+#story-content em { color: #aaa; font-style: italic; }
+#story-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+#story-close:hover { color: #eee; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Octile</h1>
+  <h1>Octile <button id="story-btn" onclick="document.getElementById('story-modal').classList.add('show')" title="Story">&#9432;</button></h1>
   <div id="timer">0:00</div>
 </header>
 
@@ -269,6 +312,21 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
   <h2>Octile Complete!</h2>
   <p id="win-time"></p>
   <button onclick="resetGame()">Play Again</button>
+</div>
+
+<div id="story-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div id="story-content">
+    <button id="story-close" onclick="document.getElementById('story-modal').classList.remove('show')">&times;</button>
+    <h2>The Story of Octile</h2>
+    <p>In 250 BC, Archimedes devised the <strong>Stomachion</strong> &mdash; a square divided into 14 ivory pieces. He posed a deceptively simple question: <em>in how many distinct ways can these pieces fill the square?</em></p>
+    <p>The puzzle consumed scholars for over two millennia. It was only in 2003 that mathematician Bill Cutler, aided by computers, found the answer: <strong>536</strong> unique solutions.</p>
+    <h3>From 14 Pieces to 11</h3>
+    <p>Octile reimagines this ancient challenge on an 8&times;8 grid. Eleven colored tiles &mdash; from a tiny 1&times;1 square to a massive 3&times;4 block &mdash; must fill all 64 cells. Three grey tiles are placed by fate; the remaining eight are yours to arrange.</p>
+    <p>Like Archimedes, we asked: <em>how many unique puzzles exist?</em> After exhaustive search with D4 symmetry (rotations and reflections), the answer: <strong>11,378</strong> &mdash; every one solvable, every one unique.</p>
+    <h3>Why "Octile"?</h3>
+    <p><strong>Oct</strong> (eight) for the 8&times;8 board. <strong>Tile</strong> for the ancient art of tessellation. A name that bridges Greek mathematics and a puzzle you hold in your hands today.</p>
+    <p><em>Archimedes had ivory. You have pixels. The challenge remains the same.</em></p>
+  </div>
 </div>
 
 <script>
