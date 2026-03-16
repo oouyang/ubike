@@ -22,7 +22,7 @@ const STATIC_ASSETS = [
     '/weather.html',
     '/oil.html',
     '/etf.html',
-    '/lgpz.html',
+    '/octile.html',
     '/js/common.js',
     '/js/ubike.js',
     '/js/bus.js',
