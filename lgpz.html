@@ -157,6 +157,8 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
 .piece:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(255,255,255,0.15); }
 .piece:active { cursor: grabbing; }
 
+.piece.selected { outline: 2px solid #f1c40f; outline-offset: 2px; transform: scale(1.08); box-shadow: 0 0 16px rgba(241,196,12,0.4); }
+
 .piece.placed { opacity: 0.3; pointer-events: none; }
 
 .piece-cell {
@@ -169,17 +171,6 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
 .piece-cell[data-color="white"] { background: #ecf0f1; }
 .piece-cell[data-color="blue"] { background: #3498db; }
 .piece-cell[data-color="yellow"] { background: #f1c40f; }
-
-.rotate-btn {
-  font-size: 16px;
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: #ccc;
-  border-radius: 4px;
-  padding: 2px 10px;
-  cursor: pointer;
-}
-.rotate-btn:hover { background: rgba(255,255,255,0.2); }
 
 #drag-ghost {
   position: fixed;
@@ -264,7 +255,7 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
   </div>
 
   <div id="pool-section">
-    <h2>Pieces <span style="font-size:11px;color:#666">(click rotate, drag to board)</span></h2>
+    <h2>Pieces <span style="font-size:11px;color:#666">(tap to rotate, tap board to place)</span></h2>
     <div id="pool"></div>
   </div>
 </div>
@@ -398,6 +389,10 @@ let dragOffsetRow = 0;
 let dragOffsetCol = 0;
 let dragFromBoard = false; // true when dragging a piece off the board
 let dragPointerId = null;  // for pointer capture
+let selectedPiece = null;  // tap-to-select mode for mobile
+let dragStartX = 0;
+let dragStartY = 0;
+const TAP_THRESHOLD = 10; // px - distinguish tap from drag
 
 function rotateShape(shape) {
   const rows = shape.length, cols = shape[0].length;
@@ -559,9 +554,48 @@ function renderBoard() {
           cell.addEventListener('pointerdown', (e) => startDragFromBoard(e, piece));
         }
       }
+      // Tap empty cell to place selected piece
+      if (!pid && !gameOver) {
+        cell.addEventListener('pointerup', (e) => onBoardCellTap(e, r, c));
+      }
       boardEl.appendChild(cell);
     }
   }
+  // Show preview for selected piece on board
+  if (selectedPiece && !selectedPiece.placed) {
+    updateSelectedPreview();
+  }
+}
+
+function onBoardCellTap(e, row, col) {
+  if (!selectedPiece || selectedPiece.placed || dragPiece) return;
+  const shape = selectedPiece.currentShape;
+  const rows = shape.length, cols = shape[0].length;
+  // Place piece centered on tapped cell
+  const startR = Math.max(0, Math.min(row - Math.floor(rows / 2), 8 - rows));
+  const startC = Math.max(0, Math.min(col - Math.floor(cols / 2), 8 - cols));
+  if (canPlace(shape, startR, startC, null)) {
+    placePiece(shape, startR, startC, selectedPiece.id);
+    selectedPiece.placed = true;
+    selectedPiece = null;
+    renderBoard();
+    renderPool();
+    checkWin();
+  }
+}
+
+function updateSelectedPreview() {
+  // No persistent preview for tap mode - user taps to place
+}
+
+function selectPiece(piece) {
+  if (selectedPiece === piece) {
+    // Already selected — rotate it
+    piece.currentShape = rotateShape(piece.currentShape);
+  } else {
+    selectedPiece = piece;
+  }
+  renderPool();
 }
 
 function renderPool() {
@@ -572,7 +606,7 @@ function renderPool() {
     wrapper.className = 'piece-wrapper';
 
     const el = document.createElement('div');
-    el.className = 'piece' + (p.placed ? ' placed' : '');
+    el.className = 'piece' + (p.placed ? ' placed' : '') + (selectedPiece === p ? ' selected' : '');
     el.dataset.id = p.id;
     const shape = p.currentShape;
     const rows = shape.length, cols = shape[0].length;
@@ -592,24 +626,12 @@ function renderPool() {
       }
     }
 
-    // Drag events
+    // Tap to select OR drag to place
     if (!p.placed) {
-      el.addEventListener('pointerdown', (e) => startDrag(e, p));
+      el.addEventListener('pointerdown', (e) => onPiecePointerDown(e, p));
     }
 
     wrapper.appendChild(el);
-
-    if (!p.placed) {
-      const btn = document.createElement('button');
-      btn.className = 'rotate-btn';
-      btn.textContent = '\u21BB';
-      btn.addEventListener('click', () => {
-        p.currentShape = rotateShape(p.currentShape);
-        renderPool();
-      });
-      wrapper.appendChild(btn);
-    }
-
     poolEl.appendChild(wrapper);
   });
 }
@@ -688,6 +710,7 @@ function onDragCancel(e) {
 function startDragFromBoard(e, piece) {
   if (gameOver) return;
   e.preventDefault();
+  selectedPiece = null;
   dragPiece = piece;
   dragFromBoard = true;
 
@@ -718,26 +741,80 @@ function startDragFromBoard(e, piece) {
   moveGhost(e.clientX, e.clientY);
 }
 
-function startDrag(e, piece) {
+function onPiecePointerDown(e, piece) {
   if (gameOver) return;
   e.preventDefault();
-  dragPiece = piece;
-  dragFromBoard = false;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+
+  // Store piece and offset info for potential drag
   const shape = piece.currentShape;
   const cols = shape[0].length;
-
-  // Determine which cell of the piece was clicked
   const pieceEl = e.currentTarget;
   const rect = pieceEl.getBoundingClientRect();
-  const cellW = 28 + 1; // cell + gap
+  const cellW = 28 + 1;
   const relX = e.clientX - rect.left;
   const relY = e.clientY - rect.top;
-  dragOffsetCol = Math.min(Math.floor(relX / cellW), cols - 1);
-  dragOffsetRow = Math.min(Math.floor(relY / cellW), shape.length - 1);
+  const offC = Math.min(Math.floor(relX / cellW), cols - 1);
+  const offR = Math.min(Math.floor(relY / cellW), shape.length - 1);
 
-  capturePointer(e);
-  buildGhost(piece);
-  moveGhost(e.clientX, e.clientY);
+  // Use a pending state: start actual drag only after movement threshold
+  let started = false;
+  const onMove = (me) => {
+    const dx = me.clientX - dragStartX;
+    const dy = me.clientY - dragStartY;
+    if (!started && Math.sqrt(dx*dx + dy*dy) > TAP_THRESHOLD) {
+      started = true;
+      // Begin real drag
+      dragPiece = piece;
+      dragFromBoard = false;
+      dragOffsetCol = offC;
+      dragOffsetRow = offR;
+      selectedPiece = null;
+      buildGhost(piece);
+      moveGhost(me.clientX, me.clientY);
+      renderPool();
+    }
+    if (started) {
+      me.preventDefault();
+      moveGhost(me.clientX, me.clientY);
+      const { row, col } = getBoardPosForGhost(me.clientX, me.clientY);
+      if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+        showPreview(dragPiece, row, col);
+      } else {
+        clearPreview();
+      }
+    }
+  };
+  const onUp = (ue) => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    if (!started) {
+      // It was a tap — select/deselect piece
+      selectPiece(piece);
+    } else {
+      // End drag
+      const ghost = document.getElementById('drag-ghost');
+      ghost.style.display = 'none';
+      clearPreview();
+      const { row, col } = getBoardPosForGhost(ue.clientX, ue.clientY);
+      const sh = dragPiece.currentShape;
+      const startR = row - dragOffsetRow;
+      const startC = col - dragOffsetCol;
+      if (canPlace(sh, startR, startC, null)) {
+        placePiece(sh, startR, startC, dragPiece.id);
+        dragPiece.placed = true;
+        renderBoard();
+        renderPool();
+        checkWin();
+      }
+      dragPiece = null;
+    }
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
 }
 
 function moveGhost(x, y) {
@@ -746,8 +823,16 @@ function moveGhost(x, y) {
   const gapSize = 2;
   const offsetX = dragOffsetCol * (cellSize + gapSize) + cellSize / 2;
   const offsetY = dragOffsetRow * (cellSize + gapSize) + cellSize / 2;
+  // On touch devices, lift ghost above finger so it's visible
+  const touchLift = ('ontouchstart' in window) ? 60 : 0;
   ghost.style.left = (x - offsetX) + 'px';
-  ghost.style.top = (y - offsetY) + 'px';
+  ghost.style.top = (y - offsetY - touchLift) + 'px';
+}
+
+function getBoardPosForGhost(x, y) {
+  // Account for touch lift when calculating board position
+  const touchLift = ('ontouchstart' in window) ? 60 : 0;
+  return getBoardPos(x, y - touchLift);
 }
 
 function getBoardPos(x, y) {
@@ -793,7 +878,7 @@ function onDragMove(e) {
   e.preventDefault();
   moveGhost(e.clientX, e.clientY);
 
-  const { row, col } = getBoardPos(e.clientX, e.clientY);
+  const { row, col } = getBoardPosForGhost(e.clientX, e.clientY);
   if (row >= 0 && row < 8 && col >= 0 && col < 8) {
     showPreview(dragPiece, row, col);
   } else {
@@ -810,7 +895,7 @@ function onDragEnd(e) {
   ghost.style.display = 'none';
   clearPreview();
 
-  const { row, col } = getBoardPos(e.clientX, e.clientY);
+  const { row, col } = getBoardPosForGhost(e.clientX, e.clientY);
   const shape = dragPiece.currentShape;
   const startR = row - dragOffsetRow;
   const startC = col - dragOffsetCol;
@@ -860,6 +945,7 @@ function startTimer() {
 
 function resetGame(puzzleIndex) {
   if (hintTimeout) { clearTimeout(hintTimeout); hintTimeout = null; }
+  selectedPiece = null;
   gameOver = false;
   document.getElementById('win-overlay').classList.remove('show');
   pieces = PIECES.map(p => ({
