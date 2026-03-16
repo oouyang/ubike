@@ -297,6 +297,7 @@ let dragPiece = null;
 let dragOffsetRow = 0;
 let dragOffsetCol = 0;
 let dragFromBoard = false; // true when dragging a piece off the board
+let dragPointerId = null;  // for pointer capture
 
 function rotateShape(shape) {
   const rows = shape.length, cols = shape[0].length;
@@ -610,14 +611,48 @@ function buildGhost(piece) {
   }
 }
 
+function capturePointer(e) {
+  dragPointerId = e.pointerId;
+  // Capture on a persistent element so events survive re-renders
+  const boardEl = document.getElementById('board');
+  try { boardEl.setPointerCapture(e.pointerId); } catch (_) {}
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragCancel);
+}
+
+function releasePointer() {
+  if (dragPointerId !== null) {
+    const boardEl = document.getElementById('board');
+    try { boardEl.releasePointerCapture(dragPointerId); } catch (_) {}
+    dragPointerId = null;
+  }
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragCancel);
+}
+
+function onDragCancel(e) {
+  if (!dragPiece) return;
+  releasePointer();
+  const ghost = document.getElementById('drag-ghost');
+  ghost.style.display = 'none';
+  clearPreview();
+  // Return piece to pool if it was dragged from board
+  if (dragFromBoard) {
+    dragPiece.placed = false;
+  }
+  renderBoard();
+  renderPool();
+  dragPiece = null;
+  dragFromBoard = false;
+}
+
 function startDragFromBoard(e, piece) {
   if (gameOver) return;
   e.preventDefault();
   dragPiece = piece;
   dragFromBoard = true;
-
-  const shape = piece.currentShape;
-  const rows = shape.length, cols = shape[0].length;
 
   // Figure out offset based on which cell of the piece was clicked
   const clickedR = parseInt(e.currentTarget.dataset.row);
@@ -635,14 +670,15 @@ function startDragFromBoard(e, piece) {
   dragOffsetRow = clickedR - minR;
   dragOffsetCol = clickedC - minC;
 
-  // Remove piece from board visually (but keep data until drop resolves)
+  // Capture pointer BEFORE re-rendering destroys the target element
+  capturePointer(e);
+
+  // Remove piece from board
   removePiece(piece.id);
   renderBoard();
 
   buildGhost(piece);
   moveGhost(e.clientX, e.clientY);
-  document.addEventListener('pointermove', onDragMove);
-  document.addEventListener('pointerup', onDragEnd);
 }
 
 function startDrag(e, piece) {
@@ -651,7 +687,7 @@ function startDrag(e, piece) {
   dragPiece = piece;
   dragFromBoard = false;
   const shape = piece.currentShape;
-  const rows = shape.length, cols = shape[0].length;
+  const cols = shape[0].length;
 
   // Determine which cell of the piece was clicked
   const pieceEl = e.currentTarget;
@@ -660,12 +696,11 @@ function startDrag(e, piece) {
   const relX = e.clientX - rect.left;
   const relY = e.clientY - rect.top;
   dragOffsetCol = Math.min(Math.floor(relX / cellW), cols - 1);
-  dragOffsetRow = Math.min(Math.floor(relY / cellW), rows - 1);
+  dragOffsetRow = Math.min(Math.floor(relY / cellW), shape.length - 1);
 
+  capturePointer(e);
   buildGhost(piece);
   moveGhost(e.clientX, e.clientY);
-  document.addEventListener('pointermove', onDragMove);
-  document.addEventListener('pointerup', onDragEnd);
 }
 
 function moveGhost(x, y) {
@@ -732,8 +767,7 @@ function onDragMove(e) {
 function onDragEnd(e) {
   if (!dragPiece) return;
   e.preventDefault();
-  document.removeEventListener('pointermove', onDragMove);
-  document.removeEventListener('pointerup', onDragEnd);
+  releasePointer();
 
   const ghost = document.getElementById('drag-ghost');
   ghost.style.display = 'none';
