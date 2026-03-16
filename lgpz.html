@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Puzzle</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow-x: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: space-between;
+}
+
+h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+
+#timer {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f0e68c;
+  min-width: 90px;
+  text-align: right;
+}
+
+#main-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+@media (min-width: 769px) {
+  #main-area {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 24px;
+    padding: 0 16px;
+  }
+}
+
+#board-container {
+  position: relative;
+  margin: 8px auto;
+  flex-shrink: 0;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 2px;
+  background: #16213e;
+  border: 3px solid #0f3460;
+  border-radius: 8px;
+  padding: 3px;
+  width: min(85vw, 400px);
+  height: min(85vw, 400px);
+}
+
+.cell {
+  background: #1a1a40;
+  border-radius: 3px;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.cell.occupied { cursor: grab; }
+.cell.occupied[data-color="grey"] { cursor: default; }
+
+.cell.preview-valid { background: rgba(255, 255, 255, 0.25); }
+.cell.preview-invalid { background: rgba(255, 60, 60, 0.4); }
+
+.cell[data-color="grey"] { background: #888; }
+.cell[data-color="red"] { background: #e74c3c; }
+.cell[data-color="white"] { background: #ecf0f1; }
+.cell[data-color="blue"] { background: #3498db; }
+.cell[data-color="yellow"] { background: #f1c40f; }
+
+.cell.border-top { border-top: 2px solid rgba(255,255,255,0.5); }
+.cell.border-bottom { border-bottom: 2px solid rgba(255,255,255,0.5); }
+.cell.border-left { border-left: 2px solid rgba(255,255,255,0.5); }
+.cell.border-right { border-right: 2px solid rgba(255,255,255,0.5); }
+
+#pool-section {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+}
+
+@media (min-width: 769px) {
+  #pool-section {
+    max-width: 340px;
+    padding: 8px 12px;
+  }
+  #pool {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    justify-items: center;
+  }
+}
+
+#pool-section h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+#pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.piece-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.piece {
+  display: grid;
+  gap: 1px;
+  cursor: grab;
+  touch-action: none;
+  border-radius: 4px;
+  padding: 2px;
+  background: rgba(255,255,255,0.05);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.piece:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(255,255,255,0.15); }
+.piece:active { cursor: grabbing; }
+
+.piece.placed { opacity: 0.3; pointer-events: none; }
+
+.piece-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+}
+
+.piece-cell[data-color="red"] { background: #e74c3c; }
+.piece-cell[data-color="white"] { background: #ecf0f1; }
+.piece-cell[data-color="blue"] { background: #3498db; }
+.piece-cell[data-color="yellow"] { background: #f1c40f; }
+
+.rotate-btn {
+  font-size: 16px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+.rotate-btn:hover { background: rgba(255,255,255,0.2); }
+
+#drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  display: none;
+  opacity: 0.85;
+}
+
+#drag-ghost .piece-cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+}
+
+#win-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+}
+#win-overlay.show { display: flex; }
+#win-overlay h2 { font-size: 36px; color: #f1c40f; }
+#win-overlay p { font-size: 20px; }
+#win-overlay button {
+  padding: 12px 32px;
+  font-size: 18px;
+  border: none;
+  border-radius: 8px;
+  background: #f1c40f;
+  color: #1a1a2e;
+  font-weight: 700;
+  cursor: pointer;
+}
+#win-overlay button:hover { background: #f39c12; }
+
+#controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+#controls button {
+  padding: 8px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  background: #0f3460;
+  color: #eee;
+  cursor: pointer;
+  font-weight: 600;
+}
+#controls button:hover { background: #1a5276; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Block Puzzle</h1>
+  <div id="timer">0:00</div>
+</header>
+
+<div id="controls">
+  <button onclick="resetGame()">New Game</button>
+</div>
+
+<div id="main-area">
+  <div id="board-container">
+    <div id="board"></div>
+  </div>
+
+  <div id="pool-section">
+    <h2>Pieces <span style="font-size:11px;color:#666">(click rotate, drag to board)</span></h2>
+    <div id="pool"></div>
+  </div>
+</div>
+
+<div id="drag-ghost"></div>
+
+<div id="win-overlay">
+  <h2>Puzzle Complete!</h2>
+  <p id="win-time"></p>
+  <button onclick="resetGame()">Play Again</button>
+</div>
+
+<script>
+'use strict';
+
+const PIECES = [
+  { id: 'grey1', color: 'grey', shape: [[1]], auto: true },
+  { id: 'grey2', color: 'grey', shape: [[1,1]], auto: true },
+  { id: 'grey3', color: 'grey', shape: [[1,1,1]], auto: true },
+  { id: 'red1',  color: 'red',  shape: [[1,1,1],[1,1,1]] },
+  { id: 'red2',  color: 'red',  shape: [[1,1,1,1]] },
+  { id: 'white1',color: 'white',shape: [[1,1,1,1,1]] },
+  { id: 'white2',color: 'white',shape: [[1,1],[1,1]] },
+  { id: 'blue1', color: 'blue', shape: [[1,1,1,1,1],[1,1,1,1,1]] },
+  { id: 'blue2', color: 'blue', shape: [[1,1,1,1],[1,1,1,1],[1,1,1,1]] },
+  { id: 'yel1',  color: 'yellow',shape: [[1,1,1],[1,1,1],[1,1,1]] },
+  { id: 'yel2',  color: 'yellow',shape: [[1,1,1,1],[1,1,1,1]] },
+];
+
+let board = []; // 8x8, null or pieceId string
+let pieces = [];
+let timerInterval = null;
+let startTime = 0;
+let elapsed = 0;
+let gameOver = false;
+
+// Dragging state
+let dragPiece = null;
+let dragOffsetRow = 0;
+let dragOffsetCol = 0;
+let dragFromBoard = false; // true when dragging a piece off the board
+
+function rotateShape(shape) {
+  const rows = shape.length, cols = shape[0].length;
+  const rotated = [];
+  for (let c = 0; c < cols; c++) {
+    rotated[c] = [];
+    for (let r = rows - 1; r >= 0; r--) {
+      rotated[c].push(shape[r][c]);
+    }
+  }
+  return rotated;
+}
+
+function initBoard() {
+  board = Array.from({ length: 8 }, () => Array(8).fill(null));
+}
+
+function canPlace(shape, startR, startC, ignorePieceId) {
+  const rows = shape.length, cols = shape[0].length;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!shape[r][c]) continue;
+      const br = startR + r, bc = startC + c;
+      if (br < 0 || br >= 8 || bc < 0 || bc >= 8) return false;
+      if (board[br][bc] !== null && board[br][bc] !== ignorePieceId) return false;
+    }
+  }
+  return true;
+}
+
+function placePiece(shape, startR, startC, pieceId) {
+  const rows = shape.length, cols = shape[0].length;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!shape[r][c]) continue;
+      board[startR + r][startC + c] = pieceId;
+    }
+  }
+}
+
+function removePiece(pieceId) {
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (board[r][c] === pieceId) board[r][c] = null;
+    }
+  }
+}
+
+function getPieceById(id) {
+  return pieces.find(p => p.id === id);
+}
+
+function getColorForCell(r, c) {
+  const pid = board[r][c];
+  if (!pid) return null;
+  const p = getPieceById(pid);
+  return p ? p.color : null;
+}
+
+// Get all unique rotations of a shape (deduped)
+function getUniqueRotations(shape) {
+  const rotations = [];
+  let s = shape;
+  for (let i = 0; i < 4; i++) {
+    const key = JSON.stringify(s);
+    if (!rotations.some(r => JSON.stringify(r) === key)) {
+      rotations.push(s);
+    }
+    s = rotateShape(s);
+  }
+  return rotations;
+}
+
+// Backtracking solver: check if remaining pieces can fill the board
+function canSolve(boardState, remainingPieces) {
+  // Find first empty cell
+  let emptyR = -1, emptyC = -1;
+  outer:
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (boardState[r][c] === null) {
+        emptyR = r;
+        emptyC = c;
+        break outer;
+      }
+    }
+  }
+  // No empty cells — solved
+  if (emptyR === -1) return true;
+  // Empty cells but no pieces left — unsolvable
+  if (remainingPieces.length === 0) return false;
+
+  for (let i = 0; i < remainingPieces.length; i++) {
+    const piece = remainingPieces[i];
+    const rotations = getUniqueRotations(piece.shape);
+    const rest = [...remainingPieces.slice(0, i), ...remainingPieces.slice(i + 1)];
+
+    for (const rot of rotations) {
+      const rows = rot.length, cols = rot[0].length;
+      // Try all placements that cover the first empty cell
+      for (let dr = 0; dr < rows; dr++) {
+        for (let dc = 0; dc < cols; dc++) {
+          if (!rot[dr][dc]) continue;
+          const startR = emptyR - dr;
+          const startC = emptyC - dc;
+          if (startR < 0 || startC < 0 || startR + rows > 8 || startC + cols > 8) continue;
+
+          // Check if placement is valid
+          let valid = true;
+          const cells = [];
+          for (let r = 0; r < rows && valid; r++) {
+            for (let c = 0; c < cols && valid; c++) {
+              if (!rot[r][c]) continue;
+              if (boardState[startR + r][startC + c] !== null) valid = false;
+              else cells.push([startR + r, startC + c]);
+            }
+          }
+          if (!valid) continue;
+
+          // Place
+          for (const [cr, cc] of cells) boardState[cr][cc] = piece.id;
+
+          if (canSolve(boardState, rest)) {
+            // Undo before returning (caller doesn't need it placed)
+            for (const [cr, cc] of cells) boardState[cr][cc] = null;
+            return true;
+          }
+
+          // Undo
+          for (const [cr, cc] of cells) boardState[cr][cc] = null;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function placeGreyPieces() {
+  const greys = pieces.filter(p => p.auto);
+  const nonGreys = pieces.filter(p => !p.auto);
+  // Sort non-grey pieces largest first for faster solving
+  nonGreys.sort((a, b) => {
+    const areaA = a.shape.flat().reduce((s, v) => s + v, 0);
+    const areaB = b.shape.flat().reduce((s, v) => s + v, 0);
+    return areaB - areaA;
+  });
+
+  let maxAttempts = 200;
+  while (maxAttempts-- > 0) {
+    // Reset board
+    for (let r = 0; r < 8; r++)
+      for (let c = 0; c < 8; c++)
+        board[r][c] = null;
+
+    // Place grey pieces randomly
+    let allPlaced = true;
+    for (const g of greys) {
+      let shape = g.shape.map(r => [...r]);
+      const rotations = Math.floor(Math.random() * 4);
+      for (let i = 0; i < rotations; i++) shape = rotateShape(shape);
+      g.currentShape = shape;
+
+      let placed = false;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const r = Math.floor(Math.random() * 8);
+        const c = Math.floor(Math.random() * 8);
+        if (canPlace(shape, r, c, null)) {
+          placePiece(shape, r, c, g.id);
+          g.placed = true;
+          g.boardR = r;
+          g.boardC = c;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) { allPlaced = false; break; }
+    }
+    if (!allPlaced) continue;
+
+    // Check if solvable
+    const boardCopy = board.map(r => [...r]);
+    if (canSolve(boardCopy, nonGreys)) return;
+  }
+  // Fallback: place greys in top-left corner (always solvable in practice)
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++)
+      board[r][c] = null;
+  let pos = 0;
+  for (const g of greys) {
+    g.currentShape = g.shape.map(r => [...r]);
+    placePiece(g.currentShape, 0, pos, g.id);
+    g.placed = true;
+    g.boardR = 0;
+    g.boardC = pos;
+    pos += g.currentShape[0].length;
+  }
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      const pid = board[r][c];
+      if (pid) {
+        const color = getColorForCell(r, c);
+        cell.classList.add('occupied');
+        cell.dataset.color = color;
+        cell.dataset.pieceId = pid;
+        // Piece outline borders: add border where neighbor is different piece or edge
+        if (r === 0 || board[r-1][c] !== pid) cell.classList.add('border-top');
+        if (r === 7 || board[r+1][c] !== pid) cell.classList.add('border-bottom');
+        if (c === 0 || board[r][c-1] !== pid) cell.classList.add('border-left');
+        if (c === 7 || board[r][c+1] !== pid) cell.classList.add('border-right');
+        // Allow dragging non-grey pieces off the board
+        const piece = getPieceById(pid);
+        if (piece && !piece.auto) {
+          cell.addEventListener('pointerdown', (e) => startDragFromBoard(e, piece));
+        }
+      }
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function renderPool() {
+  const poolEl = document.getElementById('pool');
+  poolEl.innerHTML = '';
+  pieces.filter(p => !p.auto).forEach(p => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'piece-wrapper';
+
+    const el = document.createElement('div');
+    el.className = 'piece' + (p.placed ? ' placed' : '');
+    el.dataset.id = p.id;
+    const shape = p.currentShape;
+    const rows = shape.length, cols = shape[0].length;
+    el.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
+    el.style.gridTemplateRows = `repeat(${rows}, 28px)`;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'piece-cell';
+        if (shape[r][c]) {
+          cell.dataset.color = p.color;
+        } else {
+          cell.style.visibility = 'hidden';
+        }
+        el.appendChild(cell);
+      }
+    }
+
+    // Drag events
+    if (!p.placed) {
+      el.addEventListener('pointerdown', (e) => startDrag(e, p));
+    }
+
+    wrapper.appendChild(el);
+
+    if (!p.placed) {
+      const btn = document.createElement('button');
+      btn.className = 'rotate-btn';
+      btn.textContent = '\u21BB';
+      btn.addEventListener('click', () => {
+        p.currentShape = rotateShape(p.currentShape);
+        renderPool();
+      });
+      wrapper.appendChild(btn);
+    }
+
+    poolEl.appendChild(wrapper);
+  });
+}
+
+function getCellSize() {
+  const boardEl = document.getElementById('board');
+  const rect = boardEl.getBoundingClientRect();
+  // account for padding (3px each side) and gaps (7 gaps * 2px)
+  return (rect.width - 6 - 14) / 8;
+}
+
+function buildGhost(piece) {
+  const shape = piece.currentShape;
+  const rows = shape.length, cols = shape[0].length;
+  const ghost = document.getElementById('drag-ghost');
+  const cellSize = getCellSize();
+  ghost.style.setProperty('--cell-size', cellSize + 'px');
+  ghost.style.display = 'grid';
+  ghost.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  ghost.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+  ghost.style.gap = '2px';
+  ghost.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'piece-cell';
+      if (shape[r][c]) {
+        cell.dataset.color = piece.color;
+      } else {
+        cell.style.visibility = 'hidden';
+      }
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      ghost.appendChild(cell);
+    }
+  }
+}
+
+function startDragFromBoard(e, piece) {
+  if (gameOver) return;
+  e.preventDefault();
+  dragPiece = piece;
+  dragFromBoard = true;
+
+  const shape = piece.currentShape;
+  const rows = shape.length, cols = shape[0].length;
+
+  // Figure out offset based on which cell of the piece was clicked
+  const clickedR = parseInt(e.currentTarget.dataset.row);
+  const clickedC = parseInt(e.currentTarget.dataset.col);
+  // Find top-left of this piece on the board
+  let minR = 8, minC = 8;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (board[r][c] === piece.id) {
+        if (r < minR) minR = r;
+        if (c < minC) minC = c;
+      }
+    }
+  }
+  dragOffsetRow = clickedR - minR;
+  dragOffsetCol = clickedC - minC;
+
+  // Remove piece from board visually (but keep data until drop resolves)
+  removePiece(piece.id);
+  renderBoard();
+
+  buildGhost(piece);
+  moveGhost(e.clientX, e.clientY);
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+}
+
+function startDrag(e, piece) {
+  if (gameOver) return;
+  e.preventDefault();
+  dragPiece = piece;
+  dragFromBoard = false;
+  const shape = piece.currentShape;
+  const rows = shape.length, cols = shape[0].length;
+
+  // Determine which cell of the piece was clicked
+  const pieceEl = e.currentTarget;
+  const rect = pieceEl.getBoundingClientRect();
+  const cellW = 28 + 1; // cell + gap
+  const relX = e.clientX - rect.left;
+  const relY = e.clientY - rect.top;
+  dragOffsetCol = Math.min(Math.floor(relX / cellW), cols - 1);
+  dragOffsetRow = Math.min(Math.floor(relY / cellW), rows - 1);
+
+  buildGhost(piece);
+  moveGhost(e.clientX, e.clientY);
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+}
+
+function moveGhost(x, y) {
+  const ghost = document.getElementById('drag-ghost');
+  const cellSize = getCellSize();
+  const gapSize = 2;
+  const offsetX = dragOffsetCol * (cellSize + gapSize) + cellSize / 2;
+  const offsetY = dragOffsetRow * (cellSize + gapSize) + cellSize / 2;
+  ghost.style.left = (x - offsetX) + 'px';
+  ghost.style.top = (y - offsetY) + 'px';
+}
+
+function getBoardPos(x, y) {
+  const boardEl = document.getElementById('board');
+  const rect = boardEl.getBoundingClientRect();
+  const cellSize = getCellSize();
+  const padGap = 3; // padding
+  const gap = 2;
+  const relX = x - rect.left - padGap;
+  const relY = y - rect.top - padGap;
+  const col = Math.floor(relX / (cellSize + gap));
+  const row = Math.floor(relY / (cellSize + gap));
+  return { row, col };
+}
+
+function clearPreview() {
+  document.querySelectorAll('.cell.preview-valid, .cell.preview-invalid').forEach(c => {
+    c.classList.remove('preview-valid', 'preview-invalid');
+  });
+}
+
+function showPreview(piece, boardRow, boardCol) {
+  clearPreview();
+  const shape = piece.currentShape;
+  const startR = boardRow - dragOffsetRow;
+  const startC = boardCol - dragOffsetCol;
+  const valid = canPlace(shape, startR, startC, null);
+  const rows = shape.length, cols = shape[0].length;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!shape[r][c]) continue;
+      const br = startR + r, bc = startC + c;
+      if (br < 0 || br >= 8 || bc < 0 || bc >= 8) continue;
+      const cell = document.querySelector(`.cell[data-row="${br}"][data-col="${bc}"]`);
+      if (cell) cell.classList.add(valid ? 'preview-valid' : 'preview-invalid');
+    }
+  }
+}
+
+function onDragMove(e) {
+  if (!dragPiece) return;
+  e.preventDefault();
+  moveGhost(e.clientX, e.clientY);
+
+  const { row, col } = getBoardPos(e.clientX, e.clientY);
+  if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+    showPreview(dragPiece, row, col);
+  } else {
+    clearPreview();
+  }
+}
+
+function onDragEnd(e) {
+  if (!dragPiece) return;
+  e.preventDefault();
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+
+  const ghost = document.getElementById('drag-ghost');
+  ghost.style.display = 'none';
+  clearPreview();
+
+  const { row, col } = getBoardPos(e.clientX, e.clientY);
+  const shape = dragPiece.currentShape;
+  const startR = row - dragOffsetRow;
+  const startC = col - dragOffsetCol;
+
+  if (canPlace(shape, startR, startC, null)) {
+    placePiece(shape, startR, startC, dragPiece.id);
+    dragPiece.placed = true;
+    renderBoard();
+    renderPool();
+    checkWin();
+  } else if (dragFromBoard) {
+    // Dropped outside or invalid spot — return to pool
+    dragPiece.placed = false;
+    renderBoard();
+    renderPool();
+  }
+
+  dragPiece = null;
+  dragFromBoard = false;
+}
+
+function checkWin() {
+  const allPlaced = pieces.every(p => p.placed);
+  if (!allPlaced) return;
+  gameOver = true;
+  clearInterval(timerInterval);
+  const overlay = document.getElementById('win-overlay');
+  overlay.classList.add('show');
+  document.getElementById('win-time').textContent = 'Time: ' + formatTime(elapsed);
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  startTime = Date.now();
+  elapsed = 0;
+  timerInterval = setInterval(() => {
+    elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('timer').textContent = formatTime(elapsed);
+  }, 250);
+}
+
+function resetGame() {
+  gameOver = false;
+  document.getElementById('win-overlay').classList.remove('show');
+  document.getElementById('board').innerHTML = '<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px">Generating puzzle...</div>';
+  // Defer so the "Generating" message renders before solver blocks
+  setTimeout(() => {
+    initBoard();
+    pieces = PIECES.map(p => ({
+      ...p,
+      currentShape: p.shape.map(r => [...r]),
+      placed: false,
+      boardR: -1,
+      boardC: -1,
+    }));
+    placeGreyPieces();
+    renderBoard();
+    renderPool();
+    startTimer();
+  }, 20);
+}
+
+resetGame();
+</script>
+</body>
+</html>
