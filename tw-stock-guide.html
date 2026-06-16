@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股ETF／金融參考</title>
+<script src="stocks_data.js?20260606_124838"></script>
+<script src="bwibbu_data.js?20260606_124838"></script>
+<style>
+  :root {
+    --bg: #0f1419;
+    --surface: #1a2332;
+    --surface2: #243044;
+    --border: #2d3f54;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px;
+    backdrop-filter: blur(12px);
+  }
+  .header h1 {
+    font-size: 1.25rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .count {
+    color: var(--text2); font-size: 0.8rem;
+    margin-left: auto;
+  }
+  .tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    background: var(--surface); padding: 0 16px;
+    position: sticky; top: 53px; z-index: 99;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 10px 18px; cursor: pointer;
+    color: var(--text2); font-size: 0.9rem; font-weight: 500;
+    border: none; background: none;
+    position: relative; transition: color .2s;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn .badge {
+    display: inline-block; font-size: 0.65rem;
+    background: var(--surface2); color: var(--text2);
+    padding: 1px 7px; border-radius: 10px; margin-left: 5px;
+  }
+  .tab-btn.active .badge {
+    background: var(--accent); color: #fff;
+  }
+  .tab-content { display: none; padding: 16px; }
+  .tab-content.active { display: block; }
+  .toolbar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 12px; align-items: center;
+  }
+  .toolbar .search-bar {
+    flex: 1; min-width: 180px;
+  }
+  .search-bar {
+    padding: 9px 14px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface2); color: var(--text);
+    font-size: 0.9rem; outline: none; transition: border .2s;
+  }
+  .search-bar:focus { border-color: var(--accent); }
+  .search-bar::placeholder { color: var(--text2); }
+  .filter-select {
+    padding: 9px 14px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface2); color: var(--text);
+    font-size: 0.85rem; outline: none; cursor: pointer;
+    max-width: 200px;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  thead { background: var(--surface2); }
+  th {
+    padding: 9px 10px; text-align: left;
+    font-weight: 600; color: var(--text2);
+    font-size: 0.78rem; letter-spacing: 0.03em;
+    white-space: nowrap; cursor: pointer; user-select: none;
+    position: sticky; top: 0; z-index: 2;
+    background: var(--surface2);
+  }
+  th:hover { color: var(--accent2); }
+  th .sort { margin-left: 4px; opacity: 0.4; }
+  th.sorted .sort { opacity: 1; }
+  td {
+    padding: 7px 10px; border-top: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { transition: background .1s; }
+  tbody tr:hover { background: rgba(59,130,246,0.06); }
+  .bank-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .bank-中國信託 { background: #1e3a5f; color: #93c5fd; }
+  .bank-第一 { background: #3b2f2f; color: #fca5a5; }
+  .bank-台新 { background: #2d3b2d; color: #86efac; }
+  .bank-兆豐 { background: #3b2d3b; color: #d8b4fe; }
+  .bank-合庫 { background: #2d3b3b; color: #67e8f9; }
+  .bank-永豐 { background: #3b3b2d; color: #fde68a; }
+  .bank-台灣 { background: #2d2d3b; color: #a5b4fc; }
+  .bank-玉山 { background: #1e3a2d; color: #6ee7b7; }
+  .bank-富邦 { background: #3b2d2d; color: #fdba74; }
+  .bank-彰化 { background: #2d2d2d; color: #e2e8f0; }
+  .bank-台灣中小企業銀行 { background: #2d2d1e; color: #fef08a; }
+  .bank-default { background: var(--surface2); color: var(--text2); }
+  .market-badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .market-twse { background: #1e3a5f; color: #93c5fd; }
+  .market-tpex { background: #2d3b2d; color: #86efac; }
+  .market-emerging { background: #3b2d2d; color: #fdba74; }
+  .cat-badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .cat-高股息型 { background: #3b2d2d; color: #fca5a5; }
+  .cat-市值型 { background: #1e3a5f; color: #93c5fd; }
+  .cat-債券型 { background: #2d3b3b; color: #67e8f9; }
+  .cat-槓桿反向 { background: #3b2d3b; color: #d8b4fe; }
+  .cat-產業型 { background: #2d3b2d; color: #86efac; }
+  .cat-主題型 { background: #3b3b2d; color: #fde68a; }
+  .cat-國際型 { background: #2d2d3b; color: #a5b4fc; }
+  .cat-其他 { background: var(--surface2); color: var(--text2); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num-muted { color: var(--text2); }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .link-group { display: inline-flex; gap: 6px; }
+  .link-group a { font-size: 0.78rem; }
+  .empty {
+    text-align: center; padding: 40px 20px;
+    color: var(--text2); font-size: 0.9rem;
+  }
+  .loading {
+    text-align: center; padding: 60px 20px;
+    color: var(--text2);
+  }
+  .loading .spinner {
+    display: inline-block; width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 700px) {
+    .header { padding: 10px 12px; }
+    .header h1 { font-size: 1.05rem; }
+    .tabs { padding: 0 8px; }
+    .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+    .tab-content { padding: 10px; }
+    th, td { padding: 5px 6px; font-size: 0.76rem; }
+    .toolbar { flex-direction: column; }
+    .toolbar .search-bar, .filter-select { width: 100%; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>台股ETF／金融參考</h1>
+  <span class="count" id="totalCount"></span>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="bank">保管銀行 <span class="badge" id="bankCount"></span></button>
+  <button class="tab-btn" data-tab="market">全市場 <span class="badge" id="marketCount"></span></button>
+  <button class="tab-btn" data-tab="etf">ETF總覧 <span class="badge" id="etfCount"></span></button>
+  <button class="tab-btn" data-tab="search">搜尋 <span class="badge">🔍</span></button>
+</div>
+
+<!-- Tab 1: 保管銀行 -->
+<div class="tab-content active" id="tab-bank">
+  <div class="toolbar">
+    <input class="search-bar" id="bankSearch" placeholder="搜尋ETF代碼或名稱…" autocomplete="off">
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>代碼</th><th>名稱</th><th>保管銀行</th></tr></thead><tbody id="bankBody"></tbody></table>
+  </div>
+  <div class="empty" id="bankEmpty" style="display:none">未找到符合的ETF</div>
+</div>
+
+<!-- Tab 2: 全市場 -->
+<div class="tab-content" id="tab-market">
+  <div class="toolbar">
+    <input class="search-bar" id="marketSearch" placeholder="搜尋代碼或名稱…" autocomplete="off">
+    <select class="filter-select" id="marketIndustry"><option value="">全部產業</option></select>
+    <select class="filter-select" id="marketType"><option value="">全部市場</option><option value="twse">上市</option><option value="tpex">上櫃</option><option value="emerging">興櫃</option></select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th data-sort="id">代碼<span class="sort">▲</span></th>
+        <th data-sort="name">名稱<span class="sort">▲</span></th>
+        <th data-sort="industry">產業<span class="sort">▲</span></th>
+        <th data-sort="market">市場<span class="sort">▲</span></th>
+        <th data-sort="pe" class="num">本益比<span class="sort">▲</span></th>
+        <th data-sort="yield" class="num">殖利率%<span class="sort">▲</span></th>
+        <th data-sort="pb" class="num">股價淨值比<span class="sort">▲</span></th>
+        <th>圖</th>
+      </tr></thead>
+      <tbody id="marketBody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="marketEmpty" style="display:none">無符合條件的股票</div>
+</div>
+
+<!-- Tab 3: ETF總覧 -->
+<div class="tab-content" id="tab-etf">
+  <div class="toolbar">
+    <input class="search-bar" id="etfSearch" placeholder="搜尋ETF代碼或名稱…" autocomplete="off">
+    <select class="filter-select" id="etfCategory"><option value="">全部分類</option></select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th data-sort="id">代碼<span class="sort">▲</span></th>
+        <th data-sort="name">名稱<span class="sort">▲</span></th>
+        <th data-sort="category">分類<span class="sort">▲</span></th>
+        <th data-sort="market">市場<span class="sort">▲</span></th>
+        <th data-sort="price" class="num">價格<span class="sort">▲</span></th>
+        <th data-sort="pe" class="num">本益比<span class="sort">▲</span></th>
+        <th data-sort="yield" class="num">殖利率%<span class="sort">▲</span></th>
+        <th data-sort="pb" class="num">股價淨值比<span class="sort">▲</span></th>
+        <th>圖</th>
+      </tr></thead>
+      <tbody id="etfBody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="etfEmpty" style="display:none">無符合條件的ETF</div>
+</div>
+
+<!-- Tab 4: 搜尋 -->
+<div class="tab-content" id="tab-search">
+  <div class="toolbar">
+    <input class="search-bar" id="globalSearch" placeholder="輸入代碼或名稱搜尋 (支援部分匹配)…" autocomplete="off">
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>代碼</th><th>名稱</th><th>產業</th><th>市場</th><th>分類</th><th class="num">本益比</th><th class="num">殖利率%</th><th>圖</th></tr></thead>
+      <tbody id="searchBody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="searchEmpty" style="display:none">輸入代碼或名稱開始搜尋</div>
+</div>
+
+<script>
+// ===== DATA LOADING =====
+const bankData = [
+  {id:'00662', name:'富邦NASDAQ', bank:'中國信託', link:'https://etrade.fsit.com.tw/Event/ETFdividend/index.aspx'},
+  {id:'00670L', name:'富邦NASDAQ正2', bank:'中國信託', link:'https://etrade.fsit.com.tw/Event/ETFdividend/index.aspx'},
+  {id:'00878', name:'國泰永續高股息ETF', bank:'台新', link:'https://www.cathaysite.com.tw/proj/2021/afa/'},
+  {id:'0056', name:'元大台灣高股息', bank:'中國信託', link:'https://www.yuantafunds.com/etf-div-account'},
+  {id:'006208', name:'富邦采吉50ETF', bank:'第一', link:'https://etrade.fsit.com.tw/Event/ETFdividend/index.aspx'},
+  {id:'0050', name:'元大台灣卓越', bank:'中國信託', link:'https://www.yuantafunds.com/etf-div-account'},
+  {id:'00713', name:'元大台灣高息低波ETF', bank:'台灣'},
+  {id:'00725b', name:'國泰投資級公司債', bank:'玉山'},
+  {id:'00772b', name:'中信高評級公司債', bank:'永豐'},
+  {id:'2330', name:'台積電', bank:'中國信託', link:'https://ecorp.chinatrust.com.tw/cts/pdf/stock_c_u.pdf'},
+  {id:'00915', name:'凱基優選高股息30', bank:'彰化'},
+  {id:'00922', name:'國泰台灣領袖50', bank:'中國信託'},
+  {id:'00923', name:'群益台ESG低碳50', bank:'中國信託', link:'https://www.capitalfund.com.tw/etfdividend'},
+  {id:'00937b', name:'群益ESG投等債20+', bank:'彰化', link:'https://www.capitalfund.com.tw/etfdividend'},
+  {id:'0052', name:'富邦台灣科技', bank:'台新', link:'https://etrade.fsit.com.tw/Event/ETFdividend/index.aspx'},
+  {id:'00946', name:'群益科技高息成長', bank:'中國信託', link:'https://www.capitalfund.com.tw/etfdividend'},
+  {id:'00865B', name:'國泰US短期公債', bank:'中國信託', link:'https://www.cathaysite.com.tw/proj/2021/afa/'},
+  {id:'00881', name:'國泰台灣5G+', bank:'第一'},
+  {id:'00882', name:'中信中國高股息', bank:'兆豐'},
+  {id:'00888', name:'永豐台灣ESG', bank:'合庫'},
+  {id:'00893', name:'國泰電動車', bank:'兆豐'},
+  {id:'00900', name:'富邦特選高股息30', bank:'永豐'},
+  {id:'00907', name:'永豐優息存股', bank:'台灣'},
+  {id:'00919', name:'群益台灣精選高息', bank:'中國信託', link:'https://www.capitalfund.com.tw/etfdividend'},
+  {id:'00929', name:'復華台灣科技優息', bank:'富邦', link:'https://www.fhtrust.com.tw/ETF_custService/'},
+  {id:'00924', name:'復華S&P500成長', bank:'富邦', link:'https://www.fhtrust.com.tw/ETF_custService/'},
+  {id:'00918', name:'大華優利高填息30', bank:'台灣中小企業銀行'},
+  {id:'00936', name:'台新永續高息中小', bank:'兆豐'},
+  {id:'00935', name:'野村臺灣新科技50', bank:'永豐'},
+  {id:'00850', name:'元大臺灣ESG永續', bank:'永豐'},
+  {id:'00933b', name:'群益ESG投等債20+', bank:'彰化'},
+  {id:'00941', name:'中信上游半導體', bank:'兆豐'},
+  {id:'00943', name:'兆豐台灣電子成長高息', bank:'兆豐'}
+];
+
+// Build BWIBBU lookup map
+const bwibbuMap = {};
+(window.BWIBBU_DATA || []).forEach(d => {
+  bwibbuMap[d.Code] = { pe: d.PEratio, yield: d.DividendYield, pb: d.PBratio, price: d.ClosePrice };
+});
+
+// ETF classification
+function classifyETF(s) {
+  const n = s.name.toLowerCase();
+  const id = s.id.toLowerCase();
+  if (n.includes('正') || n.includes('反') || id.endsWith('l') || id.endsWith('r')) return '槓桿反向';
+  if (n.includes('債') || id.endsWith('b')) return '債券型';
+  if (n.includes('息') || n.includes('股利') || n.includes('股息') || n.includes('配息')) return '高股息型';
+  // International first (before 市值型 catches "50" ETFs)
+  if (n.includes('nasdaq') || n.includes('s&p') || n.includes('日經') || n.includes('中國') || n.includes('美國') || n.includes('歐洲') || n.includes('印度') || n.includes('東協') || n.includes('恒') || n.includes('滬深') || n.includes('上証') || n.includes('深証') || n.includes('寶滬深') || n.includes('a50')) return '國際型';
+  // 市值型: keywords + "50" suffix + known market-cap index names
+  if (n.includes('市值') || n.includes('卓越') || n.includes('龍頭') || n.includes('領袖') || n.includes('中型') || n.includes('摩台') || n.includes('新台灣') || n.includes('富櫃') || /[0-9]50$/.test(id) || id === '0050') return '市值型';
+  if (n.includes('科技') || n.includes('半導體') || n.includes('電動車') || n.includes('5g') || n.includes('金融') || n.includes('生技') || n.includes('能源') || n.includes('工業') || n.includes('通訊') || n.includes('消費') || n.includes('電子') || n.includes('發達')) return '產業型';
+  if (n.includes('esg') || n.includes('永續') || n.includes('成長') || n.includes('價值') || n.includes('動能') || n.includes('非投等')) return '主題型';
+  // Last resort: id pattern heuristics
+  if (id.match(/^005[0-9]/) || id.match(/^006[0-9]/) || id.match(/^008[0-9]/) && !n.includes('息')) return '市值型';
+  return '其他';
+}
+
+// Merge stocks_data with bwibbu data + classification
+function buildMerged() {
+  const stocks = window.STOCK_DATA || [];
+  return stocks.map(s => {
+    const b = bwibbuMap[s.id] || {};
+    const isETF = s.industry === 'ETF' || s.industry === '上櫃ETF' || s.industry === '上櫃指數股票型基金(ETF)';
+    return {
+      id: s.id,
+      name: s.name,
+      industry: s.industry,
+      market: s.market,
+      pe: b.pe || '',
+      yield: b.yield || '',
+      pb: b.pb || '',
+      price: b.price || '',
+      isETF: isETF,
+      category: isETF ? classifyETF(s) : ''
+    };
+  });
+}
+
+// ===== UTILITY =====
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function dailyLink(id) { return 'https://goodinfo.tw/tw/ShowK_Chart.asp?STOCK_ID='+id; }
+function weeklyLink(id) { return dailyLink(id)+'&CHT_CAT=WEEK&PRICE_ADJ=F&SCROLL2Y=100&SCROLL2Y=100'; }
+function numOrDash(v) { return v && v !== '-' ? v : '-'; }
+function sortVal(row, key) {
+  const v = row[key];
+  if (key === 'price' || key === 'pe' || key === 'yield' || key === 'pb') {
+    const n = parseFloat(v);
+    return isNaN(n) ? -999999 : n;
+  }
+  if (key === 'market') { return {twse:0, tpex:1, emerging:2}[v]||9; }
+  return typeof v === 'string' ? v.toLowerCase() : String(v);
+}
+
+function bankBadge(bank) {
+  if (!bank) return '';
+  const cls = 'bank-badge bank-' + bank.replace(/\s+/g, '');
+  return '<span class="'+cls+'">'+esc(bank)+'</span>';
+}
+function marketBadge(m) {
+  const labels = {twse:'上市', tpex:'上櫃', emerging:'興櫃'};
+  const label = labels[m] || m;
+  return '<span class="market-badge market-'+m+'">'+label+'</span>';
+}
+function catBadge(c) {
+  if (!c) return '';
+  return '<span class="cat-badge cat-'+c+'">'+esc(c)+'</span>';
+}
+function chartLinks(id) {
+  return '<span class="link-group"><a href="'+dailyLink(id)+'" target="_blank">日</a> <a href="'+weeklyLink(id)+'" target="_blank">週</a></span>';
+}
+
+// ===== SORTING =====
+const sortState = {};
+function toggleSort(tableId, key) {
+  const state = sortState[tableId] || {key:null, dir:0};
+  if (state.key === key) {
+    if (state.dir === 1) state.dir = -1;
+    else if (state.dir === -1) { state.dir = 0; state.key = null; }
+    else { state.dir = 1; state.key = key; }
+  } else {
+    state.key = key; state.dir = 1;
+  }
+  sortState[tableId] = state;
+  return state;
+}
+function getSorter(tableId, rows) {
+  const st = sortState[tableId];
+  if (!st || !st.key || !st.dir) return rows;
+  const key = st.key;
+  return rows.slice().sort((a,b) => {
+    const va = sortVal(a, key), vb = sortVal(b, key);
+    return va < vb ? -st.dir : va > vb ? st.dir : 0;
+  });
+}
+function updateSortIndicators(tableId) {
+  const st = sortState[tableId];
+  document.querySelectorAll('#tab-'+tableId+' th[data-sort]').forEach(th => {
+    th.classList.toggle('sorted', st && th.dataset.sort === st.key);
+    const sp = th.querySelector('.sort');
+    if (sp) sp.textContent = st && th.dataset.sort === st.key ? (st.dir === 1 ? '▲' : '▼') : '▲';
+  });
+}
+
+// ===== TAB 1: 保管銀行 =====
+let _bankFilter = '';
+function renderBank() {
+  const q = _bankFilter.toLowerCase().trim();
+  const rows = bankData.filter(d => !q || d.id.toLowerCase().includes(q) || d.name.toLowerCase().includes(q));
+  const eb = document.getElementById('bankEmpty');
+  const tb = document.getElementById('bankBody');
+  if (!rows.length) { tb.innerHTML=''; eb.style.display='block'; return; }
+  eb.style.display='none';
+  tb.innerHTML = rows.map(d => {
+    const nh = d.link ? '<a href="'+esc(d.link)+'" target="_blank">'+esc(d.name)+'</a>' : esc(d.name);
+    return '<tr><td><a href="'+dailyLink(d.id)+'" target="_blank">'+esc(d.id)+'</a></td><td>'+nh+'</td><td>'+bankBadge(d.bank)+'</td></tr>';
+  }).join('');
+}
+
+// ===== TAB 2: 全市場 =====
+let _marketRows = [], _marketFiltered = [];
+function renderMarket() {
+  const q = (document.getElementById('marketSearch').value||'').toLowerCase().trim();
+  const ind = document.getElementById('marketIndustry').value;
+  const tp = document.getElementById('marketType').value;
+  let rows = _marketRows.filter(d => {
+    if (ind && d.industry !== ind) return false;
+    if (tp && d.market !== tp) return false;
+    if (q && !d.id.toLowerCase().includes(q) && !d.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  _marketFiltered = rows;
+  rows = getSorter('market', rows);
+  const tb = document.getElementById('marketBody');
+  const eb = document.getElementById('marketEmpty');
+  if (!rows.length) { tb.innerHTML=''; eb.style.display='block'; return; }
+  eb.style.display='none';
+  updateSortIndicators('market');
+  tb.innerHTML = rows.map(d => {
+    const pe = d.pe ? '<span class="num-muted">'+esc(numOrDash(d.pe))+'</span>' : '<span class="num-muted">-</span>';
+    const yi = d.yield ? esc(numOrDash(d.yield)) : '<span class="num-muted">-</span>';
+    const pb = d.pb ? esc(numOrDash(d.pb)) : '<span class="num-muted">-</span>';
+    return '<tr><td><a href="'+dailyLink(d.id)+'" target="_blank">'+esc(d.id)+'</a></td><td>'+esc(d.name)+'</td><td>'+esc(d.industry)+'</td><td>'+marketBadge(d.market)+'</td><td class="num">'+pe+'</td><td class="num">'+yi+'</td><td class="num">'+pb+'</td><td>'+chartLinks(d.id)+'</td></tr>';
+  }).join('');
+}
+
+// ===== TAB 3: ETF總覧 =====
+let _etfRows = [], _etfFiltered = [];
+function renderETF() {
+  const q = (document.getElementById('etfSearch').value||'').toLowerCase().trim();
+  const cat = document.getElementById('etfCategory').value;
+  let rows = _etfRows.filter(d => {
+    if (cat && d.category !== cat) return false;
+    if (q && !d.id.toLowerCase().includes(q) && !d.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  _etfFiltered = rows;
+  rows = getSorter('etf', rows);
+  const tb = document.getElementById('etfBody');
+  const eb = document.getElementById('etfEmpty');
+  if (!rows.length) { tb.innerHTML=''; eb.style.display='block'; return; }
+  eb.style.display='none';
+  updateSortIndicators('etf');
+  tb.innerHTML = rows.map(d => {
+    const pr = d.price ? esc(numOrDash(d.price)) : '<span class="num-muted">-</span>';
+    const pe = d.pe ? '<span class="num-muted">'+esc(numOrDash(d.pe))+'</span>' : '<span class="num-muted">-</span>';
+    const yi = d.yield ? esc(numOrDash(d.yield)) : '<span class="num-muted">-</span>';
+    const pb = d.pb ? esc(numOrDash(d.pb)) : '<span class="num-muted">-</span>';
+    return '<tr><td><a href="'+dailyLink(d.id)+'" target="_blank">'+esc(d.id)+'</a></td><td>'+esc(d.name)+'</td><td>'+catBadge(d.category)+'</td><td>'+marketBadge(d.market)+'</td><td class="num">'+pr+'</td><td class="num">'+pe+'</td><td class="num">'+yi+'</td><td class="num">'+pb+'</td><td>'+chartLinks(d.id)+'</td></tr>';
+  }).join('');
+}
+
+// ===== TAB 4: 搜尋 =====
+function renderSearch() {
+  const q = (document.getElementById('globalSearch').value||'').toLowerCase().trim();
+  const all = window._allRows || [];
+  const tb = document.getElementById('searchBody');
+  const eb = document.getElementById('searchEmpty');
+  if (!q) { tb.innerHTML=''; eb.style.display='block'; eb.textContent='輸入代碼或名稱開始搜尋'; return; }
+  const rows = all.filter(d => d.id.toLowerCase().includes(q) || d.name.toLowerCase().includes(q));
+  if (!rows.length) { tb.innerHTML=''; eb.style.display='block'; eb.textContent='未找到結果'; return; }
+  eb.style.display='none';
+  tb.innerHTML = rows.map(d => {
+    const pe = d.pe ? esc(numOrDash(d.pe)) : '-';
+    const yi = d.yield ? esc(numOrDash(d.yield)) : '-';
+    const catHtml = d.isETF ? catBadge(d.category) : '';
+    return '<tr><td><a href="'+dailyLink(d.id)+'" target="_blank">'+esc(d.id)+'</a></td><td>'+esc(d.name)+'</td><td>'+esc(d.industry)+'</td><td>'+marketBadge(d.market)+'</td><td>'+catHtml+'</td><td class="num">'+pe+'</td><td class="num">'+yi+'</td><td>'+chartLinks(d.id)+'</td></tr>';
+  }).join('');
+}
+
+// ===== TAB SWITCHING =====
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    const inp = document.querySelector('#tab-'+btn.dataset.tab+' .search-bar');
+    if (inp) setTimeout(() => inp.focus(), 100);
+  });
+});
+
+// ===== SORTING EVENT =====
+document.addEventListener('click', e => {
+  const th = e.target.closest('th[data-sort]');
+  if (!th) return;
+  const tbl = th.closest('table');
+  const tab = tbl && tbl.closest('[id^="tab-"]');
+  if (!tab) return;
+  const tid = tab.id.replace('tab-','');
+  toggleSort(tid, th.dataset.sort);
+  if (tid === 'market') renderMarket();
+  else if (tid === 'etf') renderETF();
+});
+
+// ===== SEARCH INPUTS =====
+document.getElementById('bankSearch').addEventListener('input', function() {
+  _bankFilter = this.value; renderBank();
+});
+document.getElementById('marketSearch').addEventListener('input', renderMarket);
+document.getElementById('marketIndustry').addEventListener('change', renderMarket);
+document.getElementById('marketType').addEventListener('change', renderMarket);
+document.getElementById('etfSearch').addEventListener('input', renderETF);
+document.getElementById('etfCategory').addEventListener('change', renderETF);
+document.getElementById('globalSearch').addEventListener('input', (function(){
+  let timer;
+  return function() {
+    clearTimeout(timer);
+    timer = setTimeout(renderSearch, 300);
+  };
+})());
+
+// ===== INIT =====
+function init() {
+  const all = buildMerged();
+  window._allRows = all;
+
+  // Populate industry filter
+  const inds = [...new Set(all.map(d => d.industry).filter(Boolean).sort())];
+  const sel = document.getElementById('marketIndustry');
+  inds.forEach(i => { const o = document.createElement('option'); o.value=i; o.textContent=i; sel.appendChild(o); });
+
+  // Populate ETF category filter
+  const cats = [...new Set(all.filter(d => d.isETF).map(d => d.category).filter(Boolean).sort())];
+  const csel = document.getElementById('etfCategory');
+  cats.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c; csel.appendChild(o); });
+
+  // Market rows (exclude ETFs for market tab? No, include everything)
+  _marketRows = all.filter(d => {
+    // Skip index entries
+    if (d.industry === 'Index' || d.industry === '大盤') return false;
+    return true;
+  });
+  _etfRows = all.filter(d => d.isETF);
+
+  // Counts
+  document.getElementById('bankCount').textContent = bankData.length;
+  document.getElementById('marketCount').textContent = _marketRows.length;
+  document.getElementById('etfCount').textContent = _etfRows.length;
+  document.getElementById('totalCount').textContent = all.length+' 檔';
+
+  // Default ETF tab sort: yield descending (so ETFs WITH data appear first)
+  sortState['etf'] = { key: 'yield', dir: -1 };
+
+  // Initial renders
+  renderBank();
+  renderMarket();
+  renderETF();
+}
+
+init();
+</script>
+</body>
+</html>
