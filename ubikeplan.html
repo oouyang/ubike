@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Ubike 路線規劃 (直角距)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label { margin-right: 10px; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    tfoot td { font-weight: bold; background-color: #e8f5e9; }
+  </style>
+</head>
+<body>
+  <h2>🚴‍♂️ Ubike 路線規劃 (直角距)</h2>
+  <div>
+    <label>起點: <input type="text" id="start" value="捷運科技大樓站"></label>
+    <label>終點: <input type="text" id="end" value="捷運頂埔站"></label>
+    <label>間隔公里: <input type="number" id="distance" value="3.5" step="0.1"></label>
+    <button onclick="generateRoute()">規劃</button>
+  </div>
+
+  <table id="routeTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>站名</th>
+        <th>緯度</th>
+        <th>經度</th>
+        <th>距離 (km)</th>
+        <th>預估時間 (分鐘)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4">總計</td>
+        <td id="totalDist">0</td>
+        <td id="totalTime">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+<script>
+// 直角距 (Manhattan distance) 計算公里數
+function manhattanDistance(lat1, lon1, lat2, lon2) {
+  const kLat = 111; // 每度緯度約 111 km
+  const avgLat = (lat1 + lat2) / 2 * Math.PI / 180;
+  const kLon = 111 * Math.cos(avgLat); // 每度經度換算公里
+
+  const dLat = Math.abs(lat1 - lat2) * kLat;
+  const dLon = Math.abs(lon1 - lon2) * kLon;
+
+  return dLat + dLon; // 直角距
+}
+
+// 下載 YouBike 站點資料
+async function loadStations() {
+  const url = "https://apis.youbike.com.tw/json/station-yb2.json";
+  const resp = await fetch(url);
+  if (resp.ok) {
+    const text = await resp.text();
+    if (text.trim()) {
+      return JSON.parse(text);
+    }
+  }
+  alert("⚠️ API 沒有回傳有效 JSON，請稍後再試");
+  return [];
+}
+
+// 規劃路線
+function planRoute(stations, startName, endName, maxDistance = 3.5) {
+  const start = stations.find(s => s.name_tw.includes(startName));
+  const end = stations.find(s => s.name_tw.includes(endName));
+
+  if (!start || !end) {
+    alert("找不到起點或終點站點");
+    return [];
+  }
+
+  const route = [start];
+  let current = start;
+
+  while (true) {
+    const distCurrentEnd = manhattanDistance(
+      parseFloat(current.lat), parseFloat(current.lng),
+      parseFloat(end.lat), parseFloat(end.lng)
+    );
+
+    const candidates = stations
+      .filter(s => {
+        const distCurrent = manhattanDistance(
+          parseFloat(current.lat), parseFloat(current.lng),
+          parseFloat(s.lat), parseFloat(s.lng)
+        );
+        const distEnd = manhattanDistance(
+          parseFloat(s.lat), parseFloat(s.lng),
+          parseFloat(end.lat), parseFloat(end.lng)
+        );
+        return distCurrent <= maxDistance && distEnd < distCurrentEnd;
+      })
+      .map(s => ({
+        station: s,
+        distEnd: manhattanDistance(
+          parseFloat(s.lat), parseFloat(s.lng),
+          parseFloat(end.lat), parseFloat(end.lng)
+        )
+      }));
+
+    if (candidates.length === 0) break;
+
+    const nextStation = candidates.reduce((a, b) => a.distEnd < b.distEnd ? a : b).station;
+    route.push(nextStation);
+    current = nextStation;
+
+    if (current.station_no === end.station_no) break;
+  }
+
+  return route;
+}
+
+// 產生表格
+async function generateRoute() {
+  const start = document.getElementById("start").value.trim();
+  const end = document.getElementById("end").value.trim();
+  const distance = parseFloat(document.getElementById("distance").value);
+
+  const stations = await loadStations();
+  if (!stations.length) return;
+
+  const route = planRoute(stations, start, end, distance);
+
+  const tbody = document.querySelector("#routeTable tbody");
+  tbody.innerHTML = "";
+  let totalDist = 0, totalTime = 0;
+
+  route.forEach((s, i) => {
+    let dist = 0, time = 0;
+    if (i > 0) {
+      const prev = route[i - 1];
+      dist = manhattanDistance(parseFloat(prev.lat), parseFloat(prev.lng),
+                               parseFloat(s.lat), parseFloat(s.lng));
+      time = (dist / 12) * 60; // 平均時速 12 km/h
+      totalDist += dist;
+      totalTime += time;
+    }
+    const row = `<tr>
+      <td>${i + 1}</td>
+      <td style="text-align:left;">${s.name_tw}</td>
+      <td>${s.lat}</td>
+      <td>${s.lng}</td>
+      <td>${dist.toFixed(2)}</td>
+      <td>${time.toFixed(1)}</td>
+    </tr>`;
+    tbody.innerHTML += row;
+  });
+
+  document.getElementById("totalDist").textContent = totalDist.toFixed(2);
+  document.getElementById("totalTime").textContent = totalTime.toFixed(1);
+}
+</script>
+</body>
+</html>
